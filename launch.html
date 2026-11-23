@@ -38273,7 +38273,7 @@ const HALL_MATTERS = [
     options: [
       { label: "Put the hedge back at the ash", win: "a", done: (A, B) => `The hedge between ${hallName(A)} and ${hallName(B)} goes back to the old ash.` },
       { label: "Let it stand where it is", win: "b", done: (A, B) => `The hedge between ${hallName(A)} and ${hallName(B)} stands where ${hallName(B)} set it.` },
-      { label: "Send a surveyor, at both their costs", win: null, done: (A, B) => `A surveyor is sent to the hedge between ${hallName(A)} and ${hallName(B)}, at both their costs, and neither thanks the court for it.` },
+      { label: "Send the Crown’s surveyor · 1 standing", cost: 1, finds: true, done: (A, B) => `The Crown’s surveyor walks the line between ${hallName(A)} and ${hallName(B)} with the parish terrier under his arm.` },
     ],
   },
   {
@@ -38300,6 +38300,7 @@ const HALL_MATTERS = [
     options: [
       { label: "Fine the miller", win: "a", done: (A, B) => `The mill of ${hallName(B)} is fined for short measure, on the complaint of ${hallName(A)}.` },
       { label: "Acquit the mill", win: "b", done: (A, B) => `The mill of ${hallName(B)} is acquitted of short measure, and ${hallName(A)} goes home with the sack.` },
+      { label: "Send for the court’s own bushel · 1 standing", cost: 1, finds: true, done: (A, B) => `The clerk fetches the court’s bushel, and ${hallName(A)} empties the sack into it before the whole hall.` },
     ],
   },
   {
@@ -38522,14 +38523,99 @@ const HALL_PRINCIPLE = {
   fresh: "an old right must make room for a new claim",
 };
 const HALL_QUESTION = { letter: "bond", mercy: "bond", crown: "realm", hearth: "realm", old: "custom", fresh: "custom" };
+// A quarrel of fact (the mill, the hedge) holds no principle: it is right or wrong.
 const HALL_HOLDS = {
-  debt: { a: "letter", b: "mercy" }, silk: { a: "letter", b: "mercy" }, measure: { a: "letter", b: "mercy" },
+  debt: { a: "letter", b: "mercy" }, silk: { a: "letter", b: "mercy" },
   apprentice: { a: "letter", b: "mercy" }, tithe: { a: "letter", b: "mercy" }, favour: { a: "letter", b: "mercy" },
   road: { a: "letter", b: "mercy" }, newroll: { a: "letter", b: "mercy" },
   press: { a: "crown", b: "hearth" }, billet: { a: "hearth", b: "crown" }, forage: { a: "hearth", b: "crown" },
-  common: { a: "fresh", b: "old" }, hedge: { a: "old", b: "fresh" }, precedence: { a: "old", b: "fresh" },
+  common: { a: "fresh", b: "old" }, precedence: { a: "old", b: "fresh" },
   match: { a: "fresh", b: "old" }, ward: { a: "old", b: "fresh" },
 };
+// Beyond the principle, quarrels differ in what a ruling touches.
+//   estates: a quarrel a law of the court began. The region reads the ruling as the law itself: the
+//            winner's constituency loses grievance and the loser's takes it; the two houses are only the occasion.
+//   facts:   one house is lying. Rule on a guess and the truth comes out afterwards, to the court's
+//            credit or cost; or spend standing to find it out first.
+//   needs:   the quarrel comes of a want of the region, and the ruling feeds or starves that want.
+//   time:    the ruling can wait on the harvest, and is judged by how the debtor stands when it comes.
+const HALL_KIND = {
+  silk: "estates", press: "estates", tithe: "estates", common: "estates",
+  measure: "facts", hedge: "facts",
+  forage: "needs", billet: "needs", road: "needs",
+  debt: "time",
+};
+const HALL_NEED = {
+  forage: { need: "soldiers", a: -1, b: 1 },
+  billet: { need: "soldiers", a: -1, b: 1 },
+  road: { need: "works", a: 1, b: 0 },
+};
+Object.assign(CONFIG, { hallWantChance: 0.5, hallDebtWeeks: 3 });
+// Which house is in the right, where a quarrel turns on a fact. Fixed for the week, and never shown.
+const hallTruth = (game) => (hallHash(game, 4471) < 0.5 ? "a" : "b");
+const HALL_TRUTH_OUT = {
+  measure: {
+    a: "Weighed against the court’s own bushel, the sack comes up a full peck short.",
+    b: "Weighed against the court’s own bushel, the sack is true to the grain.",
+    right: "By the next market the sack has been weighed on three other scales, and every one bears the court out.",
+    wrong: "By the next market the sack has been weighed on three other scales, and every one says the court judged wrong.",
+  },
+  hedge: {
+    a: "The parish terrier puts the boundary at the old ash, where it always stood.",
+    b: "The parish terrier puts the boundary where the hedge now stands. It was the ash that was planted wrong.",
+    right: "A fortnight later the parish terrier turns up in the vestry chest, and it bears the court out.",
+    wrong: "A fortnight later the parish terrier turns up in the vestry chest, and it says the court judged wrong.",
+  },
+};
+// The side an option rules for. An option that finds the facts rules for whichever house is in the right.
+const hallWinSide = (game, hall, o) => (o.finds ? hallTruth(game) : o.win);
+function hallNeedShift(game, hall, side) {
+  const spec = HALL_NEED[hall.matter], key = spec && `${hall.region}|${spec.need}`;
+  if (!spec || !side || !spec[side] || game.needBar?.[key] == null) return null;
+  const from = game.needBar[key], to = Math.max(CONFIG.needBarMin, Math.min(CONFIG.needBarMax, from + spec[side]));
+  return to === from ? null : { key, need: spec.need, from, to };
+}
+// What an option does beyond the two houses, told before it is chosen.
+function hallKindText(game, hall, o, A, B, W, L) {
+  const kind = HALL_KIND[hall.matter];
+  if (kind === "facts" && o.finds)
+    return "The court learns which house is in the right before it rules. That house gains regard; the other loses it, and takes no grudge from a ruling on the facts.";
+  if (!W) return "";
+  if (kind === "estates")
+{
+    const now = (P) => fmtNum(game.grievance?.[constituencyOf(P)] || 0);
+    return `The ${hall.region} reads this as the law itself. The ${constituencyLabel(constituencyOf(W))} lose 1 grievance (now ${now(W)}) and the ${constituencyLabel(constituencyOf(L))} take 1 (now ${now(L)}). Neither house’s own regard changes.`;
+  }
+  if (kind === "facts")
+    return `One of them is lying, and the court cannot tell which from here. If it judges rightly, ${hallName(L)} takes no grudge. If it judges wrongly, that will come out, and the ${constituencyLabel(constituencyOf(L))} take 1 grievance.`;
+  if (kind === "needs") {
+    const sh = hallNeedShift(game, hall, o.win);
+    return sh ? `The ${hall.region}’s ${sh.need} bar ${sh.to > sh.from ? "rises" : "falls"} by 1 (now ${fmtNum(sh.from)}).` : "";
+  }
+  if (kind === "time" && o.win === "b")
+    return `The court waits ${mmNum(CONFIG.hallDebtWeeks)} weeks on the harvest. If ${hallName(B)} is below pressing pressure then, the debt is paid and ${hallName(A)} regains the regard lost today. If not, ${hallName(B)} defaults and the ${constituencyLabel(constituencyOf(A))} take 1 grievance.`;
+  return "";
+}
+// Debts the court gave time on, come due.
+function settleHallDue(game, report) {
+  const due = (game.hallDue || []).filter((d) => d.week <= game.week);
+  if (!due.length) return;
+  game.hallDue = game.hallDue.filter((d) => d.week > game.week);
+  for (const d of due) {
+    const A = game.people[d.a], B = game.people[d.b];
+    if (!A || !B) continue;
+    let text;
+    if (B.pressure < CONFIG.pressing) {
+      addRegard(A, CONFIG.hallRegard);
+      if (A.grudge?.c === constituencyOf(B)) A.grudge = null;
+      text = `The harvest is in, and ${hallName(B)} repays ${hallName(A)} in full. ${hallName(A)} allows that the court was right to wait.`;
+    } else {
+      addGrievance(game, constituencyOf(A), 1);
+      text = `The harvest is in, and ${hallName(B)} cannot pay ${hallName(A)}. The ${constituencyLabel(constituencyOf(A))} take 1 grievance at the court’s indulgence.`;
+    }
+    report?.events && logEvent(report, text, "change", [A.id, B.id]);
+  }
+}
 // What an option would hold, and how that sits with the court's last word on the same question.
 function hallHolding(game, hall, o) {
   const side = o?.win && HALL_HOLDS[hall.matter]?.[o.win];
@@ -42981,6 +43067,7 @@ function hallKin(game, id) {
 
 function drawHall(game, prev = null, report = null) {
   if (!CONFIG.hallOn || game.lesson || game.gameOver || game.week < 2) return null;
+  settleHallDue(game, report);
   const steps = report?.steps || [];
   const visit = (matter, a, b, causeFull, source) => ({
     week: game.week, region: game.people[a].region, matter, a, b, causeFull, source, ruled: null,
@@ -43052,8 +43139,6 @@ function drawHall(game, prev = null, report = null) {
     }
   }
   if (offers.length) return offers.find(h => h.matter === "wedding" || h.matter === "fiddle") || offers[Math.floor(hallHash(game, 713) * offers.length)];
-  const standing = drawSoloMatter(game, report, "hall", "standing");
-  if (standing) return standing;
   // Only a match forbidden on the docket can bring the couple back.
   const log = game.hallLog || [];
   const i = log.findIndex(x => x.docket && x.matter === "match" && x.win === "b" && !x.sequel &&
@@ -43118,8 +43203,34 @@ function drawHall(game, prev = null, report = null) {
     }
   }
   // the week after a quarrel, only a direct consequence of the court's own rulings brings another
+  // Want itself brings quarrels, when nothing the court did has: soldiers unprovided take what they
+  // need, unmended roads break axles, a pressed house cannot meet its bond, an aggrieved village
+  // weighs its flour twice.
+  if (hallHash(game, 241) < CONFIG.hallWantChance) {
+    const r = pick(REGIONS, 242),
+      low = (need) => game.needBar?.[`${r}|${need}`] < 0,
+      soldier = pick(inRegion(r, (p) => p.type === "Soldier"), 243),
+      commoner = pick(inRegion(r, (p) => p.type === "Commoner"), 244),
+      merchant = pick(inRegion(r, (p) => p.type === "Merchant"), 245),
+      debtor = pick(inRegion(r, (p) => p.pressure >= CONFIG.pressing), 246);
+    if (low("soldiers")) {
+      hallHash(game, 247) < 0.5
+        ? add(5, "forage", pick(inRegion(r, (p) => p.type === "Commoner" || p.type === "Merchant"), 248), soldier, `the soldiers of the ${r} went unprovided`)
+        : add(5, "billet", commoner, soldier, `the soldiers of the ${r} went unprovided`);
+    }
+    if (low("works")) add(5, "road", merchant, pick(inRegion(r, (p) => p.type !== "Merchant"), 249), `the roads of the ${r} went unmended`);
+    if (debtor) add(5, "debt", pick(inRegion(r, (p) => p.id !== debtor.id && p.pressure < CONFIG.pressing), 250), debtor, `the season pressed hard on ${householdName(debtor)}`);
+    if (commoner && merchant && (game.grievance?.[constituencyOf(commoner)] || 0) >= 1)
+      add(5, "measure", commoner, merchant, `the ${constituencyLabel(constituencyOf(commoner))} grew aggrieved`);
+  }
   const lastWeek = log.length && log[log.length - 1].week === game.week - 1;
   if (lastWeek) cands.splice(0, cands.length, ...cands.filter((c) => c.pri <= 2));
+  // A quarrel the court's own acts began comes this week or never; a caller whose occasion keeps
+  // comes when there is none, and want fills the weeks that are left.
+  if (!cands.some((c) => c.pri <= 4)) {
+    const standing = drawSoloMatter(game, report, "hall", "standing");
+    if (standing) return standing;
+  }
   if (!cands.length) return null;
   const best = Math.min(...cands.map((c) => c.pri)),
     top = cands.filter((c) => c.pri === best),
@@ -43145,24 +43256,27 @@ function hallView(game, hall = game.hall) {
     b: m.pb ? { name: hallName(B), plea: m.pb(A, B, hall.region, hall), id: B.id, estate: B.type, region: B.region } : null,
     options: m.options.map((o) => {
       const W = o.win === "a" ? A : o.win === "b" ? B : null,
-        L = o.win === "a" ? B : o.win === "b" ? A : null;
+        L = o.win === "a" ? B : o.win === "b" ? A : null,
+        kind = HALL_KIND[hall.matter];
       return {
         label: typeof o.label === "function" ? o.label(A, B) : o.label,
         consequence: hall.matter === "marriageRank"
           ? o.ennoble ? `${hallName(B)} enters the noble estate and its duty rolls. The two houses marry. ${marriageGrievanceText(game, A, B)}`
             : "The wedding is called off. Both houses keep their present ranks."
           : HALL_RETURN_OF[hall.matter] ? "These households will return about this ruling after at least one intervening week."
-          : holdingText(game, hall, o, W, L),
+          : [hallKindText(game, hall, o, A, B, W, L), holdingText(game, hall, o, W, L)].filter(Boolean).join(" "),
         disabled: !!o.cost && !canSpendStanding(game, o.cost),
         win: W ? hallName(W) : null,
         winSide: o.win,
         lose: L ? hallName(L) : null,
-        grudge: W && !hallHolding(game, hall, o)?.follows && (hall.matter === "feud" || !(L.grudge && L.grudge.until > game.week)) ? `the ${estateInRegion(W.region, W.type)}` : null,
+        grudge: W && kind !== "estates" && kind !== "facts" && !hallHolding(game, hall, o)?.follows && (hall.matter === "feud" || !(L.grudge && L.grudge.until > game.week)) ? `the ${estateInRegion(W.region, W.type)}` : null,
         kin: L ? hallKin(game, L.id).filter((k) => k !== W.id).map((k) => hallName(game.people[k])) : [],
         rows: hallRows(game, hall, o, A, B, W, L),
-        note: o.ennoble ? "The spouse is raised to noble rank." : o.both ? "Both houses gain one regard." : o.regardA || o.regardB ? `${hallName(o.regardA ? A : B)} gains one regard.` : W
+        note: o.ennoble ? "The spouse is raised to noble rank." : o.both ? "Both houses gain one regard." : o.regardA || o.regardB ? `${hallName(o.regardA ? A : B)} gains one regard.` : W && kind === "estates"
+          ? `A ruling for the ${constituencyLabel(constituencyOf(W))} against the ${constituencyLabel(constituencyOf(L))}.`
+          : W
           ? `${hallName(W)} thinks better of the court; ${hallName(L)} thinks worse of it.`
-          : "Neither house is pleased or aggrieved.",
+          : o.finds ? "The court finds out the truth before it rules." : "Neither house is pleased or aggrieved.",
       };
     }),
   };
@@ -43180,7 +43294,7 @@ function hallEffects(game, hall, o, A, B, W, L) {
   for (const [p, regard] of [[A, o.both || o.regardA], [B, o.both || o.regardB]]) {
     if (regard) { at(p).dr += regard; at(p).tone = "up"; }
   }
-  if (W) {
+  if (W && HALL_KIND[hall.matter] !== "estates") {
     const w = at(W), l = at(L);
     w.dr += CONFIG.hallRegard;
     w.tone = "up";
@@ -43264,15 +43378,47 @@ function ruleHall(game, choice) {
   if (!o || !A || !B || hall.ruled != null || (o.cost && !trySpendStanding(g, o.cost))) return game;
   if (o.both || o.regardA) addRegard(A, o.both || o.regardA);
   if (o.both || o.regardB) addRegard(B, o.both || o.regardB);
-  const W = o.win === "a" ? A : o.win === "b" ? B : null,
-    L = o.win === "a" ? B : o.win === "b" ? A : null,
+  const kind = HALL_KIND[hall.matter],
+    side = hallWinSide(game, hall, o),
+    truth = kind === "facts" ? hallTruth(game) : null,
+    W = side === "a" ? A : side === "b" ? B : null,
+    L = side === "a" ? B : side === "b" ? A : null,
     eases = o.ease ? o.ease(g, A, B, hall.region) : [],
     faiths = o.faith ? o.faith(g, A, B, hall.region) : [];
   for (const x of eases) addPressure(x.person, x.dp);
   for (const x of faiths) (x.which === "devotion" ? addDevotion : addSuperstition)(x.person, x.n);
-  if (W) {
+  let kindLine = "";
+  if (W && kind === "estates") {
+    addGrievance(g, constituencyOf(W), -1);
+    addGrievance(g, constituencyOf(L), 1);
+    kindLine = `The ${hall.region} takes it for the law itself: the ${constituencyLabel(constituencyOf(W))} lose 1 grievance, and the ${constituencyLabel(constituencyOf(L))} take 1.`;
+    const hd = hallHolding(g, hall, o);
+    if (hd) {
+      if (hd.reverses) addGrievance(g, hd.prior.c, 1);
+      g.holdings = { ...(g.holdings || {}), [hd.question]: { side: hd.side, week: g.week, matter: hall.matter, c: constituencyOf(W) } };
+    }
+  } else if (W) {
     addRegard(W, CONFIG.hallRegard);
     addRegard(L, -CONFIG.hallRegard);
+    if (kind === "facts") {
+      const out = HALL_TRUTH_OUT[hall.matter];
+      if (o.finds) kindLine = `${out[truth]} The court rules for ${hallName(W)} on the facts, and ${hallName(L)} has no answer to them.`;
+      else if (side === truth) kindLine = `${out.right} ${hallName(L)} takes no grudge.`;
+      else {
+        addGrievance(g, constituencyOf(L), 1);
+        kindLine = `${out.wrong} The ${constituencyLabel(constituencyOf(L))} take 1 grievance.`;
+      }
+    }
+    const sh = kind === "needs" ? hallNeedShift(g, hall, side) : null;
+    if (sh) {
+      g.needBar = { ...g.needBar, [sh.key]: sh.to };
+      kindLine = `The ${hall.region}’s ${sh.need} bar ${sh.to > sh.from ? "rises" : "falls"} by 1.`;
+    }
+    if (kind === "time" && side === "b") {
+      g.hallDue = [...(g.hallDue || []), { week: g.week + CONFIG.hallDebtWeeks, a: A.id, b: B.id }];
+      kindLine = `The court will see how ${hallName(B)} stands when the harvest is in.`;
+    }
+    const rightOnFacts = kind === "facts" && (o.finds || side === truth);
     const hd = hallHolding(g, hall, o);
     if (hd) {
       if (hd.reverses) addGrievance(g, hd.prior.c, 1);
@@ -43280,7 +43426,7 @@ function ruleHall(game, choice) {
     }
     // a house ruled against twice by the same court in the same quarrel has its grudge renewed;
     // a house that loses by the court's known rule takes none
-    if (hd?.follows) {
+    if (hd?.follows || rightOnFacts) {
     } else if (!(L.grudge && L.grudge.until > g.week) || hall.matter === "feud")
       L.grudge = { c: constituencyOf(W), until: g.week + CONFIG.hallGrudgeWeeks, amount: 1 };
     // its kin by marriage take its part
@@ -43304,7 +43450,7 @@ function ruleHall(game, choice) {
     holdingLine = !held ? "" : held.reverses
       ? `The court reverses itself: it now holds that ${HALL_PRINCIPLE[held.side]}, and the ${constituencyLabel(held.prior.c)} take 1 grievance.`
       : held.follows ? `The court holds, as before, that ${HALL_PRINCIPLE[held.side]}.` : `The court holds that ${HALL_PRINCIPLE[held.side]}.`;
-  const text = [o.done(A, B, hall.region, hall), holdingLine, peerResponse].filter(Boolean).join(" ");
+  const text = [o.done(A, B, hall.region, hall), kindLine, holdingLine, peerResponse].filter(Boolean).join(" ");
   for (const [P, O] of [[A, B], [B, A]])
     P.hallMem = [
       ...(P.hallMem || []),
@@ -43314,7 +43460,7 @@ function ruleHall(game, choice) {
   hall.text = text;
   g.hallLog = [
     ...(g.hallLog || []),
-    { week: g.week, matter: m.id, a: A.id, b: B.id, choice, text, ...(HALL_RETURN_OF[m.id]?.[choice] ? { awaitingReturn: true } : {}), source: hall.source || (hall.faith ? hall.from : undefined), win: o.win, end: !!o.end, prevMatter: hall.prev?.matter },
+    { week: g.week, matter: m.id, a: A.id, b: B.id, choice, text, ...(HALL_RETURN_OF[m.id]?.[choice] ? { awaitingReturn: true } : {}), source: hall.source || (hall.faith ? hall.from : undefined), win: side, end: !!o.end, prevMatter: hall.prev?.matter },
   ].slice(-40);
   return g;
 }
