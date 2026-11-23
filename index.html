@@ -37597,6 +37597,12 @@ function Court() {
               setOpenMatter({ week: game2.week, k: k2 });
               window.scrollTo({ top: 0 });
             },
+            onLeaveUnheard: () => {
+              // Every waiting matter goes the way it would if the court did nothing; the screen then shows what came of it.
+              e(lapseAll(game2));
+              setOpenMatter(null);
+              document.querySelector(".overlay.session")?.scrollTo({ top: 0 });
+            },
             onLeave: () => {
               if (MATTER_ORDER.some((k) => matterWaits(game2, k))) return;
               e({ ...game2, mattersClosed: game2.week });
@@ -43937,8 +43943,14 @@ function hallwayVisitors(game, k) {
     return { id, name: hallName(p), icon: RECKONING_ESTATE_ICON[p.type], role: ESTATE_SINGULAR[p.type] };
   });
 }
-function mattersSay(game, seen, live) {
+function mattersSay(game, seen, live, leaving = false) {
+  const sent = seen.filter((k) => matterOf(game, k)?.lapsed).length;
+  if (!live.length && sent)
+    return `I have sent ${sent === 1 ? "the caller" : "the callers"} away, Vicar, and noted what came of it. The petitions are on your desk.`;
   if (!live.length) return "That is everyone accounted for, Vicar. The petitions are on your desk.";
+  if (leaving) return live.length === 1
+    ? "Shall I send the caller away, Vicar? This is what would come of it."
+    : "Shall I send them all away, Vicar? This is what would come of each.";
   const count = new Set(live.flatMap(k => hallwayVisitors(game, k).map(p => p.id ?? p.name))).size;
   if (live.length < seen.length) return count === 1
     ? "One name left on my list, Vicar. The visitor is still outside your office."
@@ -43947,9 +43959,19 @@ function mattersSay(game, seen, live) {
   if (count === 2) return "Good morning, Vicar. Two callers outside your office this morning. I have both names here.";
   return "Good morning, Vicar. Several members of the realm have found their way to your office this morning. I have taken the names of those waiting outside.";
 }
-function MattersScreen({ game, onOpen, onLeave }) {
+// What leaving a matter would come to; a missing note never blocks the screen.
+function safeLapseNote(game, k) {
+  try {
+    const note = lapseNote(game, k) || "";
+    // Notes already phrased as "Left unanswered, …" lose that lead-in under the "If left unheard" label.
+    return note.replace(/^Left unanswered,\s*/, "").replace(/^./, (c) => c.toUpperCase());
+  } catch (e) { return ""; }
+}
+function MattersScreen({ game, onOpen, onLeave, onLeaveUnheard }) {
   const ks = MATTER_ORDER.filter((k) => matterThisWeek(game, k)),
-    live = ks.filter((k) => matterWaits(game, k));
+    live = ks.filter((k) => matterWaits(game, k)),
+    [leavingWeek, setLeavingWeek] = useState(null),
+    leaving = leavingWeek === game.week && live.length > 0;
   return jsx("div", {
     class: "overlay session party-q-screen matters-screen",
     role: "dialog",
@@ -43960,10 +43982,10 @@ function MattersScreen({ game, onOpen, onLeave }) {
       role: "note",
       children: [
         jsx(AssistantHead, {}),
-        jsx("p", { class: "party-q-say", children: `“${mattersSay(game, ks, live)}”` }),
+        jsx("p", { class: "party-q-say", children: `“${mattersSay(game, ks, live, leaving)}”` }),
         ...ks
           .map((k) => matterOf(game, k))
-          .filter((m) => m && SOLO_MATTERS[m.matter] && m.ruled != null && m.text)
+          .filter((m) => m && (SOLO_MATTERS[m.matter] || m.lapsed) && m.ruled != null && m.text)
           .map((m) => jsx("p", { class: "party-q-say", role: "status", children: m.text }, m.matter)),
         jsx("div", {
           class: "matter-list",
@@ -43984,7 +44006,9 @@ function MattersScreen({ game, onOpen, onLeave }) {
                   ] }, p.id ?? p.name),
                 ]) }), jsx("small", { class: "hallway-subject", children:
                   k === "hall" || k === "faith" ? hallMatter(matterOf(game, k).matter).title()
-                  : worksSubject(game, matterOf(game, k)) })],
+                  : worksSubject(game, matterOf(game, k)) }),
+                  ...(leaving && open && safeLapseNote(game, k)
+                    ? [jsx("small", { class: "matter-lapse", children: `If left unheard: ${safeLapseNote(game, k)}` })] : [])],
               },
               k,
             );
@@ -43992,13 +44016,19 @@ function MattersScreen({ game, onOpen, onLeave }) {
         }),
         jsx("div", {
           class: "tut-actions",
-          children: jsx("button", {
-            type: "button",
-            class: "primary",
-            disabled: live.length > 0,
-            onClick: () => { if (!live.length) onLeave(); },
-            children: "Go on to the petitions",
-          }),
+          children: !live.length
+            ? jsx("button", { type: "button", class: "primary", onClick: () => onLeave(), children: "Go on to the petitions" })
+            : leaving
+              ? [
+                  jsx("button", { type: "button", class: "matters-leave", onClick: () => { setLeavingWeek(null); onLeaveUnheard(); },
+                    children: live.length === 1 ? "Send the caller away" : "Send them away" }, "go"),
+                  jsx("button", { type: "button", class: "primary", onClick: () => setLeavingWeek(null), children: "Hear them after all" }, "stay"),
+                ]
+              : [
+                  jsx("button", { type: "button", class: "matters-leave", onClick: () => setLeavingWeek(game.week),
+                    children: live.length === 1 ? (ks.length > 1 ? "Leave the last caller unheard…" : "Leave the caller unheard…")
+                      : live.length < ks.length ? "Leave the rest unheard…" : "Leave them unheard…" }, "ask"),
+                ],
         }),
       ],
     }),
@@ -52318,6 +52348,7 @@ p, li, blockquote {
 .hallway-party, .hallway-visitor { display: inline-flex; align-items: center; gap: .35em; }
 .hallway-party { flex-wrap: wrap; }
 .matter-btn .hallway-subject { display: block; font-weight: normal; }
+.matter-btn .matter-lapse { display: block; font-style: italic; color: var(--ink); opacity: .8; }
 .matter-btn:has(.hallway-subject) { display: flex; flex-direction: column; align-items: flex-start; gap: .2em; }
 .hallway-amp { line-height: inherit; }
 .hallway-visitor svg { display: block; }
@@ -54178,6 +54209,13 @@ p, li, blockquote {
 
 .party-q .tut-actions button.matters-leave {
   font-size: var(--t-base);
+}
+/* Leaving matters unheard is a quiet choice beside hearing them, never the obvious next step. */
+.matters-screen .party-q .tut-actions button.matters-leave {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--vellum-rule);
+  box-shadow: none;
 }
 
 .party-q .tut-actions button {
