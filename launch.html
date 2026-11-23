@@ -38509,6 +38509,42 @@ const HALL_RECALL = {
   bells: "the storm bells",
   burial: "the burial",
 };
+// The quarrels of the hall turn on principle. Each ruling for one house holds something, and what
+// the court last held on a question is cited at the next quarrel that turns on it: following it is
+// expected, and the house that loses knew the rule; reversing it costs the court with those who
+// relied on it. No ruling moves pressure, so the choice is never simply which house is nearer breaking.
+const HALL_PRINCIPLE = {
+  letter: "what was bound must be rendered in full",
+  mercy: "the last grain is not to be exacted",
+  crown: "the realm’s need comes before the household’s",
+  hearth: "the realm’s need stops at the household’s door",
+  old: "the older right stands",
+  fresh: "an old right must make room for a new claim",
+};
+const HALL_QUESTION = { letter: "bond", mercy: "bond", crown: "realm", hearth: "realm", old: "custom", fresh: "custom" };
+const HALL_HOLDS = {
+  debt: { a: "letter", b: "mercy" }, silk: { a: "letter", b: "mercy" }, measure: { a: "letter", b: "mercy" },
+  apprentice: { a: "letter", b: "mercy" }, tithe: { a: "letter", b: "mercy" }, favour: { a: "letter", b: "mercy" },
+  road: { a: "letter", b: "mercy" }, newroll: { a: "letter", b: "mercy" },
+  press: { a: "crown", b: "hearth" }, billet: { a: "hearth", b: "crown" }, forage: { a: "hearth", b: "crown" },
+  common: { a: "fresh", b: "old" }, hedge: { a: "old", b: "fresh" }, precedence: { a: "old", b: "fresh" },
+  match: { a: "fresh", b: "old" }, ward: { a: "old", b: "fresh" },
+};
+// What an option would hold, and how that sits with the court's last word on the same question.
+function hallHolding(game, hall, o) {
+  const side = o?.win && HALL_HOLDS[hall.matter]?.[o.win];
+  if (!side) return null;
+  const question = HALL_QUESTION[side], prior = game.holdings?.[question] || null;
+  return { side, question, prior, follows: !!prior && prior.side === side, reverses: !!prior && prior.side !== side };
+}
+const holdingCase = (prior) => `${stewardWeek(prior.week)}, on ${HALL_RECALL[prior.matter] || "an earlier quarrel"}`;
+function holdingText(game, hall, o, W, L) {
+  const hd = hallHolding(game, hall, o);
+  if (!hd) return "";
+  if (hd.follows) return `As the court held in ${holdingCase(hd.prior)}: ${HALL_PRINCIPLE[hd.side]}. ${hallName(L)} knew the rule, and takes no grudge from it.`;
+  if (hd.reverses) return `Against the court’s own ruling in ${holdingCase(hd.prior)}, that ${HALL_PRINCIPLE[hd.prior.side]}. The ${constituencyLabel(hd.prior.c)}, who relied on it, take 1 grievance. From now on the court holds that ${HALL_PRINCIPLE[hd.side]}.`;
+  return `This would hold that ${HALL_PRINCIPLE[hd.side]}. Later quarrels will be measured against it.`;
+}
 const ordTimes = (n) => (n === 1 ? "once" : n === 2 ? "twice" : `${mmNum(n)} times`);
 const HALL_SEQUELS = [
   {
@@ -38916,7 +38952,7 @@ const SOLO_MATTERS = {
         matter: "penitentHealth", faith: true, ruled: null, week: game.week,
         a: witness.id, b: vow.by, region: vow.region,
         from: { kind: "penance", id: vow.by, week: vow.began, constituency: vow.target },
-        perseveres: hallHash(game, 1893) < 0.5,
+        ...soloOdds(game, 1893, game.people[vow.by], "pressure"),
       };
     },
     valid(game, h) {
@@ -38938,8 +38974,8 @@ const SOLO_MATTERS = {
             consequence: `The weekly relief ends, and this penance can no longer clear a breach at quarter day. Devotion falls 1 among the laity of the ${h.region}.`, rows: [],
           },
           {
-            label: "Ask the penitent to persevere", note: "Both outcomes are equally likely.",
-            consequence: `Devotion rises 1 among the laity of the ${h.region} either way. Even chances: the penitent perseveres and weekly relief doubles to 2, or falls ill and the penance ends. Illness resets ${name}’s duty shares to zero.${soloDutySummary(game, penitent)}`, rows: [],
+            label: "Ask the penitent to persevere", note: oddsNote(h),
+            consequence: `Devotion rises 1 among the laity of the ${h.region} either way. ${oddsLead(h)}: the penitent perseveres and weekly relief doubles to 2, or falls ill and the penance ends. Illness resets ${name}’s duty shares to zero.${soloDutySummary(game, penitent)}`, rows: [],
           },
         ],
       };
@@ -38977,7 +39013,7 @@ const SOLO_MATTERS = {
           matter: "mortmainGlebe", faith: true, ruled: null, week: game.week,
           a: witness.id, b: gr.id, region: law.region,
           from: { kind: "mortmain", id: gr.id, week: game.week - 1, lawId: law.id },
-          perseveres: hallHash(game, 1903) < 0.5,
+          ...soloOdds(game, 1903, game.people[gr.id], "pressure"),
         };
       }
       return null;
@@ -39016,8 +39052,8 @@ const SOLO_MATTERS = {
             consequence: `${name} returns to an ordinary share on ${duty}.${moved}${picked}${gap}${othersStay}`, rows: [],
           },
           {
-            label: "Require delivery", note: "Both outcomes are equally likely.",
-            consequence: `Even chances: the stores suffice and the ${h.region}’s ${need} bar rises by ${actualGain} (now ${fmtNum(curBar)}, cap ${CONFIG.needBarMax}), or the endowment fails—ending mortmain on ${duty} at −${CONFIG.mortmainFailStanding} standing and +${CONFIG.mortmainFailDebt} disaster debt.`, rows: [],
+            label: "Require delivery", note: oddsNote(h),
+            consequence: `${oddsLead(h)}: the stores suffice and the ${h.region}’s ${need} bar rises by ${actualGain} (now ${fmtNum(curBar)}, cap ${CONFIG.needBarMax}), or the endowment fails—ending mortmain on ${duty} at −${CONFIG.mortmainFailStanding} standing and +${CONFIG.mortmainFailDebt} disaster debt.`, rows: [],
           },
         ],
       };
@@ -39075,7 +39111,7 @@ const SOLO_MATTERS = {
           matter: "bulwarkWatch", ruled: null, week: game.week,
           a: witness.id, b: gr.id, region: law.region,
           from: { kind: "bulwark", id: gr.id, week: game.week - 1, lawId: law.id },
-          perseveres: hallHash(game, 1913) < 0.5,
+          ...soloOdds(game, 1913, game.people[gr.id], "pressure"),
         };
       }
       return null;
@@ -39114,8 +39150,8 @@ const SOLO_MATTERS = {
             consequence: `Disbands the bulwark on ${duty}, giving up its accumulated military support and any disaster protection it has earned.`, rows: [],
           },
           {
-            label: "Hold the wall", note: "Both outcomes are equally likely.",
-            consequence: `Even chances: the garrison gains 2 weeks of readiness (${shieldNote}), or the garrison mutinies—breaking the bulwark, adding +${CONFIG.bulwarkMutinyPressure} pressure to the other bearers on ${duty}, and +${CONFIG.bulwarkMutinyG} soldier grievance.${exposedText}`, rows: [],
+            label: "Hold the wall", note: oddsNote(h),
+            consequence: `${oddsLead(h)}: the garrison gains 2 weeks of readiness (${shieldNote}), or the garrison mutinies—breaking the bulwark, adding +${CONFIG.bulwarkMutinyPressure} pressure to the other bearers on ${duty}, and +${CONFIG.bulwarkMutinyG} soldier grievance.${exposedText}`, rows: [],
           },
         ],
       };
@@ -41594,7 +41630,7 @@ const SOLO_MATTERS = {
           matter: "trialCombat", ruled: null, week: game.week,
           a: accused.id, b: accused.charge.by, region: accused.region,
           from: { kind: "accuse", accusedId: accused.id, accuserId: accused.charge.by },
-          perseveres: hallHash(game, 2223) < 0.5,
+          ...soloOdds(game, 2223, accused, "pressure"),
         };
       }
       return null;
@@ -41617,8 +41653,8 @@ const SOLO_MATTERS = {
         },
         options: [
           {
-            label: "Grant the combat", note: "Both outcomes are equally likely.",
-            consequence: `Even odds: if ${hallName(accused)} wins, the charge clears and ${hallName(accuser)} is sidelined from ${usrLaw ? dutyTitleOf(usrLaw) : "service"} for the week; if ${hallName(accuser)} wins, the charge stands without restoration and ${hallName(accused)} is sidelined from ${accLaw ? dutyTitleOf(accLaw) : "service"} for the week.`, rows: [],
+            label: "Grant the combat", note: oddsNote(h),
+            consequence: `${oddsLead(h)}: if ${hallName(accused)} wins, the charge clears and ${hallName(accuser)} is sidelined from ${usrLaw ? dutyTitleOf(usrLaw) : "service"} for the week; if ${hallName(accuser)} wins, the charge stands without restoration and ${hallName(accused)} is sidelined from ${accLaw ? dutyTitleOf(accLaw) : "service"} for the week.`, rows: [],
           },
           {
             label: "Hear the defence under oath", note: "Grant a promised hearing.",
@@ -41785,7 +41821,7 @@ const SOLO_MATTERS = {
           matter: "interdictFuneral", faith: true, ruled: null, week: game.week,
           a: cleric.id, b: bereaved.id, region: inter.region,
           from: { kind: "interdict", clericId: cleric.id, bereavedId: bereaved.id, hitIds: [...inter.ids] },
-          perseveres: hallHash(game, 2243) < 0.5,
+          ...soloOdds(game, 2243, cleric, "regard"),
         };
       }
       return null;
@@ -41818,7 +41854,7 @@ const SOLO_MATTERS = {
           },
           {
             label: "Uphold the decree", note: "The cleric must decide whether to obey.",
-            consequence: `Even chances: ${hallName(cleric)} obeys and the grudge survives, or conducts the burial anyway—clearing the grudge and returning under open charge (+${CONFIG.accusedCost} pressure).`, rows: [],
+            consequence: `${oddsLead(h)}: ${hallName(cleric)} obeys and the grudge survives, or conducts the burial anyway—clearing the grudge and returning under open charge (+${CONFIG.accusedCost} pressure).`, rows: [],
           },
         ],
       };
@@ -42020,7 +42056,7 @@ const SOLO_MATTERS = {
           matter: "brideObjectsTitle", ruled: null, week: game.week,
           a: spouse.id, b: noble.id, region: spouse.region,
           from: { kind: "blessing", spouseId: spouse.id, nobleId: noble.id, bondWeek: bond.week, former: noble.ennobled?.from ?? null },
-          perseveres: hallHash(game, 2263) < 0.5,
+          ...soloOdds(game, 2263, noble, "regard"),
         };
       }
       return null;
@@ -42042,8 +42078,8 @@ const SOLO_MATTERS = {
         shiftHouseholdEstate(trial, trial.people[noble.id], former);
         const backDuties = dutiesPaidBy(trial, trial.people[noble.id]).map((l) => `${dutyTitleOf(l)} (${unitsLabel(paidShare(trial, trial.people[noble.id], l))})`);
         opts.push({
-          label: "Put the offer to the noble", note: `May return to ${ESTATE_PLURAL[former]} (50/50).`,
-          consequence: `Even chances: ${hallName(noble)} consents—returning to the ${ESTATE_PLURAL[former]} (duties shift from ${curDuties.length ? curDuties.join(", ") : "none"} to ${backDuties.length ? backDuties.join(", ") : "none"}) and marrying in the lower estate—or declines and the match ends.`, rows: [],
+          label: "Put the offer to the noble", note: `May return to ${ESTATE_PLURAL[former]} . ${oddsNote(h)}`,
+          consequence: `${oddsLead(h)}: ${hallName(noble)} consents—returning to the ${ESTATE_PLURAL[former]} (duties shift from ${curDuties.length ? curDuties.join(", ") : "none"} to ${backDuties.length ? backDuties.join(", ") : "none"}) and marrying in the lower estate—or declines and the match ends.`, rows: [],
         });
       }
       opts.push({
@@ -42276,7 +42312,7 @@ const SOLO_MATTERS = {
           matter: "silverArrow", ruled: null, week: game.week,
           a: injured.id, b: pardoned.id, region: injured.region,
           from: { kind: "pardon", injuredId: injured.id, pardonedId: pardoned.id, milLawId: milLaw?.id ?? null },
-          perseveres: hallHash(game, 2293) < 0.5,
+          ...soloOdds(game, 2293, injured, "regard"),
         };
       }
       return null;
@@ -42294,8 +42330,8 @@ const SOLO_MATTERS = {
           consequence: `${hallName(injured)} recovers 1 regard. ${hallName(pardoned)} keeps its standing with the court.`, rows: [],
         },
         {
-          label: "Ask the injured house to present the prize in full", note: "50/50 acceptance.",
-          consequence: `Even chances: ${hallName(injured)} agrees and settles its grudge publicly, or refuses—costing the Crown 1 standing to present the arrow personally (or leaving it unawarded).${grudgeNote}`, rows: [],
+          label: "Ask the injured house to present the prize in full", note: oddsNote(h),
+          consequence: `${oddsLead(h)}: ${hallName(injured)} agrees and settles its grudge publicly, or refuses—costing the Crown 1 standing to present the arrow personally (or leaving it unawarded).${grudgeNote}`, rows: [],
         },
       ];
       if (milLaw) {
@@ -42767,14 +42803,19 @@ const SOLO_MATTERS = {
     },
   },
 };
-function drawSoloMatter(game, report, channel) {
+// A caller is "timely" when the visit follows from last week's own rulings (its draw reads the
+// report) and can come this week or never; a "standing" caller's occasion keeps, and can wait.
+const soloTimely = (spec) => spec.draw.length >= 2;
+Object.assign(CONFIG, { soloArcRestWeeks: 3 });
+// Among the callers who could come, the court hears first from the one this reign has heard least,
+// and one occasion (a page at court, a garrison on the wall) does not send caller after caller:
+// after any visit, standing callers from the same occasion rest for some weeks.
+function drawSoloMatter(game, report, channel, mode = "any") {
   const repeatWeeks = channel === "faith" ? (CONFIG.faithMatterRepeatWeeks ?? 4) : (CONFIG.hallRepeatWeeks ?? 4);
-  const recent = new Set(
-    (game.hallLog || [])
-      .filter((x) => x.week > game.week - repeatWeeks && SOLO_MATTERS[x.matter])
-      .map((x) => x.matter),
-  );
-  const specs = Object.values(SOLO_MATTERS).filter((s) => s.channel === channel && !recent.has(s.id));
+  const log = (game.hallLog || []).filter((x) => SOLO_MATTERS[x.matter]);
+  const recent = new Set(log.filter((x) => x.week > game.week - repeatWeeks).map((x) => x.matter));
+  const specs = Object.values(SOLO_MATTERS).filter((s) => s.channel === channel && !recent.has(s.id)
+    && (mode === "any" || (mode === "timely") === soloTimely(s)));
   if (!specs.length) return null;
   // Keep granted assay reports reliable the week after Assess the Sign by Count.
   if (channel === "faith") {
@@ -42784,14 +42825,32 @@ function drawSoloMatter(game, report, channel) {
       if (m) return m;
     }
   }
+  const resting = new Set(log.filter((x) => x.week > game.week - CONFIG.soloArcRestWeeks).map((x) => x.source?.kind).filter(Boolean));
+  const seen = game.soloSeen || {};
   const salt = channel === "faith" ? 1889 : 1888;
   const start = Math.floor(hallHash(game, salt) * specs.length);
+  let best = null, bestSeen = Infinity;
   for (let i = 0; i < specs.length; i++) {
-    const m = specs[(start + i) % specs.length].draw(game, report);
-    if (m) return m;
+    const spec = specs[(start + i) % specs.length], m = spec.draw(game, report);
+    if (!m || (!soloTimely(spec) && resting.has(m.from?.kind))) continue;
+    const n = seen[spec.id] || 0;
+    if (n < bestSeen) (best = m), (bestSeen = n);
   }
-  return null;
+  return best;
 }
+// A gamble's odds are read from the house it turns on: its strain, or what it thinks of the court.
+function soloOdds(game, salt, person, by) {
+  const v = by === "regard" ? (person?.regard ?? 0) : (person?.pressure ?? 0),
+    chance = !person ? 0.5 : by === "regard" ? (v > 0 ? 0.7 : v < 0 ? 0.3 : 0.5) : v >= CONFIG.urgent ? 0.3 : v >= CONFIG.pressing ? 0.5 : 0.7,
+    name = person ? hallName(person) : "",
+    oddsWhy = !person ? ""
+      : by === "regard" ? (chance > 0.5 ? `${name} thinks well of the court` : chance < 0.5 ? `${name} thinks ill of the court` : `${name} has no strong feeling toward the court`)
+      : chance > 0.5 ? `${name} is under little pressure` : chance < 0.5 ? `${name} is already at urgent pressure` : `${name} is already pressed`;
+  return { chance, oddsWhy, perseveres: hallHash(game, salt) < chance };
+}
+// The odds of a gamble's first-named outcome. Matters drawn before odds were kept read as even.
+const oddsLead = (h) => (h?.chance > 0.5 ? "Seven chances in ten" : h?.chance < 0.5 ? "Three chances in ten" : "Even chances");
+const oddsNote = (h) => [oddsLead(h), h?.oddsWhy].filter(Boolean).join(". ") + ".";
 function settleSoloMatter(game, channel, choice, isLapse = false) {
   const h = channel === "faith" ? game.faithMatter : game.hall;
   const spec = h && SOLO_MATTERS[h.matter];
@@ -42805,6 +42864,12 @@ function settleSoloMatter(game, channel, choice, isLapse = false) {
   m.ruled = useCustomLapse ? "lapsed" : choice;
   if (isLapse) m.lapsed = true;
   m.text = useCustomLapse ? spec.lapse(g, m) : spec.apply(g, m, choice, keep);
+  g.soloSeen = { ...(g.soloSeen || {}), [m.matter]: (g.soloSeen?.[m.matter] || 0) + 1 };
+  // A caller sent away unheard thinks the worse of the court, however the matter itself falls out.
+  if (isLapse && !spec.lapseFree && g.people[m.a]) {
+    addRegard(g.people[m.a], -CONFIG.lapseRegard);
+    m.text += ` ${hallName(g.people[m.a])} was sent away unheard, and thinks the worse of the court.`;
+  }
   g.hallLog = [...(g.hallLog || []), {
     week: g.week, matter: m.matter, a: m.a, b: m.b,
     source: m.from, choice, text: m.text, ...(channel === "faith" ? { faith: true } : {}),
@@ -42953,7 +43018,8 @@ function drawHall(game, prev = null, report = null) {
     return visit(HALL_RETURN_OF[entry.matter][entry.choice], entry.a, entry.b,
       `When these households came before you in ${stewardWeek(entry.week)}, you chose to ${hallMatter(entry.matter).options[entry.choice].label.split(" · ")[0].replace(/^./, c => c.toLowerCase())}.`, entry.source);
   }
-  const solo = drawSoloMatter(game, report, "hall");
+  // What follows from last week comes first; a caller whose occasion keeps waits for a quieter week.
+  const solo = drawSoloMatter(game, report, "hall", "timely");
   if (solo) return solo;
   // Start with the original visit, then vary repeat occasions across the realm.
   const nextStory = (first, second) => {
@@ -42986,6 +43052,8 @@ function drawHall(game, prev = null, report = null) {
     }
   }
   if (offers.length) return offers.find(h => h.matter === "wedding" || h.matter === "fiddle") || offers[Math.floor(hallHash(game, 713) * offers.length)];
+  const standing = drawSoloMatter(game, report, "hall", "standing");
+  if (standing) return standing;
   // Only a match forbidden on the docket can bring the couple back.
   const log = game.hallLog || [];
   const i = log.findIndex(x => x.docket && x.matter === "match" && x.win === "b" && !x.sequel &&
@@ -43067,7 +43135,11 @@ function hallView(game, hall = game.hall) {
   return {
     title: m.title(A, B, hall.region, hall),
     lede: [m.lede(A, B, hall.region, hall), hall === game.hall
-      ? matterEntry(game, "hall").cause : hall === game.faithMatter ? faithCause(game, hall) : ""].filter(Boolean).join(" "),
+      ? matterEntry(game, "hall").cause : hall === game.faithMatter ? faithCause(game, hall) : "",
+      (() => {
+        const side = HALL_HOLDS[hall.matter]?.a, prior = side && game.holdings?.[HALL_QUESTION[side]];
+        return prior ? `Both have heard what the court held in ${holdingCase(prior)}: that ${HALL_PRINCIPLE[prior.side]}.` : "";
+      })()].filter(Boolean).join(" "),
     asked: !!hall.asked,
     a: { name: hallName(A), plea: m.pa(A, B, hall.region, hall), id: A.id, estate: A.type, region: A.region },
     b: m.pb ? { name: hallName(B), plea: m.pb(A, B, hall.region, hall), id: B.id, estate: B.type, region: B.region } : null,
@@ -43079,12 +43151,13 @@ function hallView(game, hall = game.hall) {
         consequence: hall.matter === "marriageRank"
           ? o.ennoble ? `${hallName(B)} enters the noble estate and its duty rolls. The two houses marry. ${marriageGrievanceText(game, A, B)}`
             : "The wedding is called off. Both houses keep their present ranks."
-          : HALL_RETURN_OF[hall.matter] ? "These households will return about this ruling after at least one intervening week." : "",
+          : HALL_RETURN_OF[hall.matter] ? "These households will return about this ruling after at least one intervening week."
+          : holdingText(game, hall, o, W, L),
         disabled: !!o.cost && !canSpendStanding(game, o.cost),
         win: W ? hallName(W) : null,
         winSide: o.win,
         lose: L ? hallName(L) : null,
-        grudge: W && (hall.matter === "feud" || !(L.grudge && L.grudge.until > game.week)) ? `the ${estateInRegion(W.region, W.type)}` : null,
+        grudge: W && !hallHolding(game, hall, o)?.follows && (hall.matter === "feud" || !(L.grudge && L.grudge.until > game.week)) ? `the ${estateInRegion(W.region, W.type)}` : null,
         kin: L ? hallKin(game, L.id).filter((k) => k !== W.id).map((k) => hallName(game.people[k])) : [],
         rows: hallRows(game, hall, o, A, B, W, L),
         note: o.ennoble ? "The spouse is raised to noble rank." : o.both ? "Both houses gain one regard." : o.regardA || o.regardB ? `${hallName(o.regardA ? A : B)} gains one regard.` : W
@@ -43109,11 +43182,8 @@ function hallEffects(game, hall, o, A, B, W, L) {
   }
   if (W) {
     const w = at(W), l = at(L);
-    const pressure = HALL_STORIES.has(hall.matter) ? 0 : CONFIG.hallPressure;
-    w.dp -= W.pressure > 0 ? pressure : 0;
     w.dr += CONFIG.hallRegard;
     w.tone = "up";
-    l.dp += pressure;
     l.dr -= CONFIG.hallRegard;
     l.tone = "down";
     for (const k of hallKin(game, L.id)) {
@@ -43203,12 +43273,15 @@ function ruleHall(game, choice) {
   if (W) {
     addRegard(W, CONFIG.hallRegard);
     addRegard(L, -CONFIG.hallRegard);
-    if (!HALL_STORIES.has(hall.matter)) {
-      W.pressure > 0 && addPressure(W, -CONFIG.hallPressure);
-      addPressure(L, CONFIG.hallPressure);
+    const hd = hallHolding(g, hall, o);
+    if (hd) {
+      if (hd.reverses) addGrievance(g, hd.prior.c, 1);
+      g.holdings = { ...(g.holdings || {}), [hd.question]: { side: hd.side, week: g.week, matter: hall.matter, c: constituencyOf(W) } };
     }
-    // a house ruled against twice by the same court in the same quarrel has its grudge renewed
-    if (!(L.grudge && L.grudge.until > g.week) || hall.matter === "feud")
+    // a house ruled against twice by the same court in the same quarrel has its grudge renewed;
+    // a house that loses by the court's known rule takes none
+    if (hd?.follows) {
+    } else if (!(L.grudge && L.grudge.until > g.week) || hall.matter === "feud")
       L.grudge = { c: constituencyOf(W), until: g.week + CONFIG.hallGrudgeWeeks, amount: 1 };
     // its kin by marriage take its part
     for (const k of hallKin(g, L.id)) if (k !== W.id) addRegard(g.people[k], -CONFIG.hallRegard);
@@ -43227,7 +43300,11 @@ function ruleHall(game, choice) {
       addGrievance(g, "Realm|Noble", CONFIG.confirmRiseGrievance);
     shiftHouseholdEstate(g, B, "Noble");
   }
-  const text = [o.done(A, B, hall.region, hall), peerResponse].filter(Boolean).join(" ");
+  const held = hallHolding(game, hall, o),
+    holdingLine = !held ? "" : held.reverses
+      ? `The court reverses itself: it now holds that ${HALL_PRINCIPLE[held.side]}, and the ${constituencyLabel(held.prior.c)} take 1 grievance.`
+      : held.follows ? `The court holds, as before, that ${HALL_PRINCIPLE[held.side]}.` : `The court holds that ${HALL_PRINCIPLE[held.side]}.`;
+  const text = [o.done(A, B, hall.region, hall), holdingLine, peerResponse].filter(Boolean).join(" ");
   for (const [P, O] of [[A, B], [B, A]])
     P.hallMem = [
       ...(P.hallMem || []),
@@ -43846,7 +43923,10 @@ function lapseNote(game, k) {
   const m = matterOf(game, k),
     who = lapseSlighted(game, k).map(hallName),
     ill = who.length ? `${nameList(who)} would take it ill` : "";
-  if (SOLO_MATTERS[m.matter]) return SOLO_MATTERS[m.matter].lapseNote(game, m);
+  if (SOLO_MATTERS[m.matter]) {
+    const spec = SOLO_MATTERS[m.matter], caller = game.people[m.a];
+    return [spec.lapseNote(game, m), !spec.lapseFree && caller ? `${hallName(caller)} would take it ill.` : ""].filter(Boolean).join(" ");
+  }
   if (k === "works" && m.stage === "build") {
     const A = m.a != null ? hallName(game.people[m.a]) : "";
     return {
