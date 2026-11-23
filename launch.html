@@ -43997,7 +43997,7 @@ function MattersScreen({ game, onOpen, onLeave, onLeaveUnheard }) {
                 type: "button",
                 class: `matter-btn${open ? "" : " settled"}`,
                 disabled: !open,
-                onClick: () => open && onOpen(k),
+                onClick: () => { if (!open) return; setLeavingWeek(null); onOpen(k); },
                 children: [jsx("span", { class: "hallway-party", children: hallwayVisitors(game, k).flatMap((p, i) => [
                   ...(i ? [jsx("span", { class: "hallway-amp", "aria-hidden": "true", children: "&" })] : []),
                   jsx("span", { class: "hallway-visitor", children: [
@@ -44019,11 +44019,9 @@ function MattersScreen({ game, onOpen, onLeave, onLeaveUnheard }) {
           children: !live.length
             ? jsx("button", { type: "button", class: "primary", onClick: () => onLeave(), children: "Go on to the petitions" })
             : leaving
-              ? [
-                  jsx("button", { type: "button", class: "matters-leave", onClick: () => { setLeavingWeek(null); onLeaveUnheard(); },
-                    children: live.length === 1 ? "Send the caller away" : "Send them away" }, "go"),
-                  jsx("button", { type: "button", class: "primary", onClick: () => setLeavingWeek(null), children: "Hear them after all" }, "stay"),
-                ]
+              // Hearing a caller instead is just a matter of opening it; no separate way back is needed.
+              ? jsx("button", { type: "button", class: "matters-leave", onClick: () => { setLeavingWeek(null); onLeaveUnheard(); },
+                  children: live.length === 1 ? "Send the caller away" : "Send them away" }, "go")
               : [
                   jsx("button", { type: "button", class: "matters-leave", onClick: () => setLeavingWeek(game.week),
                     children: live.length === 1 ? (ks.length > 1 ? "Leave the last caller unheard…" : "Leave the caller unheard…")
