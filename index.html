@@ -38931,7 +38931,9 @@ function HallOption({ game, v, o, onRule }) {
     quiet = !v.solo && !outcomes && !terms.length && !shown.length,
     // the summary under the button: never the price or the odds again, which coin and chips show
     bareNote = (o.note || "").replace(/^(Seven|Three) chances in ten\.\s*|^Even chances\.\s*/, "").trim(),
-    note = (v.solo || quiet) && bareNote && !/^(Costs|Stake) \d+ standing|equally likely|50\/50/i.test(bareNote) ? bareNote : null;
+    // no summary under the button: an option speaks through its lines and rows. Only an option
+    // that moves nothing at all says so ("Neither house is pleased or aggrieved").
+    note = quiet && bareNote && !/^(Costs|Stake) \d+ standing|equally likely|50\/50/i.test(bareNote) ? bareNote : null;
   return jsx("div", {
     class: "hall-option",
     children: [
