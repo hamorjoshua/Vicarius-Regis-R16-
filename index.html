@@ -43623,7 +43623,7 @@ function hallView(game, hall = game.hall) {
       })()].filter(Boolean).join(" "),
     asked: !!hall.asked,
     shared: hall.matter !== "marriageRank" && HALL_RETURN_OF[hall.matter] ? "Whatever you rule, these households will come back about it in a week or two."
-      : HALL_KIND[hall.matter] === "facts" ? "One of them is lying, and the court cannot tell which." : null,
+      : HALL_KIND[hall.matter] === "facts" ? "One of them is lying, and there is no telling which. Rule for the one you believe." : null,
     sharedIcon: HALL_KIND[hall.matter] === "facts" ? "question" : "hourglass",
     a: { name: hallName(A), plea: m.pa(A, B, hall.region, hall), id: A.id, estate: A.type, region: A.region },
     b: m.pb ? { name: hallName(B), plea: m.pb(A, B, hall.region, hall), id: B.id, estate: B.type, region: B.region } : null,
