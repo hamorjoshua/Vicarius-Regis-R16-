@@ -38911,10 +38911,12 @@ function HallOption({ game, v, o, onRule }) {
             class: "hall-outcomes",
             children: outcomes.map((oc, i) =>
               jsx("div", { class: "hall-outcome", children: [
-                jsx("p", { class: "hall-outcome-head", children: [
-                  jsx("span", { class: "hall-tag hall-odds-tag", "aria-label": `${oddsText(oc.odds)} chances`, children: oddsText(oc.odds) }),
-                  oddsTerms.length === 2 ? (oc.rows.length ? pruneCovered(oddsTerms[i].text, { outcome: true }) : oddsTerms[i].text) : "",
-                ] }),
+                jsx("p", { class: "hall-outcome-head", children: jsx("span", { class: "hall-tag hall-odds-tag", "aria-label": `${oddsText(oc.odds)} chances`, children: oddsText(oc.odds) }) }),
+                // what the rows cannot say is a line item of its own, beside them
+                (() => {
+                  const said = oddsTerms.length === 2 ? (oc.rows.length ? pruneCovered(oddsTerms[i].text, { outcome: true }) : oddsTerms[i].text) : "";
+                  return said ? jsx(HallTerms, { terms: [{ text: said }] }) : null;
+                })(),
                 oc.rows.length > 0 && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, oc.rows)) }),
               ] }, i)),
           }),
@@ -53060,6 +53062,8 @@ p, li, blockquote {
 .hall-option .hall-terms li:has(.hall-tag) .hall-tile { width: 20px; height: 20px; }
 .hall-option .hall-outcome { background: transparent; padding: 8px 8px 8px; }
 .hall-option .hall-outcome .fx-list { margin-top: 7px; }
+.hall-option .hall-outcome .hall-terms { margin-top: 7px; }
+.hall-option .hall-outcome .hall-terms + .fx-list { margin-top: 6px; }
 /* A household on one line: icon, name, pressure pips and regard, drawn smaller. A note that regard
    spilled into pressure, or anything else said about the row, takes the line below. */
 .hall-option .fx-row { align-items: start; }
