@@ -38757,7 +38757,13 @@ function soloDiffRows(before, after, hall) {
     rows.push({
       term: true, icon: up ? "hamsa" : "seer",
       text: `The ${region} ${regionVerb(region)} ${up ? "more" : "less"} superstitious.`,
-      pop: list.map((e) => `${hallName(e.p0)}: ${FAITH_STATE.superstition[superstitionOf(e.p0)]} to ${FAITH_STATE.superstition[superstitionOf(e.p1)]}.`).join(" "),
+      // what the change means, then who changes and how
+      pop: [
+        up
+          ? `More of the ${region} will look for signs in everything. The credulous take comfort in omens, but take every disaster for one, and are the easier alarmed.`
+          : `Fewer in the ${region} will look for signs. Omens comfort them less, but a disaster is only a disaster, and they are the harder to alarm.`,
+        ...list.map((e) => `${hallName(e.p0)} grows ${FAITH_STATE.superstition[superstitionOf(e.p1)].toLowerCase()}${superstitionOf(e.p0) > 0 || up ? `, from ${FAITH_STATE.superstition[superstitionOf(e.p0)].toLowerCase()}` : ""}.`),
+      ],
     });
     for (const e of list) e.ds = 0;
   }
@@ -38899,7 +38905,9 @@ function HallPopLine({ t, mark, cls }) {
     children: [
       mark && jsx("span", { class: "hall-mark", children: mark }),
       jsx("span", { class: "hall-term-text", children: [t.tag && jsx("span", { class: "hall-tag", children: t.tag }), t.text] }),
-      open && jsx("span", { class: "hall-pop", role: "note", children: t.pop }),
+      open && jsx("span", { class: "hall-pop", role: "note", children: Array.isArray(t.pop)
+        ? [jsx("span", { class: "hall-pop-lead", children: t.pop[0] }), jsx("span", { class: "hall-pop-list", children: t.pop.slice(1).map((x, k) => jsx("span", { class: "hall-pop-item", children: x }, k)) })]
+        : t.pop }),
     ],
   });
 }
@@ -53158,6 +53166,10 @@ p, li, blockquote {
   box-shadow: 0 10px 26px rgba(10, 14, 11, .46), 0 2px 6px rgba(10, 14, 11, .28);
   animation: court-pop 120ms ease-out;
 }
+.hall-pop-lead { display: block; }
+.hall-pop-list { display: block; margin-top: 7px; padding-top: 6px; border-top: 1px solid #ead6a533; font-style: normal; }
+.hall-pop-item { display: block; }
+.hall-pop-item + .hall-pop-item { margin-top: 2px; }
 .hall-pop::before {
   content: ""; position: absolute; top: -5px; left: 18px; width: 8px; height: 8px;
   background: var(--ink); transform: rotate(45deg);
