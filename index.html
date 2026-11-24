@@ -43959,7 +43959,7 @@ function personFx(person, dp, dr, tone, extra = {}) {
     icon: RECKONING_ESTATE_ICON[person.type],
     id: person.id,
     who: hallName(person),
-    pressure: dp || p2 !== p1 ? { from: p0, to: p2 } : null,
+    pressure: dp || spill ? { from: p0, to: p2 } : null,
     regard: dr ? { from: r0, to: r1 } : null,
     ...extra,
     // regard past its bound spills into pressure; say so, since the graph alone cannot
@@ -43967,7 +43967,9 @@ function personFx(person, dp, dr, tone, extra = {}) {
       [
         extra.what,
         spill
-          ? `already at ${r0 > 0 ? "+" : r0 < 0 ? "−" : ""}${Math.abs(r0)} regard, so ${spill > 0 ? "eased" : "pressed"} by ${Math.abs(spill)} instead`
+          ? p2 !== p1
+            ? `already at ${r0 > 0 ? "+" : r0 < 0 ? "−" : ""}${Math.abs(r0)} regard, so ${spill > 0 ? "eased" : "pressed"} by ${Math.abs(p1 - p2)} pressure instead`
+            : `already at ${r0 > 0 ? "+" : r0 < 0 ? "−" : ""}${Math.abs(r0)} regard, with no pressure left to ease`
           : "",
       ]
         .filter(Boolean)
@@ -52985,7 +52987,9 @@ p, li, blockquote {
 .hall-option .hall-outcome .fx-list { margin-top: 7px; }
 /* A household on one line: icon, name, pressure pips and regard, drawn smaller. A note that regard
    spilled into pressure, or anything else said about the row, takes the line below. */
-.hall-option .fx-row { align-items: center; }
+.hall-option .fx-row { align-items: start; }
+.hall-option .fx-row > .fx-icon { height: 22px; }
+.hall-option .fx-text > .fx-who, .hall-option .fx-text > .fx-who-line, .hall-option .fx-text > .fx-meters { min-height: 22px; display: inline-flex; align-items: center; }
 .hall-option .fx-text { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 2px; }
 .hall-option .fx-who { white-space: nowrap; }
 .hall-option .fx-who-line { display: inline-flex; align-items: center; gap: 6px; }
