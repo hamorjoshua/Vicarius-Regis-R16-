@@ -31172,7 +31172,8 @@ function HearingsSheet({ record, interactive = !0, animate = !1 }) {
 const RASTER_ICONS = new Set(["commoner-river", "commoner-tower", "commoner-mountain"]);
 // Commoners are three estates, one to a region, each with its own mark; the regions themselves are
 // marked by the same figures without the person (river, mountain, tower).
-const COMMONER_ICON = { Riverlands: "commoner-river", Highlands: "commoner-mountain", Capital: "commoner-tower" };
+// Commoners take their region's own mark (the figures with a person drawn on them did not read at size).
+const COMMONER_ICON = { Riverlands: "river", Highlands: "mountain", Capital: "tower" };
 const REGION_ICON = { Riverlands: "river", Highlands: "mountain", Capital: "tower" };
 function estateIcon(estate, region) {
   if (estate === "Commoner") return COMMONER_ICON[region] || "common";
