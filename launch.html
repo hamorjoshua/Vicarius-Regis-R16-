@@ -38691,7 +38691,7 @@ function soloDiffRows(before, after, hall) {
   const st0 = before.standing ?? CONFIG.standingMax, st1 = after.standing ?? CONFIG.standingMax,
     d = st1 + (after.reserve || 0) - st0 - (before.reserve || 0);
   if (d)
-    rows.push({ tone: d > 0 ? "up" : "down", icon: "crown", who: "Crown standing",
+    rows.push({ plain: true,
       seals: { value: st0, projected: st1, reserve: before.reserve || 0, label: `${d > 0 ? "+" : "−"}${Math.abs(d)}` } });
   const moved = [];
   for (const p0 of before.people) {
@@ -38778,6 +38778,37 @@ function soloPreview(game, hall, choice) {
   }
   return (cache.by[choice] = out);
 }
+// Prose the drawn rows already say is cut down to what they cannot: a sentence is broken into its
+// clauses, a clause that only moves a measure by a number goes, and what is left is the qualitative
+// part ("the children can truthfully blame you"). A clause with a condition on it always stays.
+const MEASURE = /\b(standing|regard|pressure|grievance|devotion|devout|superstition|superstitious|bar)\b/i;
+const CONDITION = /\b(if|unless|until|next|while|weeks?|when|may|either|otherwise|chances?|reckoning|quarter)\b/i;
+// what a clause says beyond the number, which the rows cannot draw
+const BEYOND = /\b(end\w*|debt|mortmain|grudge|charge|writ|dut(y|ies)|units?|roll|relief|shares?|office|title|rank|either|instead)\b/i;
+const ARTICLE = /^(the|a|an|both|each|every|no|its|his|her|their|any|some|all|this|that|these|those)\b/i;
+function pruneCovered(text, { outcome = false } = {}) {
+  let t = text.trim().replace(/\.$/, "");
+  // an outcome's own "if the hall laughs," is said by its odds chip
+  const lead = outcome ? t.match(/^(if|should)\b[^,]*,\s*/i) : null;
+  if (lead) t = t.slice(lead[0].length);
+  const parts = t.split(/\s*;\s*|,\s+and\s+(?=[a-z])|\s+and\s+(?=[a-z])|,\s+(?=(?:but|though)\b)|\s+while\s+(?=(?:the|its|his|her|their)\b)/);
+  const kept = [];
+  let subject = "", lastCut = false, cut = !!lead;
+  for (const part of parts) {
+    const who = part.match(/^((?:[A-Z][\w’'-]*\s)+)(?=[a-z])/);
+    if (who && !ARTICLE.test(who[1])) subject = who[1].trim();
+    else if (/^[A-Z]/.test(part)) subject = "";
+    const covered = MEASURE.test(part) && /\d/.test(part) && !CONDITION.test(part) && !BEYOND.test(part);
+    if (covered) { lastCut = cut = true; continue; }
+    // a clause that lost its subject to a cut one takes it back
+    kept.push(lastCut && /^[a-z]/.test(part) && subject && !ARTICLE.test(part) ? `${subject} ${part}` : part);
+    lastCut = false;
+  }
+  if (!cut) return text;
+  if (!kept.length) return "";
+  const out = kept.join(", and ").replace(/\s*\([^)]*\)/g, "").trim();
+  return out ? `${capFirst(out)}.` : "";
+}
 // A line of prose the drawn rows already say in full: a plain change to a measure, with no condition on it.
 const termCovered = (text) =>
   /\b(pressure|regard|standing|grievance|devotion|superstition)\b/i.test(text) &&
@@ -38814,14 +38845,16 @@ function HallOption({ game, v, o, onRule }) {
     oddsTerms = all.filter((t) => /^(Even|\d in 10)$/.test(t.tag || "")),
     // a gamble is always set out as its two outcomes, with what each moves where the court can tell
     outcomes = preview?.outcomes || (oddsTerms.length === 2 ? oddsTerms.map((t) => ({ odds: t.tag, rows: [] })) : null),
-    terms = all.filter((t) => !(outcomes && oddsTerms.length === 2 && oddsTerms.includes(t))
-      && !(drawn && !t.tag && termCovered(t.text))
-      // the badge on the button already names the price
-      && !(cost > 0 && t.tag === "Cost" && /^(Costs|Spends?|Stake) \d+ standing\.?$/.test(t.text))),
+    terms = all.filter((t) => !(outcomes && oddsTerms.length === 2 && oddsTerms.includes(t)))
+      // what the rows (and the coin on the button) already show is cut from the words
+      .map((t) => (drawn && (!t.tag || t.tag === "Cost") ? { ...t, text: pruneCovered(t.text), tag: t.tag === "Cost" ? null : t.tag, icon: t.tag === "Cost" ? null : t.icon } : t))
+      .filter((t) => t.text && !(cost > 0 && t.tag === "Cost" && /^(Costs|Spends?|Stake) \d+ standing\.?$/.test(t.text))),
     shown = preview?.rows || o.rows || [],
     // an option that moves nothing says so, rather than standing empty
     quiet = !v.solo && !outcomes && !terms.length && !shown.length,
-    note = (v.solo || quiet) && o.note && !/^Costs \d+ standing\.?$/.test(o.note) ? o.note : null;
+    // the summary under the button: never the price or the odds again, which coin and chips show
+    bareNote = (o.note || "").replace(/^(Seven|Three) chances in ten\.\s*|^Even chances\.\s*/, "").trim(),
+    note = (v.solo || quiet) && bareNote && !/^(Costs|Stake) \d+ standing|equally likely|50\/50/i.test(bareNote) ? bareNote : null;
   return jsx("div", {
     class: "hall-option",
     children: [
@@ -38833,7 +38866,7 @@ function HallOption({ game, v, o, onRule }) {
         onClick: onRule,
         children: [
           jsx("span", { class: "hall-choose-label", children: label }),
-          cost > 0 && jsx("span", { class: "hall-cost", title: `Costs ${cost} standing`, children: [jsx(Icon, { icon: "crown", size: 13 }), `−${cost}`] }),
+          cost > 0 && jsx("span", { class: "flip-cost hall-coin", title: `Costs ${cost} standing`, "aria-label": `Costs ${cost} standing`, children: `−${cost}` }),
         ],
       }),
       note && jsx("p", { class: "hall-summary", children: note }),
@@ -38845,7 +38878,7 @@ function HallOption({ game, v, o, onRule }) {
               jsx("div", { class: "hall-outcome", children: [
                 jsx("p", { class: "hall-outcome-head", children: [
                   jsx("span", { class: "hall-odds", children: oc.odds }),
-                  oddsTerms.length === 2 ? oddsTerms[i].text : "",
+                  oddsTerms.length === 2 ? (oc.rows.length ? pruneCovered(oddsTerms[i].text, { outcome: true }) : oddsTerms[i].text) : "",
                 ] }),
                 oc.rows.length > 0 && jsx(EffectRows, { rows: withOfficeTags(game, oc.rows) }),
               ] }, i)),
@@ -41403,7 +41436,7 @@ const SOLO_MATTERS = {
           {
             label: "Write yourself in as the petitioner instead", note: "Costs 1 standing.",
             disabled: !canSpendStanding(game, 1),
-            consequence: `Spends 1 standing, for the Vicar is the joke now. ${hallName(sponsor)} gains 1 regard${rival ? `, and ${hallName(rival)}’s heir is given the second reader’s place (+1 regard)` : ""}. ${N} is spared, and never knows how nearly.`, rows: [],
+            consequence: `The Vicar is the joke now. ${hallName(sponsor)} gains 1 regard${rival ? `. ${hallName(rival)}’s heir is given the second reader’s place` : ""}. ${N} is spared, and never knows how nearly.`, rows: [],
           },
         ],
       };
@@ -43809,7 +43842,7 @@ function hallMemLines(person, game = TEXT.game) {
 function EffectRows({ rows }) {
   const lvl = (v) => (v >= CONFIG.urgent ? 2 : v >= CONFIG.pressing ? 1 : 0),
     // what a ruling gives comes first, then what it costs
-    rank = (r) => (r.tone === "up" ? 0 : r.tone === "down" ? 2 : 1);
+    rank = (r) => (r.plain ? -1 : r.tone === "up" ? 0 : r.tone === "down" ? 2 : 1);
   rows = [...rows].sort((a, b) => rank(a) - rank(b));
   return jsx("ul", {
     class: "fx-list",
@@ -43819,7 +43852,7 @@ function EffectRows({ rows }) {
         {
           class: `fx-row ${r.tone || "even"}`,
           children: [
-            jsx("span", { class: "fx-mark", "aria-hidden": "true", children: r.tone === "up" ? "▲" : r.tone === "down" ? "▼" : "·" }),
+            jsx("span", { class: "fx-mark", "aria-hidden": "true", children: r.plain ? "" : r.tone === "up" ? "▲" : r.tone === "down" ? "▼" : "·" }),
             jsx("span", {
               class: "fx-icon",
               "aria-hidden": "true",
@@ -43833,7 +43866,7 @@ function EffectRows({ rows }) {
                       class: "fx-who-line",
                       children: [jsx("span", { class: "fx-who", children: r.who }), jsx("span", { class: "pm-tag pm-office fx-office", children: r.office })],
                     })
-                  : jsx("span", { class: "fx-who", children: r.who }),
+                  : r.who ? jsx("span", { class: "fx-who", children: r.who }) : null,
                 r.bar &&
                   jsx("span", {
                     class: `fx-bar-row ${r.bar.kind}`,
@@ -45143,9 +45176,7 @@ function worksView(game) {
           disabled = !canSpendStanding(game, o.standing);
           const st = game.standing ?? CONFIG.standingMax;
           rows.push({
-            tone: "down",
-            icon: "crown",
-            who: "Crown standing",
+            plain: true,
             seals: { value: st, projected: disabled ? st : Math.max(0, st - Math.max(0, o.standing - (game.reserve || 0))), reserve: game.reserve || 0, label: `−${o.standing}` },
             what: disabled ? `the Crown has not ${o.standing} standing to spend` : null,
           });
@@ -45165,7 +45196,7 @@ function worksView(game) {
           });
         }
         if (o.pressureA || o.regardA) rows.push(personFx(A, o.pressureA || 0, o.regardA || 0, "down"));
-        return { label: typeof o.label === "function" ? o.label(An) : o.label, rows, disabled };
+        return { label: typeof o.label === "function" ? o.label(An) : o.label, rows, disabled, cost: o.standing || 0 };
       }),
     };
   }
@@ -45346,7 +45377,10 @@ function WorksOverlay({ game, onRule, view }) {
                     class: "primary hall-choose",
                     disabled: !!o.disabled,
                     onClick: () => onRule(i),
-                    children: o.label,
+                    children: [
+                      jsx("span", { class: "hall-choose-label", children: o.label }),
+                      o.cost > 0 && jsx("span", { class: "flip-cost hall-coin", title: `Costs ${o.cost} standing`, "aria-label": `Costs ${o.cost} standing`, children: `−${o.cost}` }),
+                    ],
                   }),
                   jsx(EffectRows, { rows: withOfficeTags(game, o.rows) }),
                 ],
@@ -52874,6 +52908,8 @@ p, li, blockquote {
 .hall-summary { margin: 0; font-size: 1em; line-height: 1.3; font-style: italic; text-align: center; text-wrap: balance; }
 .hall-choose { display: flex !important; align-items: center; justify-content: center; gap: 10px; }
 .hall-choose-label { min-width: 0; }
+.flip-cost.hall-coin { flex: none; width: 23px; height: 23px; margin: 0; font-weight: 600; font-size: var(--t-sm); background: #e2c98a; color: #2b2113; box-shadow: 0 0 0 1.5px #2b2113, 0 1px 0 1.5px #00000038; }
+.fx-row:has(> .fx-mark:empty) .fx-icon:empty + .fx-text .fx-meters { margin-top: 1px; }
 .hall-cost { flex: none; display: inline-flex; align-items: center; gap: 3px; font: 600 var(--t-sm)/1 var(--sans); padding: 4px 7px 3px; border-radius: 999px; background: #2b211a; color: #ead6a5; }
 .hall-cost svg { display: block; }
 .hall-terms { list-style: none; margin: 0; padding: 0; font-size: .9em; line-height: 1.4; }
