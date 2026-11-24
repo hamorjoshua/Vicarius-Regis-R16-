@@ -38746,7 +38746,12 @@ function soloDiffRows(before, after, hall) {
   for (const e of moved) if (!named.has(e.p0.id)) groups.set(sig(e), [...(groups.get(sig(e)) || []), e]);
   for (const e of moved) {
     const g = named.has(e.p0.id) || e.dp || e.dr || e.ds ? null : groups.get(sig(e));
-    if (!g || g.length < 3) { rows.push(single(e)); continue; }
+    if (!g || g.length < 3) {
+      const row = single(e);
+      if (!named.has(e.p0.id) && !e.dp && !e.dr && e.ds) row.compact = true;
+      rows.push(row);
+      continue;
+    }
     if (g[0] !== e) continue;
     const types = new Set(g.map((x) => x.p0.type)), regions = new Set(g.map((x) => x.p0.region));
     if (e.dd && !e.dp && !e.dr && !e.ds && regions.size === 1) {
@@ -43840,7 +43845,10 @@ function hallRows(game, hall, o, A, B, W, L) {
       });
       continue;
     }
-    rows.push(personFx(e.person, e.dp, e.dr, e.tone, { faith: e.faith.length ? e.faith : null, what: e.what.join(" · ") || void 0 }));
+    rows.push(personFx(e.person, e.dp, e.dr, e.tone, {
+      faith: e.faith.length ? e.faith : null, what: e.what.join(" · ") || void 0,
+      compact: !near(e) && !e.dp && !e.dr && e.faith.some((f) => f.which === "superstition") && !e.what.length,
+    }));
   }
   return rows;
 }
@@ -43987,7 +43995,7 @@ function EffectRows({ rows }) {
       jsx(
         "li",
         {
-          class: `fx-row ${r.tone || "even"}`,
+          class: `fx-row ${r.tone || "even"}${r.compact ? " fx-compact" : ""}`,
           children: [
             jsx("span", { class: "fx-mark", "aria-hidden": "true", children: r.plain ? "" : r.tone === "up" ? "▲" : r.tone === "down" ? "▼" : "·" }),
             jsx("span", {
@@ -53185,8 +53193,9 @@ p, li, blockquote {
 .hall-option .fx-regard { gap: 4px; font-size: 10px; }
 .hall-option .fx-regard .rg-graph { width: 14px; height: 16px; }
 .hall-option .fx-regard-mark { font-size: 11px; }
-.hall-option .fx-faith .fx-bar-num { display: none; }
-.hall-option .fx-text > .fx-meters:has(.fx-faith) { gap: 6px; }
+/* a household whose only change is superstition, once folded into "four households …", is one line:
+   its icon, its name, and the chips, without the caption */
+.hall-option .fx-row.fx-compact .fx-faith .fx-bar-num { display: none; }
 .hallway-party, .hallway-visitor { display: inline-flex; align-items: center; gap: .35em; }
 .hallway-party { flex-wrap: wrap; }
 .matter-btn .hallway-subject { display: block; font-weight: normal; }
