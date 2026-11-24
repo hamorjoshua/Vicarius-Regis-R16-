@@ -38836,16 +38836,24 @@ function dutyChangeRows(before, after) {
   return out;
 }
 const SOLO_PREVIEWS = new WeakMap();
-function soloPreview(game, hall, choice) {
+function soloPreview(game, hall, choice, unaffordable = false) {
   let cache = SOLO_PREVIEWS.get(hall);
   if (!cache || cache.game !== game) SOLO_PREVIEWS.set(hall, (cache = { game, by: {} }));
-  if (choice in cache.by) return cache.by[choice];
+  const ck = `${choice}${unaffordable ? "u" : ""}`;
+  if (ck in cache.by) return cache.by[ck];
   const channel = hall === game.faithMatter ? "faith" : "hall";
+  // What an unaffordable option would do is worked out on a copy given the standing to pay for it;
+  // its price is then shown against the court's real standing, marked as more than it has.
+  const base = unaffordable ? { ...game, standing: CONFIG.standingMax, reserve: 0 } : game;
+  const st = game.standing ?? CONFIG.standingMax;
+  const markPrice = (rows) => rows.map((r) => (unaffordable && r.seals
+    ? { ...r, seals: { value: st, projected: st, reserve: game.reserve || 0, label: `${r.seals.label} · not enough standing` } }
+    : r));
   const trial = (perseveres) => {
     try {
-      const h = { ...hall, perseveres }, g0 = channel === "faith" ? { ...game, faithMatter: h } : { ...game, hall: h },
+      const h = { ...hall, perseveres }, g0 = channel === "faith" ? { ...base, faithMatter: h } : { ...base, hall: h },
         g1 = settleSoloMatter(g0, channel, choice);
-      return g1 === g0 ? null : soloDiffRows(game, g1, hall);
+      return g1 === g0 ? null : markPrice(soloDiffRows(base, g1, hall));
     } catch (e) {
       return null;
     }
@@ -38858,7 +38866,7 @@ function soloPreview(game, hall, choice) {
     out = JSON.stringify(yes) === JSON.stringify(no) ? { rows: yes }
       : { outcomes: [{ odds: odds(chance), rows: yes }, { odds: odds(1 - chance), rows: no }] };
   }
-  return (cache.by[choice] = out);
+  return (cache.by[ck] = out);
 }
 // Prose the drawn rows already say is cut down to what they cannot: a sentence is broken into its
 // clauses, a clause that only moves a measure by a number goes, and what is left is the qualitative
@@ -43848,7 +43856,8 @@ function hallView(game, hall = game.hall) {
     const view = SOLO_MATTERS[hall.matter].view(game, hall);
     return view && {
       ...view, solo: true,
-      options: view.options.map((o, i) => (o.rows?.length || o.disabled ? o : { ...o, preview: soloPreview(game, hall, i) })),
+      // an option the court cannot afford is still drawn in full, faded, with its price marked unaffordable
+      options: view.options.map((o, i) => (o.rows?.length ? o : { ...o, preview: soloPreview(game, hall, i, !!o.disabled) })),
     };
   }
   const m = hall && hallMatter(hall.matter),
@@ -53372,6 +53381,7 @@ p, li, blockquote {
 .hall-option .hall-terms li:has(.hall-tag) .hall-tile { width: 20px; height: 20px; }
 .hall-option .hall-outcome { background: transparent; padding: 8px 8px 8px; }
 .hall-option .hall-outcome .fx-list { margin-top: 7px; }
+.hall-option:has(> .hall-choose:disabled) > :not(.hall-choose) { opacity: .6; }
 .hall-option .fx-duty { list-style: none; background: #e2d5b6; border-radius: var(--r-sm); padding: 8px 10px 9px; }
 .hall-option .fx-duty .reck-duty { margin: 0; padding: 0; border: 0; background: none; }
 .hall-option .fx-duty, .hall-option .fx-duty .reck-duty, .hall-option .fx-duty .duty-allocation { min-width: 0; max-width: 100%; box-sizing: border-box; }
