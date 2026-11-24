@@ -52916,7 +52916,9 @@ p, li, blockquote {
 .hall-summary { margin: 0; font-size: 1em; line-height: 1.3; font-style: italic; text-align: center; text-wrap: balance; }
 .hall-choose { display: flex !important; align-items: center; justify-content: center; gap: 10px; }
 .hall-choose-label { min-width: 0; }
-.flip-cost.hall-coin { flex: none; width: 23px; height: 23px; margin: 0; font-weight: 600; font-size: var(--t-sm); background: #e2c98a; color: #2b2113; box-shadow: 0 0 0 1.5px #2b2113, 0 1px 0 1.5px #00000038; }
+/* the coin sits at the button's right edge, out of the flow, so the label centres on the whole button */
+.hall-choose:has(.hall-coin) { position: relative; padding-left: 44px !important; padding-right: 44px !important; }
+.flip-cost.hall-coin { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 23px; height: 23px; margin: 0; font-weight: 600; font-size: var(--t-sm); background: #e2c98a; color: #2b2113; box-shadow: none; }
 .fx-row:has(> .fx-mark:empty) .fx-icon:empty + .fx-text .fx-meters { margin-top: 1px; }
 .hall-cost { flex: none; display: inline-flex; align-items: center; gap: 3px; font: 600 var(--t-sm)/1 var(--sans); padding: 4px 7px 3px; border-radius: 999px; background: #2b211a; color: #ead6a5; }
 .hall-cost svg { display: block; }
