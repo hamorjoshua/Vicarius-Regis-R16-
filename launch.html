@@ -38912,7 +38912,7 @@ function HallOption({ game, v, o, onRule }) {
         type: "button",
         class: "primary hall-choose",
         disabled: !!o.disabled,
-        "aria-label": `${o.label}. ${o.note}`,
+        "aria-label": o.note ? `${o.label}. ${o.note}` : o.label,
         onClick: onRule,
         children: [
           jsx("span", { class: "hall-choose-label", children: [
@@ -39436,11 +39436,11 @@ const SOLO_MATTERS = {
         },
         options: [
           {
-            label: "Bring the penitent home", note: "End the penance.",
+            label: "Bring the penitent home", note: "",
             consequence: `It no longer eases pressure each week, and can no longer clear a breach at quarter day.`, rows: [],
           },
           {
-            label: "Ask the penitent to persevere", note: oddsNote(h),
+            label: "Ask the penitent to persevere", note: "",
             // the devotion it wins either way is drawn above both outcomes; each outcome says only what is its own
             consequence: `${oddsLead(h)}: ${name} perseveres, and the penance eases 2 pressure a week instead of 1, or ${name} falls ill and the penance ends${(() => {
               const duties = dutiesPaidBy(game, penitent).map((l) => dutyTitleOf(l));
