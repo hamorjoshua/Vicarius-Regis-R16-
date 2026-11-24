@@ -39430,6 +39430,8 @@ const PAGE_QUIPS = [
     line: "You say the court will write to the weather. That is the line people will repeat.",
     after: "The arms are painted on a weathervane within the month." },
 ];
+// How hard a household is pressed, as the assistant would say it.
+const strainWords = (p) => ((p?.pressure || 0) >= CONFIG.urgent ? "close to breaking" : (p?.pressure || 0) >= CONFIG.pressing ? "hard pressed" : "managing, for now");
 const SOLO_MATTERS = {
   penitentHealth: {
     id: "penitentHealth",
@@ -39523,7 +39525,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], cleric = game.people[h.b], name = hallName(cleric);
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the endowed duty";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the endowed duty";
       const need = law ? NEED_OF_DUTY[law.kind] : "the need";
       const needKey = law ? `${law.region}|${need}` : null;
       const curBar = needKey ? (game.needBar?.[needKey] ?? 0) : 0;
@@ -39540,7 +39542,7 @@ const SOLO_MATTERS = {
       const othersStay = (law.mortmainClerics || []).length > 1 ? " Other endowing clerics remain bound." : "";
       return {
         title: "The seed corn",
-        lede: `${hallName(witness)} has come alone, Vicar. It concerns the mortmain endowment ${name} bound to ${duty}. The chapter’s barns are down to next season’s seed.`,
+        lede: `${hallName(witness)} has come alone, Vicar. It concerns the land ${name} gave the Church to keep up ${duty}. The chapter’s barns are down to next season’s seed.`,
         a: {
           name: hallName(witness), estate: witness.type, region: witness.region, id: witness.id,
           plea: `We can keep ${duty} supplied, Vicar. I came to ask whether ${name}’s gift extends to the grain put by for sowing.`,
@@ -39559,7 +39561,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice, keep) {
       const p = g.people[m.b], name = hallName(p), law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (!choice) {
         if (law) {
           const rest = (law.mortmainClerics || []).filter((id) => id !== p.id);
@@ -39639,7 +39641,7 @@ const SOLO_MATTERS = {
         : "";
       return {
         title: "The exposed wall",
-        lede: `${hallName(witness)} has come alone, Vicar. It concerns the bulwark ${name} raised on ${duty} (${curWeeks} ${curWeeks === 1 ? "week" : "weeks"} of readiness).`,
+        lede: `${hallName(witness)} has come alone, Vicar. It concerns the garrison ${name} keeps on ${duty}, ${curWeeks ? `which has stood ${curWeeks === 1 ? "a week" : `${mmNum(curWeeks)} weeks`}` : "raised only lately"}.`,
         a: {
           name: hallName(witness), estate: witness.type, region: witness.region, id: witness.id,
           plea: `${name} has enough hands for the east wall on ${duty} if ${prn(soldier).sub} leaves the west stair empty. ${prn(soldier).Sub} sent me because ${prn(soldier).sub}’ll do it if you tell ${prn(soldier).obj} to.`,
@@ -39689,7 +39691,7 @@ const SOLO_MATTERS = {
     title: () => "The second signature",
     lapseNote: () => "The visiting merchant would go home with the paper unsigned.",
     lapse(g, m) {
-      const law = lawById(g, m.from.lawId), duty = law ? dutyTitleOf(law) : "the duty";
+      const law = lawById(g, m.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       return `${hallName(g.people[m.a])} folds the paper unsigned and goes home. The syndicate on ${duty} continues on ${hallName(g.people[m.b])}’s credit alone.`;
     },
     draw(game, report) {
@@ -39714,7 +39716,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], merchant = game.people[h.b], name = hallName(merchant);
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the commuted duty";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the commuted duty";
       const trial = cloneState(game);
       const tLaw = lawById(trial, law.id);
       tLaw.sureties ||= [];
@@ -39727,7 +39729,7 @@ const SOLO_MATTERS = {
       const cover = short > 0 ? ` Still leaves ${duty} short by ${unitsLabel(short)}.` : ` Covers ${duty} in full.`;
       return {
         title: "The second signature",
-        lede: `${hallName(witness)} has come alone, Vicar. It concerns the syndicate ${name} underwrote on ${duty}. ${hallName(witness)} is offering to cosign the bond.`,
+        lede: `${hallName(witness)} has come alone, Vicar. It concerns the merchants’ company ${name} pledged for ${duty}. ${hallName(witness)} offers to put a second name to the bond.`,
         a: {
           name: hallName(witness), estate: witness.type, region: witness.region, id: witness.id,
           plea: `${name}’s name is good until Michaelmas. Mine is good until Easter. Shall I put it under ${prn(merchant).pos} on ${duty}?`,
@@ -39746,7 +39748,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const witness = g.people[m.a], law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (!choice) {
         if (law) delete law.syndicate;
         return `${hallName(witness)} closes the ledger. The syndicate on ${duty} is wound up cleanly without default.`;
@@ -39803,7 +39805,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], official = game.people[h.b], name = hallName(official);
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the lightest duty";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the lightest duty";
       const label = constituencyLabel(h.from.findingKey);
       const amt = Math.min(h.from.findingAmt, game.grievance?.[h.from.findingKey] || 0);
       return {
@@ -39826,7 +39828,7 @@ const SOLO_MATTERS = {
       };
     },
     apply(g, m, choice) {
-      const law = lawById(g, m.from.lawId), duty = law ? dutyTitleOf(law) : "the duty";
+      const law = lawById(g, m.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       const label = constituencyLabel(m.from.findingKey);
       if (!choice) {
         if (g.assize) delete g.assize[m.region];
@@ -39878,10 +39880,10 @@ const SOLO_MATTERS = {
       const members = epCommon(game, h.region);
       const mean = Math.round(epMean(members, (p) => p.pressure) * 100) / 100;
       const law = h.from.lawId != null ? lawById(game, h.from.lawId) : null;
-      const duty = law ? dutyTitleOf(law) : "the regional roll";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the regional roll";
       return {
         title: "The last week of the stint",
-        lede: `${hallName(witness)} has come alone, Vicar. The common stint in the ${h.region} is one qualifying week short of its dividend${law ? ` (lightening ${duty})` : ""}.`,
+        lede: `${hallName(witness)} has come alone, Vicar. The households sharing the common stint in the ${h.region} want one more week of work together before any of them is eased${law ? ` on ${duty}` : ""}.`,
         a: {
           name: hallName(witness), estate: witness.type, region: witness.region, id: witness.id,
           plea: `One more week together and we’ve earned the lighter roll on ${duty}. But if we share the loads again, look whose load we’ll all be taking—${name} stands at ${fmtNum(mostPressed.pressure)} pressure.`,
@@ -39953,7 +39955,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], helper = game.people[h.from.helperId];
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the entailed duty";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the entailed duty";
       const trial = cloneState(game);
       const tLaw = lawById(trial, law.id);
       soloReopenAndAdmit(trial, tLaw, trial.people[helper.id]);
@@ -39981,7 +39983,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const law = lawById(g, m.from.lawId), helper = g.people[m.from.helperId];
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (!choice) {
         if (law && helper) soloReopenAndAdmit(g, law, helper);
         addGrievance(g, "Realm|Noble", 1);
@@ -40020,7 +40022,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], noble = game.people[h.b], name = hallName(noble);
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the duty";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       const otherLaw = h.from.otherLawId != null ? lawById(game, h.from.otherLawId) : null;
       let shiftPreview = ` ${name}’s household takes 2 pressure to carry it directly.`;
       if (otherLaw?.active) {
@@ -40054,7 +40056,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const p = g.people[m.b], name = hallName(p), law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (!choice) {
         if (law) {
           law.personal = { ...(law.personal || {}), [p.id]: 1 };
@@ -40103,7 +40105,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], soldier = game.people[h.b], name = hallName(soldier);
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the foreign duty";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the foreign duty";
       const homeMet = needMet(game, h.region, "soldiers");
       const homeBar = game.needBar?.[`${h.region}|soldiers`] ?? 0;
       const trial = cloneState(game);
@@ -40113,7 +40115,7 @@ const SOLO_MATTERS = {
       const gap = short > 0 ? ` Leaves ${duty} short by ${unitsLabel(short)}.` : "";
       return {
         title: "The empty border",
-        lede: `${hallName(witness)} has come alone, Vicar, straight from the ${h.region} watch (${homeMet ? "currently met" : "currently short"}, military balance ${fmtNum(homeBar)}). ${name} is still serving abroad on ${duty}.`,
+        lede: `${hallName(witness)} has come alone, Vicar, straight from the ${h.region} watch, ${homeMet ? "which is kept, for now" : "which is thin on the walls"}. ${name} is still serving abroad on ${duty}.`,
         a: {
           name: hallName(witness), estate: witness.type, region: witness.region, id: witness.id,
           plea: `We can still man the east gate in the ${h.region}. It’s the relief tomorrow morning I can’t give you. Call ${name} off ${duty} now, or leave ${prn(soldier).obj} abroad and see us through the close.`,
@@ -40132,7 +40134,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const p = g.people[m.b], name = hallName(p), law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the foreign duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the foreign duty";
       if (!choice) {
         soloUnwindMarch(g, p, law);
         addGrievance(g, "Realm|Soldier", 1);
@@ -40179,10 +40181,10 @@ const SOLO_MATTERS = {
     view(game, h) {
       const witness = game.people[h.a], official = game.people[h.b], name = hallName(official);
       const senior = game.people[h.from.seniorId], junior = game.people[h.from.juniorId];
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the codified duty";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the codified duty";
       return {
         title: "The inked margin",
-        lede: `${hallName(witness)} has come alone, Vicar. ${name}’s new registry on ${duty} sets ${hallName(senior)} ahead of ${hallName(junior)}—yet ${hallName(junior)} is pressing at the door (${fmtNum(junior.pressure)} pressure).`,
+        lede: `${hallName(witness)} has come alone, Vicar. ${name}’s new registry on ${duty} sets ${hallName(senior)} ahead of ${hallName(junior)}—yet ${hallName(junior)} is at the door, ${strainWords(junior)}.`,
         a: {
           name: hallName(witness), estate: witness.type, region: witness.region, id: witness.id,
           plea: `The ink is scarcely dry on ${name}’s order of precedence between ${hallName(senior)} and ${hallName(junior)}. Does the codified order bind even an urgent petitioner this week, or shall the clerk bend it for urgency?`,
@@ -40201,7 +40203,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const p = g.people[m.b], name = hallName(p), law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (!choice) {
         p.auditExemptUrgent = g.week;
         addGrievance(g, "Realm|Official", 1);
@@ -40258,7 +40260,7 @@ const SOLO_MATTERS = {
         : `waiting at ${fmtNum(waiting.pressure)} pressure`;
       return {
         title: "The heir asks to stand surety",
-        lede: `${sName} has come alone, Vicar. ${sName}’s heir—whom you gave a place at court—has promised ${wName} (${waitingFor}) an audience with you.`,
+        lede: `${sName} has come alone, Vicar. ${sName}’s heir—whom you gave a place at court—has promised ${wName}, who is ${strainWords(waiting)}, an audience with you.`,
         a: {
           name: sName, estate: sponsor.type, region: sponsor.region, id: sponsor.id,
           plea: `My daughter told ${wName} the King’s Vicar would hear them by Friday. I explained that a page cannot give the Crown’s word. She asked whether I could give mine. That is why I am here.`,
@@ -40335,7 +40337,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const cleric = game.people[h.a], accused = game.people[h.b], accuser = game.people[h.from.accuserId];
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "poor relief";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "poor relief";
       const curShare = paidShare(game, cleric, law);
       const trial = cloneState(game);
       const tLaw = lawById(trial, law.id);
@@ -40365,7 +40367,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const cleric = g.people[m.a], accused = g.people[m.b], accuser = g.people[m.from.accuserId];
-      const law = lawById(g, m.from.lawId), duty = law ? dutyTitleOf(law) : "poor relief";
+      const law = lawById(g, m.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "poor relief";
       if (!choice) {
         delete accused.charge;
         if (accuser) addRegard(accuser, -1);
@@ -40412,7 +40414,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], veteran = game.people[h.b], vName = hallName(veteran);
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the watch";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the watch";
       const curUnits = paidShare(game, veteran, law);
       const trial = cloneState(game);
       soloReleaseDischarged(trial, lawById(trial, law.id), trial.people[veteran.id]);
@@ -40440,13 +40442,13 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const veteran = g.people[m.b], vName = hallName(veteran);
-      const law = lawById(g, m.from.lawId), duty = law ? dutyTitleOf(law) : "the watch";
+      const law = lawById(g, m.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the watch";
       if (!choice) {
         addRegard(veteran, -1);
         return `The charter stands as sealed. ${vName} keeps the midnight watch on ${duty} and loses 1 regard.`;
       }
       if (law) soloReleaseDischarged(g, law, veteran);
-      return `The discharge governs. ${duty} is reopened, ${vName} is released from the watch, and the entail’s quarter-day shield is lifted.`;
+      return `The discharge governs. ${capFirst(duty)} is reopened, ${vName} is released from the watch, and the entail’s quarter-day shield is lifted.`;
     },
   },
   commendPayment: {
@@ -40486,7 +40488,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const ben = game.people[h.a], noble = game.people[h.b], law = lawById(game, h.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "their shared duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "their shared duty";
       const nBefore = paidShare(game, noble, law), bBefore = paidShare(game, ben, law);
       const trial = cloneState(game);
       const tLaw = lawById(trial, law.id);
@@ -40515,7 +40517,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const ben = g.people[m.a], noble = g.people[m.b], law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (!choice) {
         if (law) {
           (law.lent ||= []).push({ from: noble.id, to: ben.id });
@@ -40801,7 +40803,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const merchant = game.people[h.a], soldier = game.people[h.b], law = lawById(game, h.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the watch";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the watch";
       const units = paidShare(game, soldier, law);
       return {
         title: "Who rang the great bell?",
@@ -40824,7 +40826,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const soldier = g.people[m.b], law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the watch";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the watch";
       for (const s of g.people.filter((p) => p.region === "Capital" && p.type === "Soldier"))
         addSuperstition(s, -1);
       if (choice === 0) {
@@ -40868,11 +40870,11 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const house = game.people[h.a], merchant = game.people[h.b], law = lawById(game, h.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       const units = paidShare(game, house, law);
       return {
         title: "The one roof that held its snow",
-        lede: `${hallName(house)} has come with ${hallName(merchant)}’s count of the Highlands roofs. ${hallName(house)} stands at ${fmtNum(house.pressure)} pressure and carries ${unitsLabel(units)} on ${duty}.`,
+        lede: `${hallName(house)} has come with ${hallName(merchant)}’s count of the Highlands roofs. ${hallName(house)} is ${strainWords(house)}, and carries a share of ${duty}.`,
         a: {
           name: hallName(house), estate: house.type, region: house.region, id: house.id,
           plea: `${hallName(merchant)} counted every roof in the village. ${prn(merchant).Sub} might have counted our firewood. There hasn’t been a fire under that roof since Thursday.`,
@@ -40896,7 +40898,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const house = g.people[m.a], law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (choice === 0) {
         if (law) {
           law.respite = { id: house.id, week: g.week };
@@ -41910,7 +41912,7 @@ const SOLO_MATTERS = {
       const shortText = shortAfter > 0 ? ` Leaves ${dutyTitleOf(tollLaw)} short by ${unitsLabel(shortAfter)}.` : ` ${dutyTitleOf(tollLaw)} still stays covered.`;
       return {
         title: "The procession has reached the tollgate",
-        lede: `${hallName(A)} has come alone, Vicar. The wedding procession with ${hallName(B)} is stopped at ${dutyTitleOf(tollLaw)}—the keeper is arguing whether thirty-seven travelers and a donkey count as one party.`,
+        lede: `${hallName(A)} has come alone, Vicar. The wedding procession with ${hallName(B)} is stopped at ${dutyNameInSentence(dutyTitleOf(tollLaw))}—the keeper is arguing whether thirty-seven travelers and a donkey count as one party.`,
         a: {
           name: hallName(A), estate: A.type, region: A.region, id: A.id,
           plea: `We can go round by the ford. My grandmother has said she will cross the ford if lifted. Four of us have seen the chair and would prefer a ruling.`,
@@ -42076,7 +42078,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const official = game.people[h.a], noble = game.people[h.b], target = game.people[h.from.targetId];
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the duty";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       const before = paidShare(game, noble, law);
       const trial = cloneState(game);
       const tLaw = lawById(trial, law.id);
@@ -42110,7 +42112,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const official = g.people[m.a], noble = g.people[m.b], target = g.people[m.from.targetId];
-      const law = lawById(g, m.from.lawId), duty = law ? dutyTitleOf(law) : "the duty";
+      const law = lawById(g, m.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (choice === 0) {
         if (law) {
           law.personal = { ...(law.personal || {}), [noble.id]: 2 };
@@ -42168,7 +42170,7 @@ const SOLO_MATTERS = {
       const busyUndertaking = Object.keys(game.undertakings || {}).length > 0;
       return {
         title: "The accused throws down a glove",
-        lede: `${hallName(accused)} has thrown down a glove, demanding trial by combat against ${hallName(accuser)}. Currently ${hallName(accused)} carries ${accInfo}, and ${hallName(accuser)} carries ${usrInfo}.`,
+        lede: `${hallName(accused)} has thrown down a glove, demanding trial by combat against ${hallName(accuser)}.`,
         a: {
           name: hallName(accused), estate: accused.type, region: accused.region, id: accused.id,
           plea: `${hallName(accuser)} has had ${prn(accuser).pos} say before the court. I ask leave to put the same words to ${prn(accuser).obj} in the yard. If ${prn(accuser).sub} will say them there, I shall answer ${prn(accuser).obj} there.`,
@@ -42263,7 +42265,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const rec = game.people[h.a], donor = game.people[h.b], law = lawById(game, h.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       // Preview Option 0 (transfer)
       const t0 = cloneState(game);
       const l0 = lawById(t0, law.id);
@@ -42302,7 +42304,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const rec = g.people[m.a], donor = g.people[m.b], law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (choice === 0) {
         if (law) {
           law.personal = { ...(law.personal || {}), [donor.id]: 2, [rec.id]: 1 };
@@ -42356,7 +42358,7 @@ const SOLO_MATTERS = {
       const hitIds = h.from.hitIds || [];
       const stillPressed = hitIds.map((id) => game.people[id]).filter((p) => p && p.pressure > 0);
       const countNote = hitIds.length
-        ? ` There were ${hitIds.length} house${hitIds.length === 1 ? "" : "s"} under the interdict, Vicar; ${stillPressed.length} still carry pressure (${stillPressed.map(hallName).join(", ") || "none"}).`
+        ? ` The interdict has fallen on ${mmNum(hitIds.length)} house${hitIds.length === 1 ? "" : "s"}, Vicar, and ${stillPressed.length ? `${nameList(stillPressed.map(hallName))} still feel${stillPressed.length === 1 ? "s" : ""} it` : "none of them feels it now"}.`
         : "";
       return {
         title: "The cleric under interdict asks to bury an enemy",
@@ -42508,7 +42510,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const leader = game.people[h.a], helper = game.people[h.b], law = lawById(game, h.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       const units = paidShare(game, helper, law);
       const total = qRaw(game, law).reduce((s, p) => s + paidShare(game, p, law), 0);
       const shortAfter = Math.max(0, Math.round((law.requirement - (total - units)) * 100) / 100);
@@ -42539,7 +42541,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const leader = g.people[m.a], helper = g.people[m.b], law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (choice === 0) {
         if (law) {
           law.respite = { id: helper.id, week: g.week };
@@ -42674,7 +42676,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const accused = game.people[h.a], precedent = game.people[h.b], law = lawById(game, h.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       const t0 = cloneState(game);
       const l0 = lawById(t0, law.id);
       l0.personal = { ...(l0.personal || {}), [accused.id]: 1 };
@@ -42710,7 +42712,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const accused = g.people[m.a], precedent = g.people[m.b], law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the duty";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the duty";
       if (choice === 0) {
         delete accused.charge;
         if (law) {
@@ -42930,7 +42932,7 @@ const SOLO_MATTERS = {
       const busyUndertaking = Object.keys(game.undertakings || {}).length > 0;
       return {
         title: "The accuser offers to bail out the accused",
-        lede: `${hallName(accuser)} has returned, Vicar. ${hallName(accused)}, whom ${hallName(accuser)} accused, turned urgent at the reckoning (${fmtNum(accused.pressure)} pressure), and ${hallName(accuser)} offers to stand surety until the defence is heard.`,
+        lede: `${hallName(accuser)} has returned, Vicar. ${hallName(accused)}, whom ${hallName(accuser)} accused, is close to breaking under the charge, and ${hallName(accuser)} offers to stand surety until the defence is heard.`,
         a: {
           name: hallName(accuser), estate: accuser.type, region: accuser.region, id: accuser.id,
           plea: `I still say ${hallName(accused)} took the silver. I also know what happens to ${prn(accused).pos} house if this goes another fortnight. Must I withdraw the one to prevent the other?`,
@@ -43038,7 +43040,7 @@ const SOLO_MATTERS = {
       const easeAll = allDrops.length ? ` Eases: ${allDrops.join(", ")}.` : "";
       return {
         title: "The new cleric asks for a vow of poverty",
-        lede: `${hallName(cleric)}, newly received into the clergy, has brought a bundle of old lighter-share writs (${laws.map(dutyTitleOf).join(", ")}) to surrender at the altar.`,
+        lede: `${hallName(cleric)}, newly received into the clergy, has brought a bundle of old lighter-share writs, for ${nameList(laws.map((l) => dutyNameInSentence(dutyTitleOf(l))))}, to surrender at the altar.`,
         a: {
           name: hallName(cleric), estate: cleric.type, region: cleric.region, id: cleric.id,
           plea: `I took the habit on Monday. On Tuesday my steward sent the usual writ along to the collectors. It seems he and I have understood my conversion rather differently.`,
@@ -43116,7 +43118,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], stranded = game.people[h.b], commander = game.people[h.from.commanderId];
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the works";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the works";
       const kinId = hallKin(game, stranded.id).find((kid) => game.people[kid]?.region === h.region);
       const kin = kinId != null ? game.people[kinId] : null;
       return {
@@ -43204,7 +43206,7 @@ const SOLO_MATTERS = {
       const turnsUrgent = poor.pressure + 1 >= CONFIG.urgent;
       return {
         title: "The guild has made you a silver cup",
-        lede: `${hallName(founder)} brings a ceremonial silver cup subscribed by the compact. Scratched into the underside is the name of ${hallName(poor)} (now at ${fmtNum(poor.pressure)} pressure).`,
+        lede: `${hallName(founder)} brings a ceremonial silver cup subscribed by the compact. Scratched into the underside is the name of ${hallName(poor)}, the house that could least afford its share.`,
         a: {
           name: hallName(founder), estate: founder.type, region: founder.region, id: founder.id,
           plea: `There was to be one handle, Vicar. Then the richer houses subscribed for two. By the time the cup reached the poorer houses, there was unfortunately very little left for them to subscribe for except the cup.`,
