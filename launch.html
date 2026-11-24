@@ -38745,7 +38745,7 @@ function soloDiffRows(before, after, hall) {
   const named = new Set([hall.a, hall.b]), groups = new Map(), sig = (e) => `${e.dp}|${e.dr}|${Math.sign(e.dd)}|${Math.sign(e.ds)}`;
   for (const e of moved) if (!named.has(e.p0.id)) groups.set(sig(e), [...(groups.get(sig(e)) || []), e]);
   for (const e of moved) {
-    const g = named.has(e.p0.id) || e.dp || e.dr ? null : groups.get(sig(e));
+    const g = named.has(e.p0.id) || e.dp || e.dr || e.ds ? null : groups.get(sig(e));
     if (!g || g.length < 3) { rows.push(single(e)); continue; }
     if (g[0] !== e) continue;
     const types = new Set(g.map((x) => x.p0.type)), regions = new Set(g.map((x) => x.p0.region));
@@ -43819,7 +43819,7 @@ function hallRows(game, hall, o, A, B, W, L) {
   for (const e of all.filter((e) => !near(e))) groups.set(sig(e), [...(groups.get(sig(e)) || []), e]);
   const rows = [];
   for (const e of all) {
-    if (!near(e) && groups.get(sig(e)).length > 2) {
+    if (!near(e) && groups.get(sig(e)).length > 2 && !e.faith.some((f) => f.which === "superstition")) {
       const g = groups.get(sig(e));
       if (g[0] !== e) continue;
       const types = new Set(g.map((x) => x.person.type)),
@@ -53185,6 +53185,8 @@ p, li, blockquote {
 .hall-option .fx-regard { gap: 4px; font-size: 10px; }
 .hall-option .fx-regard .rg-graph { width: 14px; height: 16px; }
 .hall-option .fx-regard-mark { font-size: 11px; }
+.hall-option .fx-faith .fx-bar-num { display: none; }
+.hall-option .fx-text > .fx-meters:has(.fx-faith) { gap: 6px; }
 .hallway-party, .hallway-visitor { display: inline-flex; align-items: center; gap: .35em; }
 .hallway-party { flex-wrap: wrap; }
 .matter-btn .hallway-subject { display: block; font-weight: normal; }
