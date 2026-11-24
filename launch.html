@@ -53003,9 +53003,13 @@ p, li, blockquote {
 /* tags inverted to match the tiles: the label cut in parchment out of a strip of ink, always on a
    line of its own above what it labels, in one colour whatever it marks */
 .hall-option .hall-tag, .hall-option .hall-tag.up, .hall-option .hall-tag.down {
-  display: block; width: fit-content; margin: 1px 0 5px; padding: 3px 6px 2px; border-radius: 4px;
-  font-weight: 500; background: var(--ink-soft); color: #e2d5b6;
+  display: block; width: fit-content; box-sizing: border-box; height: 20px; margin: 0 0 5px; padding: 0 6px; border-radius: 4px;
+  /* the page holds every face at 400 with !important; these labels alone are set medium, as asked */
+  font-weight: 500 !important; line-height: 20px; background: var(--ink-soft); color: #e2d5b6;
 }
+/* the mark beside a label is exactly the label's height, its top and bottom flush with the strip */
+.hall-option .hall-terms li:has(.hall-tag) .hall-mark { padding-top: 0; height: 20px; align-items: center; }
+.hall-option .hall-terms li:has(.hall-tag) .hall-tile { width: 20px; height: 20px; }
 .hall-option .hall-outcome { background: transparent; padding: 8px 8px 8px; }
 .hall-option .hall-outcome .fx-list { margin-top: 7px; }
 /* A household on one line: icon, name, pressure pips and regard, drawn smaller. A note that regard
