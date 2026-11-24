@@ -36799,6 +36799,8 @@ function Court() {
     [hallStep, setHallStep] = useState(null),
     [worksStep, setWorksStep] = useState(null),
     [openMatter, setOpenMatter] = useState(null),
+    // what came of the matter just ruled, for the assistant to tell before the list returns
+    [matterResult, setMatterResult] = useState(null),
     [faithStep, setFaithStep] = useState(null),
     [officeStep, setOfficeStep] = useState(null),
     J = {
@@ -37580,17 +37582,28 @@ function Court() {
         (() => {
           const k = openMatter?.week === game2.week && matterWaits(game2, openMatter.k) ? openMatter.k : null,
             // return to the matters screen once more after the final matter is settled
-            settle = (g2) => e(g2),
+            settle = (g2, k2) => {
+              e(g2);
+              const m = matterOf(g2, k2);
+              if (m && m.ruled != null && m.text) setMatterResult({ week: g2.week, k: k2, text: m.text });
+            },
             back = () => {
               setOpenMatter(null);
               document.querySelector(".overlay.session")?.scrollTo({ top: 0 });
               window.scrollTo({ top: 0 });
             };
-          if (k === "hall") return jsx(HallOverlay, { game: game2, onRule: (i) => (settle(ruleHall(game2, i)), back()) });
-          if (k === "works") return jsx(WorksOverlay, { game: game2, onRule: (i) => (settle(ruleWorks(game2, i)), back()) });
-          if (k === "office") return jsx(WorksOverlay, { game: game2, view: officeMatterView(game2), onRule: (i) => (settle(ruleOffice(game2, i)), back()) });
+          // after a ruling, the assistant says what came of it before the list returns
+          if (matterResult?.week === game2.week)
+            return jsx(AssistantScreen, {
+              say: `${matterResult.text} ${enteredLine(game2, matterResult.k)}`,
+              button: MATTER_ORDER.some((k3) => matterWaits(game2, k3)) ? "Back to the list" : "Very good",
+              onNext: () => { setMatterResult(null); window.scrollTo({ top: 0 }); },
+            });
+          if (k === "hall") return jsx(HallOverlay, { game: game2, onRule: (i) => (settle(ruleHall(game2, i), "hall"), back()) });
+          if (k === "works") return jsx(WorksOverlay, { game: game2, onRule: (i) => (settle(ruleWorks(game2, i), "works"), back()) });
+          if (k === "office") return jsx(WorksOverlay, { game: game2, view: officeMatterView(game2), onRule: (i) => (settle(ruleOffice(game2, i), "office"), back()) });
           if (k === "faith")
-            return jsx(HallOverlay, { game: game2, view: hallView(game2, game2.faithMatter), label: "A matter of faith", onRule: (i) => (settle(ruleFaith(game2, i)), back()) });
+            return jsx(HallOverlay, { game: game2, view: hallView(game2, game2.faithMatter), label: "A matter of faith", onRule: (i) => (settle(ruleFaith(game2, i), "faith"), back()) });
           return jsx(MattersScreen, {
             game: game2,
             onOpen: (k2) => {
@@ -44619,7 +44632,7 @@ function MattersScreen({ game, onOpen, onLeave, onLeaveUnheard }) {
         jsx("p", { class: "party-q-say", children: `“${mattersSay(game, ks, live, leaving)}”` }),
         ...ks
           .map((k) => matterOf(game, k))
-          .filter((m) => m && (SOLO_MATTERS[m.matter] || m.lapsed) && m.ruled != null && m.text)
+          .filter((m) => m && m.lapsed && m.ruled != null && m.text)
           .map((m) => jsx("p", { class: "party-q-say", role: "status", children: m.text }, m.matter)),
         jsx("div", {
           class: "matter-list",
