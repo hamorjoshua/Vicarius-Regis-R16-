@@ -38815,13 +38815,13 @@ const termCovered = (text) =>
   !/\b(if|unless|until|next|while|weeks?|when|may|either|otherwise|chances?|reckoning|charges?|dut(y|ies)|units?|rolls?|writs?|undertaking|word|grudge|quarter|open|ends?|clear\w*|breach\w*|keeps?|stays?|remains?)\b/i.test(text);
 function HallTerms({ terms }) {
   const mark = (t) => t.work ? jsx(WorkIcon, { work: t.work }) : t.icon ? jsx(Icon, { icon: t.icon, size: 14 })
-    : jsx("span", { class: `hall-glyph ${t.tone || ""}`, "aria-hidden": "true", children: t.glyph || "·" });
+    : t.glyph ? jsx("span", { class: `hall-glyph ${t.tone || ""}`, "aria-hidden": "true", children: t.glyph }) : null;
   return terms.length
     ? jsx("ul", {
         class: "hall-terms",
         children: terms.map((t, i) =>
-          jsx("li", { children: [
-            jsx("span", { class: "hall-mark", children: mark(t) }),
+          jsx("li", { class: mark(t) ? "" : "unmarked", children: [
+            mark(t) && jsx("span", { class: "hall-mark", children: mark(t) }),
             jsx("span", { class: "hall-term-text", children: [
               t.tag && jsx("span", { class: `hall-tag ${t.tone || ""}`, children: t.tag }),
               t.text,
@@ -52931,6 +52931,27 @@ p, li, blockquote {
 .hall-outcome-head { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: .9em; line-height: 1.35; }
 .hall-odds { flex: none; font: 600 var(--t-sm)/1 var(--sans); letter-spacing: .04em; text-transform: uppercase; padding: 4px 7px 3px; border-radius: 999px; background: #2b211a; color: #ead6a5; white-space: nowrap; }
 .hall-outcome .fx-list { margin-top: 5px; }
+/* In a decision, every line is its own tablet, flush to the left edge: no rule between rows and no
+   up/down mark in a gutter, since the meters and the regard arrow already say which way things go. */
+.hall-option .fx-list, .hall-option .hall-terms { display: grid; gap: 6px; margin: 0; }
+.hall-option .fx-row, .hall-option .hall-terms li {
+  grid-template-columns: 17px 1fr;
+  gap: 8px;
+  padding: 8px 10px 7px;
+  background: #e2d5b6;
+  border: 0;
+  border-radius: var(--r-sm);
+}
+.hall-option .hall-terms li:first-child { border-top: 0; }
+.hall-option .fx-row > .fx-mark { display: none; }
+.hall-option .fx-row:has(> .fx-icon:empty) { grid-template-columns: 1fr; }
+.hall-option .fx-row:has(> .fx-icon:empty) > .fx-icon { display: none; }
+.hall-option .hall-terms .hall-mark { grid-column: 1; }
+.hall-option .hall-terms .hall-term-text { grid-column: 2; }
+.hall-option .hall-terms li.unmarked { grid-template-columns: 1fr; }
+.hall-option .hall-terms li.unmarked .hall-term-text { grid-column: 1; }
+.hall-option .hall-outcome { background: transparent; padding: 8px 8px 8px; }
+.hall-option .hall-outcome .fx-list { margin-top: 7px; }
 .hallway-party, .hallway-visitor { display: inline-flex; align-items: center; gap: .35em; }
 .hallway-party { flex-wrap: wrap; }
 .matter-btn .hallway-subject { display: block; font-weight: normal; }
