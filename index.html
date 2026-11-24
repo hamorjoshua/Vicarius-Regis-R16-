@@ -38785,6 +38785,7 @@ function soloDiffRows(before, after, hall) {
       ].filter(Boolean).join(", "),
     });
   }
+  rows.push(...dutyChangeRows(before, after));
   const cap = CONFIG.grievanceBreach, step = (v) => Math.round((10 * Math.min(v, cap)) / cap);
   for (const key of new Set([...Object.keys(before.grievance || {}), ...Object.keys(after.grievance || {})])) {
     const g0 = before.grievance?.[key] || 0, g1 = after.grievance?.[key] || 0;
@@ -38798,6 +38799,29 @@ function soloDiffRows(before, after, hall) {
     rows.push({ tone: n1 > n0 ? "up" : "down", work: key, who: `${capFirst(need)} of the ${region}`, what: `Need bar ${fmtNum(n0)} → ${fmtNum(n1)}` });
   }
   return rows;
+}
+// Each duty whose roll a ruling changes, drawn as the reckoning draws it: who carries what, before and after.
+function dutyChangeRows(before, after) {
+  const out = [];
+  for (const id of new Set([...before.laws.map((l) => l.id), ...after.laws.map((l) => l.id)])) {
+    const a = reckLiteSnap(before, id), b = reckLiteSnap(after, id);
+    if (!a && !b) continue;
+    const share = (sn, pid) => sn?.holders.find((h) => h.id === pid)?.share || 0,
+      ids = new Set([...(a?.holders || []), ...(b?.holders || [])].map((h) => h.id)),
+      moved = [...ids].some((pid) => Math.abs(share(a, pid) - share(b, pid)) > 1e-6),
+      changed = !a !== !b || moved ||
+        Math.abs((a?.requirement || 0) - (b?.requirement || 0)) > 1e-6 ||
+        Math.abs((a?.shortfall || 0) - (b?.shortfall || 0)) > 1e-6 ||
+        Math.abs((a?.relieved || 0) - (b?.relieved || 0)) > 1e-6;
+    if (!changed) continue;
+    const law = after.laws.find((l) => l.id === id) || before.laws.find((l) => l.id === id);
+    const status = !a ? "Established" : !b ? "Ended"
+      : b.requirement > a.requirement + 1e-6 ? "More work required" : b.requirement < a.requirement - 1e-6 ? "Less work required"
+      : b.shortfall > a.shortfall + 1e-6 ? "Falls short" : b.shortfall < a.shortfall - 1e-6 ? (b.shortfall < 1e-6 ? "Now fully met" : "Less short")
+      : "Shares redistributed";
+    out.push({ duty: { id, title: dutyDisplayTitle(law.title), region: law.region, status, before: a, after: b, notes: [], progress: null } });
+  }
+  return out;
 }
 const SOLO_PREVIEWS = new WeakMap();
 function soloPreview(game, hall, choice) {
@@ -38950,7 +38974,7 @@ function HallOption({ game, v, o, onRule }) {
       .filter((t) => t.text && !(cost > 0 && t.tag === "Cost" && /^(Costs|Spends?|Stake) \d+ standing\.?$/.test(t.text))),
     shown = (preview?.rows || o.rows || []).filter((r) => !r.term),
     // an option that moves nothing says so, rather than standing empty
-    quiet = !v.solo && !outcomes && !terms.length && !shown.length,
+    quiet = !outcomes && !terms.length && !shown.length && !(o.branches || []).length,
     // the summary under the button: never the price or the odds again, which coin and chips show
     bareNote = (o.note || "").replace(/^(Seven|Three) chances in ten\.\s*|^Even chances\.\s*/, "").trim(),
     // no summary under the button: an option speaks through its lines and rows. Only an option
@@ -39858,13 +39882,11 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Close the assize", note: "Leave the complaint unentered.",
-            consequence: "", rows: [],
-            terms: [{ text: `The complaint goes unentered. The ${label} keep their grievance, and ${duty} is spared the extra work.`, icon: "gavel" }],
+            consequence: "", rows: [], note: "Nothing changes.",
           },
           {
             label: "Hear the finding", note: "Enter the assize’s exchange now.",
             consequence: "", rows: [],
-            terms: [{ text: `${capFirst(duty)} takes on more work.`, icon: "duties", pop: `The finding is entered now: ${duty} takes on ${unitsLabel(CONFIG.assizeAssessment)} more, and the complaint of the ${label} is answered.` }],
           },
         ],
       };
@@ -41328,7 +41350,7 @@ const SOLO_MATTERS = {
           {
             label: "Receive them under the Crown’s hospitality", note: "Costs 1 standing.",
             disabled: !canSpendStanding(game, 1),
-            consequence: `Both finish their talk in private.`, rows: [],
+            consequence: "", rows: [],
           },
           {
             label: "Leave the next visit to the households", note: "Keep the Crown’s standing.",
@@ -44116,6 +44138,7 @@ function EffectRows({ rows }) {
   return jsx("ul", {
     class: "fx-list",
     children: rows.map((r, i) =>
+      r.duty ? jsx("li", { class: "fx-duty", children: jsx(ReckDutyChange, { d: r.duty }) }, i) :
       jsx(
         "li",
         {
@@ -53305,6 +53328,11 @@ p, li, blockquote {
 .hall-option .hall-terms li:has(.hall-tag) .hall-tile { width: 20px; height: 20px; }
 .hall-option .hall-outcome { background: transparent; padding: 8px 8px 8px; }
 .hall-option .hall-outcome .fx-list { margin-top: 7px; }
+.hall-option .fx-duty { list-style: none; background: #e2d5b6; border-radius: var(--r-sm); padding: 8px 10px 9px; }
+.hall-option .fx-duty .reck-duty { margin: 0; padding: 0; border: 0; background: none; }
+.hall-option .fx-duty, .hall-option .fx-duty .reck-duty, .hall-option .fx-duty .duty-allocation { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.hall-option .fx-duty { overflow: hidden; }
+.hall-option .fx-duty .duties-title { flex-wrap: wrap; row-gap: 2px; }
 
 .hall-option .hall-outcome .hall-terms { margin-top: 7px; }
 .hall-option .hall-outcome .hall-terms + .fx-list { margin-top: 6px; }
