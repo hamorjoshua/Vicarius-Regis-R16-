@@ -39653,9 +39653,12 @@ const SOLO_MATTERS = {
           {
             label: "Hold the wall", note: oddsNote(h),
             // a mutiny disbands the bulwark just as standing it down does; its other costs are drawn as rows
-            consequence: `${oddsLead(h)}: the garrison gains 2 weeks of readiness (${shieldNote}), or the bulwark is disbanded.`, rows: [],
-            outcomeIcons: [null, "swords"],
-            outcomePops: [null, `The garrison mutinies. ${disbandPop}`],
+            consequence: `${oddsLead(h)}: the garrison gains two weeks of readiness, or the bulwark is disbanded.`, rows: [],
+            outcomeIcons: ["swords", "swords"],
+            outcomePops: [
+              `Readiness is the count of weeks the bulwark has held. At ${mmNum(CONFIG.bulwarkSlot3Start)} weeks it is ready: when disaster next strikes the ${law?.region || "region"}, ${name} takes the blow as pressure and the court is spared a breach of confidence. ${curWeeks >= CONFIG.bulwarkSlot3Start ? "It is ready already, and the weeks keep it so." : nextWeeks >= CONFIG.bulwarkSlot3Start ? "These two weeks would make it ready." : `These two weeks would bring it to ${mmNum(nextWeeks)}.`}`,
+              `The garrison mutinies. ${disbandPop}`,
+            ],
           },
         ],
       };
