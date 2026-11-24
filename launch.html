@@ -39609,7 +39609,7 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Release this house from its endowment", note: "Restore its ordinary obligation.",
-            consequence: `${name} returns to an ordinary share on ${duty}.${moved}${picked}${gap}${othersStay}`, rows: [],
+            consequence: "", rows: [],
           },
           {
             label: "Require delivery", note: oddsNote(h),
@@ -40115,11 +40115,11 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Release the noble from the vow", note: "Restore the lighter share.",
-            consequence: `${name}’s share of ${duty} is halved again, and ${name} loses 1 personal devotion.`, rows: [],
+            consequence: "", rows: [],
           },
           {
             label: "Require the noble’s own household to fulfil it", note: "Keep the full share on this duty.",
-            consequence: `${name} keeps the full share of ${duty}, and devotion rises 1 among the laity of the ${h.region}.${shiftPreview}`, rows: [],
+            consequence: "", rows: [],
           },
         ],
       };
@@ -40193,7 +40193,7 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Recall the commander", note: "Unwind the march off the foreign roll.",
-            consequence: `Ends ${name}’s march and removes ${prn(soldier).obj} from ${duty}.${cover}${gap} The soldiers gain 1 grievance.`, rows: [],
+            consequence: "", rows: [],
           },
           {
             label: "Keep the march abroad", note: "Let the home watch decide at week’s close.",
@@ -40673,7 +40673,7 @@ const SOLO_MATTERS = {
       const opts = [
         {
           label: "Return the seal with its face struck smooth", note: "Keep the judgment intact.",
-          consequence: `${hallName(target)} recovers the family keepsake and gains 1 regard. Its former rank and writs stay forfeit.`, rows: [],
+          consequence: "", rows: [],
         },
       ];
       if (h.from.writ != null && h.from.redeemLawId != null) {
@@ -40688,7 +40688,7 @@ const SOLO_MATTERS = {
         const ease = drops.length ? ` Eases: ${drops.join(", ")}.` : "";
         opts.push({
           label: "Let the house redeem the seal intact", note: "Restore one confiscated writ for 1 unit.",
-          consequence: `Honors one confiscated writ again while ${hallName(target)} rises from ${unitsLabel(cur)} to ${unitsLabel(after)} on ${dutyTitleOf(rLaw)}.${ease} ${hallName(noble)} takes a grudge against the ${constituencyLabel(constituencyOf(target))}.`, rows: [],
+          consequence: `${hallName(noble)} takes a grudge against the ${constituencyLabel(constituencyOf(target))}.`, rows: [],
         });
       }
       opts.push({
@@ -41354,7 +41354,7 @@ const SOLO_MATTERS = {
           },
           {
             label: "Leave the next visit to the households", note: "Keep the Crown’s standing.",
-            consequence: `${hallName(A)} and ${hallName(B)} arrange their own meeting.`, rows: [],
+            consequence: "", rows: [], note: "Nothing changes.",
           },
         ],
       };
@@ -41501,7 +41501,7 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Accept the veteran in substitution", note: "Swap their estates on the rolls.",
-            consequence: `${hallName(vet)} returns to the soldiers and ${hallName(rec)} returns to the commons.${rollSummary}${favorNote}`, rows: [],
+            consequence: `${hallName(vet)} returns to the soldiers and ${hallName(rec)} to the commons.${favorNote}`, rows: [],
           },
           {
             label: "Hold the new levy to its summons", note: "Keep the conscription as ordered.",
@@ -41644,12 +41644,12 @@ const SOLO_MATTERS = {
           },
           {
             label: `Show it to ${N} first`, note: "Ask the lord’s leave.",
-            consequence: `${N} is pleased to have been asked, and gains 1 regard. The page reads a gentler version, and ${hallName(sponsor)} gets no credit for it.`, rows: [],
+            consequence: "", rows: [],
           },
           {
             label: "Write yourself in as the petitioner instead", note: "Costs 1 standing.",
             disabled: !canSpendStanding(game, 1),
-            consequence: `The Vicar is the joke now. ${hallName(sponsor)} gains 1 regard${rival ? `. ${hallName(rival)}’s heir is given the second reader’s place` : ""}. ${N} is spared, and never knows how nearly.`, rows: [],
+            consequence: rival ? `${hallName(rival)}’s heir is given the second reader’s place.` : "", rows: [],
           },
         ],
       };
@@ -41730,15 +41730,15 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Seal the attendance roll", note: "Enter the names publicly.",
-            consequence: `${hallName(official)} gains 1 regard. The households whose devotion rose are entered publicly.${supNote}`, rows: [],
+            consequence: "", rows: [],
           },
           {
             label: "Let the cleric burn it", note: "Keep the list private.",
-            consequence: `The devotion gained at the mission stands. ${hallName(cleric)} gains 1 regard, and ${hallName(official)} loses 1 regard.`, rows: [],
+            consequence: "", rows: [],
           },
           {
             label: "Ask who will put their own name to it", note: "Invite a voluntary profession.",
-            consequence: `The list stays private. Next week a devout household may voluntarily step forward to shoulder 1 unit on a religious duty—or nobody may come forward.`, rows: [],
+            consequence: `Next week a devout household may step forward to take on 1 unit of a religious duty, or none may.`, rows: [],
           },
         ],
       };
@@ -41800,7 +41800,7 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Restore the money quietly", note: "Keep the affair off the rolls.",
-            consequence: `${hallName(watchman)} gains 1 regard. Any grudge ${hallName(absent)} bears over the affair remains.`, rows: [],
+            consequence: "", rows: [],
           },
           {
             label: "Have the watchman clear the household publicly", note: "Ease the absent household now.",
@@ -42549,7 +42549,7 @@ const SOLO_MATTERS = {
           consequence: "", rows: [],
           branches: [
             { tile: "check", tag: "If it holds", note: `${hallName(sponsor)} comes through the week short of breaking.`, rows: [standingRow(game, 1)] },
-            { tile: "wrong", tag: "If it buckles", note: `${hallName(sponsor)} looks for respite from ${prn(sponsor).pos} heaviest duty.`, rows: [] },
+            { tile: "wrong", tag: "If it buckles", note: "The court gains no standing.", rows: [] },
           ],
         },
         {
@@ -43062,7 +43062,7 @@ const SOLO_MATTERS = {
           },
           {
             label: "Leave the case on the docket", note: "Proceed on original terms.",
-            consequence: `The accusation proceeds on its original terms. ${hallName(accuser)} learns that setting a prosecution in motion was easier than moderating it.`, rows: [],
+            consequence: "", rows: [], note: "Nothing changes.",
           },
         ],
       };
@@ -43249,15 +43249,11 @@ const SOLO_MATTERS = {
             label: "Send the Crown’s people", note: "Costs 1 standing.",
             disabled: !canSpendStanding(game, 1),
             consequence: "", rows: [],
-            terms: [{ text: "The garrison keeps its readiness.", icon: "swords" }],
           },
           {
             label: "Order the gate kept", note: "Preserve the garrison’s readiness.",
             consequence: "", rows: [],
-            terms: [
-              { text: "The garrison keeps its readiness.", icon: "swords" },
-              { text: kin ? `${hallName(kin)}, kin by marriage, goes out privately instead.` : `${hallName(stranded)} weathers the night outside.` },
-            ],
+            terms: [],
           },
         ],
       };
