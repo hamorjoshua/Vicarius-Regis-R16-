@@ -38575,26 +38575,87 @@ function hallNeedShift(game, hall, side) {
   const from = game.needBar[key], to = Math.max(CONFIG.needBarMin, Math.min(CONFIG.needBarMax, from + spec[side]));
   return to === from ? null : { key, need: spec.need, from, to };
 }
-// What an option does beyond the two houses, told before it is chosen.
-function hallKindText(game, hall, o, A, B, W, L) {
+// What an option does beyond the two houses, told before it is chosen: short tagged lines, never a paragraph.
+const capFirst = (t) => t.replace(/^./, (c) => c.toUpperCase());
+const estateRow = (key, tone, what) => ({ tone, icon: RECKONING_ESTATE_ICON[estateOfKey(key)] || "estates", who: capFirst(constituencyLabel(key)), what });
+function hallKindTerms(game, hall, o, A, B, W, L) {
   const kind = HALL_KIND[hall.matter];
   if (kind === "facts" && o.finds)
-    return "The court learns which house is in the right before it rules. That house gains regard; the other loses it, and takes no grudge from a ruling on the facts.";
-  if (!W) return "";
-  if (kind === "estates")
-{
-    const now = (P) => fmtNum(game.grievance?.[constituencyOf(P)] || 0);
-    return `The ${hall.region} reads this as the law itself. The ${constituencyLabel(constituencyOf(W))} lose 1 grievance (now ${now(W)}) and the ${constituencyLabel(constituencyOf(L))} take 1 (now ${now(L)}). Neither house’s own regard changes.`;
-  }
+    return [{ tag: "The truth", text: "The court rules for whichever house is in the right. The other takes no grudge." }];
+  if (!W) return [];
+  if (kind === "estates") return [{ tag: "Read as law", text: `The ${hall.region} takes this for the law itself. Neither house’s own regard changes.` }];
   if (kind === "facts")
-    return `One of them is lying, and the court cannot tell which from here. If it judges rightly, ${hallName(L)} takes no grudge. If it judges wrongly, that will come out, and the ${constituencyLabel(constituencyOf(L))} take 1 grievance.`;
+    return [
+      { tag: "A guess", text: "One of them is lying, and the court cannot tell which." },
+      { tag: "If right", text: `${hallName(L)} takes no grudge.` },
+      { tag: "If wrong", tone: "down", text: `It comes out, and the ${constituencyLabel(constituencyOf(L))} take 1 grievance.` },
+    ];
   if (kind === "needs") {
     const sh = hallNeedShift(game, hall, o.win);
-    return sh ? `The ${hall.region}’s ${sh.need} bar ${sh.to > sh.from ? "rises" : "falls"} by 1 (now ${fmtNum(sh.from)}).` : "";
+    return sh ? [{ tag: "The region", tone: sh.to > sh.from ? "up" : "down", text: `${capFirst(sh.need)} bar ${sh.to > sh.from ? "rises" : "falls"} by 1 (now ${fmtNum(sh.from)}).` }] : [];
   }
   if (kind === "time" && o.win === "b")
-    return `The court waits ${mmNum(CONFIG.hallDebtWeeks)} weeks on the harvest. If ${hallName(B)} is below pressing pressure then, the debt is paid and ${hallName(A)} regains the regard lost today. If not, ${hallName(B)} defaults and the ${constituencyLabel(constituencyOf(A))} take 1 grievance.`;
-  return "";
+    return [
+      { tag: `In ${mmNum(CONFIG.hallDebtWeeks)} weeks`, text: `If ${hallName(B)} is below pressing pressure, the debt is paid and ${hallName(A)} regains the regard lost today.` },
+      { tag: "Otherwise", tone: "down", text: `${hallName(B)} defaults, and the ${constituencyLabel(constituencyOf(A))} take 1 grievance.` },
+    ];
+  return [];
+}
+function holdingTerms(game, hall, o, W, L) {
+  const hd = hallHolding(game, hall, o);
+  if (!hd) return [];
+  const then = hd.prior && `week ${hd.prior.week} (${HALL_RECALL[hd.prior.matter] || "an earlier quarrel"})`;
+  if (hd.follows) return [{ tag: "Your rule", tone: "up", text: `Follows ${then}.${HALL_KIND[hall.matter] === "estates" ? "" : ` ${hallName(L)} knew the rule and takes no grudge.`}` }];
+  if (hd.reverses) return [{ tag: "Breaks your rule", tone: "down", text: `Reverses ${then}. New rule: ${HALL_PRINCIPLE[hd.side]}.` }];
+  return [{ tag: "Sets a rule", text: `${capFirst(HALL_PRINCIPLE[hd.side])}.` }];
+}
+// Constituencies an option moves, as rows beside the households'.
+function hallEstateRows(game, hall, o, W, L) {
+  if (!W) return [];
+  const rows = [], now = (key) => fmtNum(game.grievance?.[key] || 0);
+  if (HALL_KIND[hall.matter] === "estates") {
+    const w = constituencyOf(W), l = constituencyOf(L);
+    rows.push(estateRow(w, "up", (game.grievance?.[w] || 0) > 0 ? `Lose 1 grievance (now ${now(w)})` : "Have no grievance to lose"), estateRow(l, "down", `Take 1 grievance (now ${now(l)})`));
+  }
+  const hd = hallHolding(game, hall, o);
+  if (hd?.reverses) rows.push(estateRow(hd.prior.c, "down", "Take 1 grievance, having relied on the old rule"));
+  return rows;
+}
+// A written consequence, broken into lines a steward can scan: one sentence to a line, the price
+// tagged, and a gamble set out as its two outcomes with the odds of each.
+function hallTermsOf(text) {
+  if (!text) return [];
+  const out = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+(?=[A-Z“‘(+−\d])/)) {
+    const odds = sentence.match(/^(Seven chances in ten|Three chances in ten|Even chances|Even odds)[:.]\s*(.*)$/s);
+    if (odds && odds[2]) {
+      const [first, second] = odds[1].startsWith("Seven") ? ["7 in 10", "3 in 10"] : odds[1].startsWith("Three") ? ["3 in 10", "7 in 10"] : ["Even", "Even"];
+      const body = odds[2].replace(/\.$/, "");
+      const cutAt = [/;\s+(?=if )/, /\s*—\s*or\s+/, /,\s+or\s+/].map((re) => body.split(re)).find((parts) => parts.length === 2);
+      if (cutAt) {
+        out.push({ tag: first, text: `${capFirst(cutAt[0].trim())}.` }, { tag: second, text: `${capFirst(cutAt[1].trim())}.` });
+        continue;
+      }
+      out.push({ tag: first, text: `${capFirst(body)}.` });
+      continue;
+    }
+    if (/^(Costs|Spends?|Stake) \d+ standing/.test(sentence)) out.push({ tag: "Cost", tone: "down", text: sentence });
+    else if (/^These households will return/.test(sentence)) out.push({ tag: "Returns", text: sentence });
+    else out.push({ text: sentence });
+  }
+  return out;
+}
+function HallTerms({ terms }) {
+  return terms.length
+    ? jsx("ul", {
+        class: "hall-terms",
+        children: terms.map((t, i) =>
+          jsx("li", { class: t.tag ? "tagged" : "plain", children: [
+            t.tag && jsx("span", { class: `hall-tag ${t.tone || ""}`, children: t.tag }),
+            jsx("span", { children: t.text }),
+          ] }, i)),
+      })
+    : null;
 }
 // Debts the court gave time on, come due.
 function settleHallDue(game, report) {
@@ -38624,13 +38685,6 @@ function hallHolding(game, hall, o) {
   return { side, question, prior, follows: !!prior && prior.side === side, reverses: !!prior && prior.side !== side };
 }
 const holdingCase = (prior) => `${stewardWeek(prior.week)}, on ${HALL_RECALL[prior.matter] || "an earlier quarrel"}`;
-function holdingText(game, hall, o, W, L) {
-  const hd = hallHolding(game, hall, o);
-  if (!hd) return "";
-  if (hd.follows) return `As the court held in ${holdingCase(hd.prior)}: ${HALL_PRINCIPLE[hd.side]}. ${hallName(L)} knew the rule, and takes no grudge from it.`;
-  if (hd.reverses) return `Against the court’s own ruling in ${holdingCase(hd.prior)}, that ${HALL_PRINCIPLE[hd.prior.side]}. The ${constituencyLabel(hd.prior.c)}, who relied on it, take 1 grievance. From now on the court holds that ${HALL_PRINCIPLE[hd.side]}.`;
-  return `This would hold that ${HALL_PRINCIPLE[hd.side]}. Later quarrels will be measured against it.`;
-}
 const ordTimes = (n) => (n === 1 ? "once" : n === 2 ? "twice" : `${mmNum(n)} times`);
 const HALL_SEQUELS = [
   {
@@ -43238,7 +43292,10 @@ function drawHall(game, prev = null, report = null) {
   return { week: game.week, matter: c.matter, a: c.a, b: c.b, region: c.region, ruled: null, cause: c.cause };
 }
 function hallView(game, hall = game.hall) {
-  if (hall && SOLO_MATTERS[hall.matter]) return SOLO_MATTERS[hall.matter].view(game, hall);
+  if (hall && SOLO_MATTERS[hall.matter]) {
+    const view = SOLO_MATTERS[hall.matter].view(game, hall);
+    return view && { ...view, solo: true };
+  }
   const m = hall && hallMatter(hall.matter),
     A = m && game.people[hall.a],
     B = m && game.people[hall.b];
@@ -43264,14 +43321,16 @@ function hallView(game, hall = game.hall) {
           ? o.ennoble ? `${hallName(B)} enters the noble estate and its duty rolls. The two houses marry. ${marriageGrievanceText(game, A, B)}`
             : "The wedding is called off. Both houses keep their present ranks."
           : HALL_RETURN_OF[hall.matter] ? "These households will return about this ruling after at least one intervening week."
-          : [hallKindText(game, hall, o, A, B, W, L), holdingText(game, hall, o, W, L)].filter(Boolean).join(" "),
+          : "",
+        terms: hall.matter === "marriageRank" || HALL_RETURN_OF[hall.matter] ? null
+          : [...hallKindTerms(game, hall, o, A, B, W, L), ...holdingTerms(game, hall, o, W, L)],
         disabled: !!o.cost && !canSpendStanding(game, o.cost),
         win: W ? hallName(W) : null,
         winSide: o.win,
         lose: L ? hallName(L) : null,
         grudge: W && kind !== "estates" && kind !== "facts" && !hallHolding(game, hall, o)?.follows && (hall.matter === "feud" || !(L.grudge && L.grudge.until > game.week)) ? `the ${estateInRegion(W.region, W.type)}` : null,
         kin: L ? hallKin(game, L.id).filter((k) => k !== W.id).map((k) => hallName(game.people[k])) : [],
-        rows: hallRows(game, hall, o, A, B, W, L),
+        rows: [...hallRows(game, hall, o, A, B, W, L), ...hallEstateRows(game, hall, o, W, L)],
         note: o.ennoble ? "The spouse is raised to noble rank." : o.both ? "Both houses gain one regard." : o.regardA || o.regardB ? `${hallName(o.regardA ? A : B)} gains one regard.` : W && kind === "estates"
           ? `A ruling for the ${constituencyLabel(constituencyOf(W))} against the ${constituencyLabel(constituencyOf(L))}.`
           : W
@@ -43685,7 +43744,8 @@ function HallOverlay({ game, onRule, view, label }) {
                     onClick: () => onRule(i),
                     children: o.label,
                   }),
-                  o.consequence && jsx("p", { class: "hall-term", children: o.consequence }),
+                  v.solo && o.note && jsx("p", { class: "hall-summary", children: o.note }),
+                  jsx(HallTerms, { terms: o.terms || hallTermsOf(o.consequence) }),
                   jsx(EffectRows, { rows: withOfficeTags(game, o.rows) }),
                 ],
               },
@@ -52569,6 +52629,13 @@ p, li, blockquote {
 }
 
 .hall-term { margin: .35em 0; font-size: .9em; line-height: 1.35; }
+.hall-summary { margin: 0; font-size: 1em; line-height: 1.3; font-style: italic; }
+.hall-terms { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .9em; line-height: 1.4; }
+.hall-terms li { position: relative; }
+.hall-terms li.plain { padding-left: .9em; }
+.hall-terms li.plain::before { content: "·"; position: absolute; left: .15em; font-weight: 700; }
+.hall-tag { display: inline-block; margin-right: 7px; vertical-align: 1px; font: 600 var(--t-sm)/1 var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); border: 1px solid var(--vellum-rule); border-radius: var(--r-sm); padding: 3px 6px 2px; white-space: nowrap; }
+.hall-tag.down { border-style: dashed; }
 .hallway-party, .hallway-visitor { display: inline-flex; align-items: center; gap: .35em; }
 .hallway-party { flex-wrap: wrap; }
 .matter-btn .hallway-subject { display: block; font-weight: normal; }
