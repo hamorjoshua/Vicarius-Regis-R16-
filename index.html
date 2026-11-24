@@ -38745,7 +38745,7 @@ function soloDiffRows(before, after, hall) {
   const named = new Set([hall.a, hall.b]), groups = new Map(), sig = (e) => `${e.dp}|${e.dr}|${Math.sign(e.dd)}|${Math.sign(e.ds)}`;
   for (const e of moved) if (!named.has(e.p0.id)) groups.set(sig(e), [...(groups.get(sig(e)) || []), e]);
   for (const e of moved) {
-    const g = named.has(e.p0.id) ? null : groups.get(sig(e));
+    const g = named.has(e.p0.id) || e.dp || e.dr ? null : groups.get(sig(e));
     if (!g || g.length < 3) { rows.push(single(e)); continue; }
     if (g[0] !== e) continue;
     const types = new Set(g.map((x) => x.p0.type)), regions = new Set(g.map((x) => x.p0.region));
@@ -38963,7 +38963,7 @@ function HallOption({ game, v, o, onRule }) {
                 // what the rows cannot say is a line item of its own, beside them
                 (() => {
                   const said = oddsTerms.length === 2 ? (oc.rows.length ? pruneCovered(oddsTerms[i].text, { outcome: true }) : oddsTerms[i].text) : "";
-                  return said ? jsx(HallTerms, { terms: [{ text: said, pop: o.outcomePops?.[i] || null }] }) : null;
+                  return said ? jsx(HallTerms, { terms: [{ text: said, pop: o.outcomePops?.[i] || null, icon: o.outcomeIcons?.[i] || null }] }) : null;
                 })(),
                 oc.rows.length > 0 && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, oc.rows)) }),
               ] }, i)),
@@ -39633,6 +39633,7 @@ const SOLO_MATTERS = {
       const exposed = qRaw(game, law)
         .filter((x) => x.id !== soldier.id)
         .map(hallName);
+      const disbandPop = `It gives up the military support it has built on ${duty}, and any protection against disaster it has earned.`;
       const exposedText = exposed.length
         ? ` Exposed to mutiny (+${CONFIG.bulwarkMutinyPressure} pressure): ${exposed.join(", ")}.`
         : "";
@@ -39646,12 +39647,15 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Stand down the bulwark", note: "End the bulwark safely.",
-            consequence: `The bulwark stands down.`, rows: [],
-            terms: [{ text: "The bulwark stands down.", icon: "swords", pop: `It gives up the military support it has built on ${duty}, and any protection against disaster it has earned.` }],
+            consequence: `The bulwark is disbanded.`, rows: [],
+            terms: [{ text: "The bulwark is disbanded.", icon: "swords", pop: disbandPop }],
           },
           {
             label: "Hold the wall", note: oddsNote(h),
-            consequence: `${oddsLead(h)}: the garrison gains 2 weeks of readiness (${shieldNote}), or the garrison mutinies—breaking the bulwark, adding +${CONFIG.bulwarkMutinyPressure} pressure to the other bearers on ${duty}, and +${CONFIG.bulwarkMutinyG} soldier grievance.${exposedText}`, rows: [],
+            // a mutiny disbands the bulwark just as standing it down does; its other costs are drawn as rows
+            consequence: `${oddsLead(h)}: the garrison gains 2 weeks of readiness (${shieldNote}), or the bulwark is disbanded.`, rows: [],
+            outcomeIcons: [null, "swords"],
+            outcomePops: [null, `The garrison mutinies. ${disbandPop}`],
           },
         ],
       };
