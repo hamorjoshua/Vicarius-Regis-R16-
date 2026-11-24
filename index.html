@@ -43838,11 +43838,12 @@ function ruleHall(game, choice) {
     if (!rightOnFacts) addRegard(L, -CONFIG.hallRegard);
     if (kind === "facts") {
       const out = HALL_TRUTH_OUT[hall.matter];
-      if (o.finds) kindLine = `${out[truth]} The court rules for ${hallName(W)} on the facts, and ${hallName(L)} has no answer to them.`;
-      else if (side === truth) kindLine = `${out.right}`;
+      // the assistant tells it plainly: whose word you took, and whether it was the true one
+      if (o.finds) kindLine = `${out[truth]} So it was ${hallName(L)} who lied, Vicar, and the court has ruled for ${hallName(W)}.`;
+      else if (side === truth) kindLine = `${out.right} You sided with ${hallName(W)}, Vicar, and you were right: it was ${hallName(L)} who lied.`;
       else {
         addGrievance(g, constituencyOf(L), 1);
-        kindLine = `${out.wrong} ${hallName(L)} loses 1 regard, and ${grievanceTold(game, constituencyOf(L), 1)}.`;
+        kindLine = `${out.wrong} You sided with ${hallName(W)}, Vicar, and you were wrong: it was ${hallName(W)} who lied. ${hallName(L)} thinks the worse of the court for it, and ${grievanceTold(game, constituencyOf(L), 1)}.`;
       }
     }
     const sh = kind === "needs" ? hallNeedShift(g, hall, side) : null;
