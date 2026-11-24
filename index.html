@@ -13624,9 +13624,9 @@ function epWeekly(game, R) {
     if (host) {
       if (host.pressure < CONFIG.urgent) {
         gainStanding(game, 1);
-        epEvent(R, `${hallName(host)} carried the King’s supper without breaking: the Crown gains 1 standing.`, [host.id]);
+        epEvent(R, `${hallName(host)} carried the court’s supper without breaking: the Crown gains 1 standing.`, [host.id]);
       } else {
-        epEvent(R, `The King’s supper pushed ${hallName(host)} to urgency; the house looks for respite from its largest duty.`, [host.id]);
+        epEvent(R, `The court’s supper pushed ${hallName(host)} to urgency; the house looks for respite from its largest duty.`, [host.id]);
       }
     }
   }
@@ -35826,7 +35826,7 @@ const HALL_INTRO = {
   weddingUnopened: (A, B) => `word from ${A} about an unopened wedding invitation to ${B}`,
   wrongMuster: (A, B) => `an offer from ${A} to take ${B}’s place at muster`,
   pardonedTrial: (A, B) => `a request from ${A} to surrender the pardon against ${B}`,
-  pageJoke: (A, B) => `a folded scrap brought by ${A} about supper before the King`,
+  pageJoke: (A, B) => `a folded scrap brought by ${A} about the reading at the court’s supper`,
   bishopList: (A, B) => `a list of names brought by ${A} after the mission`,
   missingPurse: (A, B) => `a purse found by ${A} under ${B}’s watch bench`,
   oldHouseName: (A, B) => `a request from ${A} concerning the noble roll`,
@@ -35837,7 +35837,7 @@ const HALL_INTRO = {
   trialCombat: (A, B) => `a demand from ${A} for trial by combat against ${B}`,
   marriageChestWrit: (A, B) => `word from ${A} about a writ packed in the marriage chest`,
   interdictFuneral: (A, B) => `a request from ${A} to bury a member of ${B} under interdict`,
-  kingChair: (A, B) => `word from ${A} that the King has asked to dine`,
+  kingChair: (A, B) => `word from ${A} that the court is to dine under ${A}’s roof`,
   rebelReceipt: (A, B) => `an old tally brought by ${A} on behalf of ${B}`,
   brideObjectsTitle: (A, B) => `word from ${A} before letters of nobility are sealed with ${B}`,
   ownPrecedent: (A, B) => `two writs laid side by side by ${A} citing ${B}`,
@@ -38141,7 +38141,7 @@ const HALL_MATTERS = [
   {
     id: "hound", title: () => "Who presented the petition?",
     lede: (A, B) => `On the first morning at court, the heir of ${hallName(A)} taught the king’s old hound to carry a petition in its mouth. It brought yours back quite dry, Vicar. ${hallName(B)} has brought the child who taught it to let go.`,
-    pa: () => "Wait till His Grace sees it. One whistle and the beast goes straight to the throne.",
+    pa: () => "Wait till His Grace comes home and sees it. One whistle and the beast goes straight to the throne.",
     pb: () => "Whistle all you please. My girl has the sausage. Will her name be given when the trick is shown?",
     options: [
       { label: "Give the page the whole exhibition", regardA: 1, done: (A, B) => `The page of ${hallName(A)} takes the bow. Halfway back to the throne the hound makes a small detour to visit ${hallName(B)}.` },
@@ -38890,7 +38890,7 @@ const HALL_SEQUELS = [
     pa: () => "He comes out for her. If she gives us the sausage, we can do the rest.",
     pb: () => "He comes out because I let him go back in again. Give me the kennel key tonight.",
     options: [
-      { label: "Give the kennel key to the girl", regardB: 1, done: () => "When the king calls for the hound, his keeper sends word that he is asleep. The king asks them both to breakfast." },
+      { label: "Give the kennel key to the girl", regardB: 1, done: () => "When the hall calls for the hound, his keeper sends word that he is asleep. You ask them both to breakfast." },
       { label: "Retire the trick while it is still famous", done: () => "The page hangs the whistle on a nail. The hound resumes his former office under the kitchen table." },
     ],
   },
@@ -41332,9 +41332,9 @@ const SOLO_MATTERS = {
   pageJoke: {
     id: "pageJoke",
     channel: "hall",
-    title: () => "The page asks leave to tell the king a joke",
+    title: () => "The page asks leave to tell a joke about the king",
     lapseChoice: 1,
-    lapseNote: () => "The assistant would read the scrap aloud to you, and the King would hear the scheduled reading.",
+    lapseNote: () => "The assistant would read the scrap aloud to you, and the court would hear the scheduled reading.",
     draw(game) {
       const sponsors = game.people.filter(
         (p) => !p.charge && p.rites?.court_place != null && game.week - p.rites.court_place >= 1 && p.rites.jokeWeek == null,
@@ -41359,8 +41359,8 @@ const SOLO_MATTERS = {
       const sponsor = game.people[h.a];
       const rival = h.from.rivalId != null ? game.people[h.from.rivalId] : null;
       return {
-        title: "The page asks leave to tell the king a joke",
-        lede: `${hallName(sponsor)} has come alone with a folded scrap, Vicar. The heir you placed at court is to read at supper and has written a short exchange in which the King petitions you for relief from hearing petitions.`,
+        title: "The page asks leave to tell a joke about the king",
+        lede: `${hallName(sponsor)} has come alone with a folded scrap, Vicar. The heir you placed at court is to read at the court’s supper and has written a short exchange in which the King, home at last, petitions you for relief from hearing petitions.`,
         a: {
           name: hallName(sponsor), estate: sponsor.type, region: sponsor.region, id: sponsor.id,
           plea: `I read it, laughed, and have been worried ever since. The King’s line is quite good. It’s your line I came about.`,
@@ -41368,11 +41368,11 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Let the page read it under your name", note: "Both outcomes are equally likely.",
-            consequence: `Even odds: if the King laughs, gain 1 standing and ${hallName(sponsor)} gains 1 regard; if the room goes quiet, lose 1 standing. The appointment is safe either way.`, rows: [],
+            consequence: `Even odds: if the hall laughs, gain 1 standing and ${hallName(sponsor)} gains 1 regard; if the room goes quiet, lose 1 standing. The appointment is safe either way.`, rows: [],
           },
           {
             label: "Have the assistant read it to you now", note: "Keep it off the supper table.",
-            consequence: `You hear the joke privately and ${hallName(sponsor)} gains 1 regard with leave to say truthfully that the Vicar laughed. The King hears the scheduled reading.`, rows: [],
+            consequence: `You hear the joke privately and ${hallName(sponsor)} gains 1 regard with leave to say truthfully that the Vicar laughed. The court hears the scheduled reading.`, rows: [],
           },
           {
             label: "Give the page your better ending", note: "Stake 1 standing (50/50).",
@@ -41390,7 +41390,7 @@ const SOLO_MATTERS = {
         if (m.perseveres) {
           gainStanding(g, 1);
           addRegard(sponsor, 1);
-          return `At supper the King laughs until he drops his knife. The Crown gains 1 standing, and ${hallName(sponsor)} gains 1 regard.`;
+          return `At supper the hall laughs until the clerk drops his knife. The Crown gains 1 standing, and ${hallName(sponsor)} gains 1 regard.`;
         }
         spendStanding(g, 1);
         return `The hall goes very quiet after the Vicar’s line. You lose 1 standing, though ${hallName(sponsor)}’s appointment holds under your word.`;
@@ -41602,7 +41602,7 @@ const SOLO_MATTERS = {
         lede: `${hallName(p)} has returned after last week’s elevation. The clerk enrolled ${hallName(p)} under the name of its holding; ${hallName(p)} wants to keep the familiar name.`,
         a: {
           name: hallName(p), estate: p.type, region: p.region, id: p.id,
-          plea: `My father mended pots under that name. I rather thought the distinction you conferred was that his daughter might bear it before the King.`,
+          plea: `My father mended pots under that name. I rather thought the distinction you conferred was that his daughter might one day bear it before the King.`,
         },
         options: [
           {
@@ -42242,9 +42242,9 @@ const SOLO_MATTERS = {
   kingChair: {
     id: "kingChair",
     channel: "hall",
-    title: () => "The king wants the petitioner’s chair",
+    title: () => "The court wants the petitioner’s chair",
     lapseChoice: 0,
-    lapseNote: () => "Left unanswered, the household entertains the King at its own expense.",
+    lapseNote: () => "Left unanswered, the household entertains the court at its own expense.",
     draw(game) {
       const sponsors = game.people.filter(
         (p) => !p.charge && p.rites?.court_place != null && game.week - p.rites.court_place >= 2 && p.rites.kingChairWeek == null,
@@ -42269,11 +42269,11 @@ const SOLO_MATTERS = {
       const rival = h.from.rivalId != null ? game.people[h.from.rivalId] : null;
       const opts = [
         {
-          label: "Let the household entertain him at its own expense", note: "Host takes +2 pressure.",
+          label: "Let the household entertain the court at its own expense", note: "Host takes +2 pressure.",
           consequence: `${hallName(sponsor)} (now at ${fmtNum(sponsor.pressure)} pressure) takes 2 pressure and gains 1 regard. If it survives this week’s reckoning below urgent, the Crown gains 1 standing.`, rows: [],
         },
         {
-          label: "Put the royal table on the Crown’s account", note: "Costs 1 standing.",
+          label: "Put the court’s table on the Crown’s account", note: "Costs 1 standing.",
           disabled: !canSpendStanding(game, 1),
           consequence: `Spends 1 standing. ${hallName(sponsor)} gains 1 regard and takes no hosting pressure.`, rows: [],
         },
@@ -42285,11 +42285,11 @@ const SOLO_MATTERS = {
         });
       }
       return {
-        title: "The king wants the petitioner’s chair",
-        lede: `${hallName(sponsor)} has come in equal parts delight and alarm, Vicar. The King is passing through the ${h.region} and has asked to dine under ${hallName(sponsor)}’s roof on the heir’s praise of the table.`,
+        title: "The court wants the petitioner’s chair",
+        lede: `${hallName(sponsor)} has come in equal parts delight and alarm, Vicar. The court is to sup in the ${h.region} this week, and your harbinger has chosen ${hallName(sponsor)}’s roof for it, on the heir’s praise of the table.`,
         a: {
           name: hallName(sponsor), estate: sponsor.type, region: sponsor.region, id: sponsor.id,
-          plea: `We can seat fourteen, Vicar. His Grace is bringing nineteen. My daughter says the King is quite content to sit upon a chest. It is the other eighteen I have questions about.`,
+          plea: `We can seat fourteen, Vicar. Your train is nineteen. My daughter says you are quite content to sit upon a chest. It is the other eighteen I have questions about.`,
         },
         options: opts,
       };
@@ -42307,13 +42307,13 @@ const SOLO_MATTERS = {
       if (choice === 1) {
         trySpendStanding(g, 1);
         addRegard(sponsor, 1);
-        return `The Crown settles the supper account (−1 standing). ${hallName(sponsor)} gains 1 regard and hosts the King without strain.`;
+        return `The Crown settles the supper account (−1 standing). ${hallName(sponsor)} gains 1 regard and hosts the court without strain.`;
       }
       addPressure(sponsor, 1);
       if (rival) {
         addPressure(rival, 1);
         addRegard(rival, 1);
-        return `${hallName(sponsor)} and ${hallName(rival)} split the nineteen guests (+1 pressure each; ${hallName(rival)} recovers 1 regard)—and the children later confess the King ate the pudding at both houses.`;
+        return `${hallName(sponsor)} and ${hallName(rival)} split the nineteen guests (+1 pressure each; ${hallName(rival)} recovers 1 regard)—and the children later confess that the Vicar ate the pudding at both houses.`;
       }
       return `${hallName(sponsor)} manages the overflow (+1 pressure).`;
     },
