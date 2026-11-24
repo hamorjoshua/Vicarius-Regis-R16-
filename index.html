@@ -35826,7 +35826,7 @@ const HALL_INTRO = {
   weddingUnopened: (A, B) => `word from ${A} about an unopened wedding invitation to ${B}`,
   wrongMuster: (A, B) => `an offer from ${A} to take ${B}’s place at muster`,
   pardonedTrial: (A, B) => `a request from ${A} to surrender the pardon against ${B}`,
-  pageJoke: (A, B) => `a folded scrap brought by ${A} about the reading at the court’s supper`,
+  pageJoke: (A, B) => `a folded scrap brought by ${A}, in which the page makes sport of ${B}`,
   bishopList: (A, B) => `a list of names brought by ${A} after the mission`,
   missingPurse: (A, B) => `a purse found by ${A} under ${B}’s watch bench`,
   oldHouseName: (A, B) => `a request from ${A} concerning the noble roll`,
@@ -39289,6 +39289,20 @@ const OMEN_EXPLANATIONS = {
     plea: "Every baker in the lane bought soaked alder from my cart that morning, Vicar. That is the whole of my miracle. But yesterday my mother went to church for the first time since we buried him. Must you tell her?",
   },
 };
+const PAGE_QUIPS = [
+  { ask: "to have the river moved, since it runs past the house on the wrong side",
+    line: "In the piece you answer that the river was there first. In life, I think the river would lose.",
+    after: "By Michaelmas the house is telling it as its own." },
+  { ask: "to be excused the road roll, on the ground that the family horses have never touched a road",
+    line: "You ask what they walk on. The page has given the lord a very long answer.",
+    after: "The lord's groom is heard telling it in the stables by morning." },
+  { ask: "for a second pew, so that the household need not sit beside the household",
+    line: "You offer a stool in the porch. It is the stool that worries me.",
+    after: "The second pew is not mentioned again, which the parish counts a mercy." },
+  { ask: "to have the family arms painted on the weather, so that it will know whose land it is raining on",
+    line: "You say the court will write to the weather. That is the line people will repeat.",
+    after: "The arms are painted on a weathervane within the month." },
+];
 const SOLO_MATTERS = {
   penitentHealth: {
     id: "penitentHealth",
@@ -41332,9 +41346,12 @@ const SOLO_MATTERS = {
   pageJoke: {
     id: "pageJoke",
     channel: "hall",
-    title: () => "The page asks leave to tell a joke about the king",
-    lapseChoice: 1,
-    lapseNote: () => "The assistant would read the scrap aloud to you, and the court would hear the scheduled reading.",
+    title: () => "The page has written a lord into the supper reading",
+    lapseChoice: 0,
+    lapseNote: (game, h) => {
+      const noble = h.from?.nobleId != null ? game.people[h.from.nobleId] : null;
+      return `Left unanswered, the page reads it as written${noble ? `, with ${hallName(noble)} at the table` : ""}.`;
+    },
     draw(game) {
       const sponsors = game.people.filter(
         (p) => !p.charge && p.rites?.court_place != null && game.week - p.rites.court_place >= 1 && p.rites.jokeWeek == null,
@@ -41343,11 +41360,17 @@ const SOLO_MATTERS = {
         if (hallHash(game, 2141) >= 0.35) return null;
         const rivalId = sponsor.rites.court_place_rival;
         const rival = rivalId != null && game.people[rivalId] && !game.people[rivalId].charge ? game.people[rivalId] : null;
+        // the lord the page has written in: a noble house of the realm, of the sponsor's own region where there is one
+        const lords = game.people.filter((p) => p.type === "Noble" && !p.charge && p.id !== sponsor.id && p.id !== rival?.id);
+        const local = lords.filter((p) => p.region === sponsor.region), pool = local.length ? local : lords;
+        if (!pool.length) continue;
+        const noble = pool[Math.floor(hallHash(game, 2142) * pool.length)];
         return {
           matter: "pageJoke", ruled: null, week: game.week,
-          a: sponsor.id, b: rival ? rival.id : sponsor.id, region: sponsor.region,
-          from: { kind: "court_place", sponsorId: sponsor.id, rivalId: rival?.id ?? null },
-          perseveres: hallHash(game, 2143) < 0.5,
+          a: sponsor.id, b: noble.id, region: sponsor.region,
+          from: { kind: "court_place", sponsorId: sponsor.id, rivalId: rival?.id ?? null, nobleId: noble.id, quip: Math.floor(hallHash(game, 2144) * PAGE_QUIPS.length) },
+          // a lord who thinks well of the court takes a joke from it in better part
+          ...soloOdds(game, 2143, noble, "regard"),
         };
       }
       return null;
@@ -41358,26 +41381,29 @@ const SOLO_MATTERS = {
     view(game, h) {
       const sponsor = game.people[h.a];
       const rival = h.from.rivalId != null ? game.people[h.from.rivalId] : null;
+      const noble = h.from.nobleId != null ? game.people[h.from.nobleId] : null;
+      const N = noble ? hallName(noble) : "the lord", quip = PAGE_QUIPS[h.from.quip ?? 0];
+      const theirs = noble ? `the ${constituencyLabel(constituencyOf(sponsor))}` : "the page’s house";
       return {
-        title: "The page asks leave to tell a joke about the king",
-        lede: `${hallName(sponsor)} has come alone with a folded scrap, Vicar. The heir you placed at court is to read at the court’s supper and has written a short exchange in which the King, home at last, petitions you for relief from hearing petitions.`,
+        title: "The page has written a lord into the supper reading",
+        lede: `${hallName(sponsor)} has come alone with a folded scrap, Vicar. The heir you placed at court is to read at the court’s supper, and has written a short exchange in which ${N} petitions you ${quip.ask}. ${noble ? `${N} will be at the table.` : ""}`.trim(),
         a: {
           name: hallName(sponsor), estate: sponsor.type, region: sponsor.region, id: sponsor.id,
-          plea: `I read it, laughed, and have been worried ever since. The King’s line is quite good. It’s your line I came about.`,
+          plea: `I read it, laughed, and have been worried ever since. It is very like ${noble ? prn(noble).obj : "him"}. ${quip.line}`,
         },
         options: [
           {
-            label: "Let the page read it under your name", note: "Both outcomes are equally likely.",
-            consequence: `Even odds: if the hall laughs, gain 1 standing and ${hallName(sponsor)} gains 1 regard; if the room goes quiet, lose 1 standing. The appointment is safe either way.`, rows: [],
+            label: "Let the page read it as written", note: oddsNote(h),
+            consequence: `${oddsLead(h)}: if ${N} laughs, the Crown gains 1 standing, and both ${hallName(sponsor)} and ${N} gain 1 regard; if ${N} does not, ${N} loses 1 regard and takes a grudge against ${theirs}.`, rows: [],
           },
           {
-            label: "Have the assistant read it to you now", note: "Keep it off the supper table.",
-            consequence: `You hear the joke privately and ${hallName(sponsor)} gains 1 regard with leave to say truthfully that the Vicar laughed. The court hears the scheduled reading.`, rows: [],
+            label: `Show it to ${N} first`, note: "Ask the lord’s leave.",
+            consequence: `${N} is pleased to have been asked, and gains 1 regard. The page reads a gentler version, and ${hallName(sponsor)} gets no credit for it.`, rows: [],
           },
           {
-            label: "Give the page your better ending", note: "Stake 1 standing (50/50).",
+            label: "Write yourself in as the petitioner instead", note: "Costs 1 standing.",
             disabled: !canSpendStanding(game, 1),
-            consequence: `Stake 1 standing. Even odds: if it lands, recover the stake${rival ? ` and grant ${hallName(rival)}’s heir a place as second reader (+1 regard to both houses)` : " and gain 1 regard"}; if it falls flat, lose 1 standing and the children can truthfully blame you.`, rows: [],
+            consequence: `Spends 1 standing, for the Vicar is the joke now. ${hallName(sponsor)} gains 1 regard${rival ? `, and ${hallName(rival)}’s heir is given the second reader’s place (+1 regard)` : ""}. ${N} is spared, and never knows how nearly.`, rows: [],
           },
         ],
       };
@@ -41385,31 +41411,34 @@ const SOLO_MATTERS = {
     apply(g, m, choice) {
       const sponsor = g.people[m.a];
       const rival = m.from.rivalId != null ? g.people[m.from.rivalId] : null;
+      const noble = m.from.nobleId != null ? g.people[m.from.nobleId] : null;
+      const N = noble ? hallName(noble) : "the lord", quip = PAGE_QUIPS[m.from.quip ?? 0];
       sponsor.rites = { ...(sponsor.rites || {}), jokeWeek: g.week };
       if (choice === 0) {
         if (m.perseveres) {
           gainStanding(g, 1);
           addRegard(sponsor, 1);
-          return `At supper the hall laughs until the clerk drops his knife. The Crown gains 1 standing, and ${hallName(sponsor)} gains 1 regard.`;
+          if (noble) addRegard(noble, 1);
+          return `At supper ${N} laughs louder than anyone, and asks for a copy. ${quip.after} The Crown gains 1 standing, and both houses gain 1 regard.`;
         }
-        spendStanding(g, 1);
-        return `The hall goes very quiet after the Vicar’s line. You lose 1 standing, though ${hallName(sponsor)}’s appointment holds under your word.`;
+        if (noble) {
+          addRegard(noble, -1);
+          noble.grudge = { c: constituencyOf(sponsor), until: g.week + CONFIG.hallGrudgeWeeks, amount: 1 };
+        }
+        return `${N} does not laugh, and so nobody else does. ${N} leaves before the pudding, and holds it against the ${constituencyLabel(constituencyOf(sponsor))}.`;
       }
       if (choice === 1) {
-        addRegard(sponsor, 1);
-        return `Your assistant reads it: the King, home from abroad, asks for three weeks’ respite from hearing petitions, and the Vicar asks whether he has brought a surety. ${hallName(sponsor)} goes home (+1 regard), and supper keeps its scheduled reading.`;
-      }
-      if (m.perseveres) {
-        addRegard(sponsor, 1);
-        if (rival) {
-          rival.rites = { ...(rival.rites || {}), court_place: g.week };
-          addRegard(rival, 1);
-          return `Your ending brings the supper table down. The stake is returned, and ${hallName(rival)}’s heir is given the second reader’s place so both children can play the King and the Vicar (+1 regard to both houses).`;
-        }
-        return `Your ending brings the supper table down. The stake is returned, and ${hallName(sponsor)} gains 1 regard.`;
+        if (noble) addRegard(noble, 1);
+        return `${N} reads the scrap twice, strikes one word, and gives leave. The page reads the gentler version to polite laughter; ${N} gains 1 regard for having been asked.`;
       }
       trySpendStanding(g, 1);
-      return `Your ending lands in a polite silence (−1 standing). Both children can truthfully tell their parents whose line it was.`;
+      addRegard(sponsor, 1);
+      if (rival) {
+        rival.rites = { ...(rival.rites || {}), court_place: g.week };
+        addRegard(rival, 1);
+        return `The page reads it with the Vicar as the petitioner, and ${hallName(rival)}’s heir reads the Vicar’s part back (−1 standing; +1 regard to both houses). The hall enjoys it a good deal more than you do.`;
+      }
+      return `The page reads it with the Vicar as the petitioner (−1 standing). The hall enjoys it a good deal more than you do, and ${hallName(sponsor)} gains 1 regard.`;
     },
   },
   bishopList: {
