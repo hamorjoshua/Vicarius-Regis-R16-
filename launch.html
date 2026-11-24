@@ -38979,7 +38979,7 @@ function HallOption({ game, v, o, onRule }) {
     bareNote = (o.note || "").replace(/^(Seven|Three) chances in ten\.\s*|^Even chances\.\s*/, "").trim(),
     // no summary under the button: an option speaks through its lines and rows. Only an option
     // that moves nothing at all says so ("Neither house is pleased or aggrieved").
-    note = quiet && bareNote && !/^(Costs|Stake) \d+ standing|equally likely|50\/50/i.test(bareNote) ? bareNote : null;
+    note = !quiet ? null : v.solo ? "Nothing changes." : bareNote && !/^(Costs|Stake) \d+ standing|equally likely|50\/50/i.test(bareNote) ? bareNote : null;
   return jsx("div", {
     class: "hall-option",
     children: [
@@ -39008,7 +39008,7 @@ function HallOption({ game, v, o, onRule }) {
                 jsx("p", { class: "hall-outcome-head", children: jsx("span", { class: "hall-tag hall-odds-tag", "aria-label": `${oddsText(oc.odds)} chances`, children: oddsText(oc.odds) }) }),
                 // what the rows cannot say is a line item of its own, beside them
                 (() => {
-                  const said = oddsTerms.length === 2 ? (oc.rows.length ? pruneCovered(oddsTerms[i].text, { outcome: true }) : oddsTerms[i].text) : "";
+                  const said = o.outcomeHide?.[i] ? "" : oddsTerms.length === 2 ? (oc.rows.length ? pruneCovered(oddsTerms[i].text, { outcome: true }) : oddsTerms[i].text) : "";
                   return said ? jsx(HallTerms, { terms: [{ text: said, pop: o.outcomePops?.[i] || null, icon: o.outcomeIcons?.[i] || null }] }) : null;
                 })(),
                 oc.rows.some((r) => r.term) && jsx(HallTerms, { terms: oc.rows.filter((r) => r.term) }),
@@ -39614,6 +39614,8 @@ const SOLO_MATTERS = {
           {
             label: "Require delivery", note: oddsNote(h),
             consequence: `${oddsLead(h)}: the stores suffice, or the endowment fails.`, rows: [],
+            // the stores sufficing is said by the need bar drawn beneath
+            outcomeHide: [true, false],
             outcomeIcons: ["cross", "cross"],
             outcomePops: [
               `The chapter’s barns hold out, and ${duty} is the better kept for it.`,
