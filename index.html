@@ -43864,6 +43864,7 @@ function EffectRows({ rows }) {
             jsx("span", {
               class: "fx-icon",
               "aria-hidden": "true",
+              "data-icon": r.work ? "work" : r.icon || null,
               children: r.work ? jsx(WorkIcon, { work: r.work }) : r.icon ? jsx(Icon, { icon: r.icon, size: 15 }) : null,
             }),
             jsx("span", {
@@ -52989,9 +52990,8 @@ p, li, blockquote {
    spilled into pressure, or anything else said about the row, takes the line below. */
 .hall-option .fx-row { align-items: start; }
 .hall-option .fx-row > .fx-icon { height: 22px; }
-/* the name's letters sit high in their line box (room is kept for descenders), so the icon is lifted
-   to the middle of the letters, not of the box */
-.hall-option .fx-row > .fx-icon > * { transform: translateY(-2.5px); }
+/* the commoners' sprout carries its weight in its stem, low in its box; lifted to sit level with the name */
+.hall-option .fx-row > .fx-icon[data-icon="common"] > * { transform: translateY(-2px); }
 .hall-option .fx-text > .fx-who, .hall-option .fx-text > .fx-who-line, .hall-option .fx-text > .fx-meters { min-height: 22px; display: inline-flex; align-items: center; }
 .hall-option .fx-text { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 2px; }
 .hall-option .fx-who { white-space: nowrap; }
