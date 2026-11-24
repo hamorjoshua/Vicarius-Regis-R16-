@@ -38885,7 +38885,10 @@ function HallOption({ game, v, o, onRule }) {
         "aria-label": `${o.label}. ${o.note}`,
         onClick: onRule,
         children: [
-          jsx("span", { class: "hall-choose-label", children: label }),
+          jsx("span", { class: "hall-choose-label", children: [
+            label,
+            o.sideWith && jsx("span", { class: "hall-choose-sub", children: `(siding with ${o.sideWith})` }),
+          ] }),
           cost > 0 && jsx("span", { class: "flip-cost hall-coin", title: `Costs ${cost} standing`, "aria-label": `Costs ${cost} standing`, children: `−${cost}` }),
         ],
       }),
@@ -43642,6 +43645,8 @@ function hallView(game, hall = game.hall) {
         disabled: !!o.cost && !canSpendStanding(game, o.cost),
         win: W ? hallName(W) : null,
         winSide: o.win,
+        // in a quarrel of fact, the button says whose word the ruling takes
+        sideWith: kind === "facts" && W ? hallName(W) : null,
         lose: L ? hallName(L) : null,
         grudge: W && kind !== "estates" && kind !== "facts" && !hallHolding(game, hall, o)?.follows && (hall.matter === "feud" || !(L.grudge && L.grudge.until > game.week)) ? `the ${estateInRegion(W.region, W.type)}` : null,
         kin: L ? hallKin(game, L.id).filter((k) => k !== W.id).map((k) => hallName(game.people[k])) : [],
@@ -52933,6 +52938,7 @@ p, li, blockquote {
 .hall-summary { margin: 0; font-size: 1em; line-height: 1.3; font-style: italic; text-align: center; text-wrap: balance; }
 .hall-choose { display: flex !important; align-items: center; justify-content: center; gap: 10px; }
 .hall-choose-label { min-width: 0; }
+.hall-choose-sub { display: block; margin-top: 2px; font: italic var(--t-sm)/1.2 var(--serif); opacity: .8; }
 /* the coin sits at the button's right edge, out of the flow, so the label centres on the whole button */
 .hall-choose:has(.hall-coin) { position: relative; padding-left: 44px !important; padding-right: 44px !important; }
 .flip-cost.hall-coin { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 23px; height: 23px; margin: 0; font-weight: 600; font-size: var(--t-sm); background: #e2c98a; color: #2b2113; box-shadow: none; }
