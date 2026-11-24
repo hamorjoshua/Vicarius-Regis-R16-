@@ -39458,6 +39458,13 @@ const PAGE_QUIPS = [
     line: "You say the court will write to the weather. That is the line people will repeat.",
     after: "The arms are painted on a weathervane within the month." },
 ];
+// The standing seals as a change would leave them, worked out on a copy of the realm.
+function standingRow(game, d) {
+  const c = cloneState(game), st = game.standing ?? CONFIG.standingMax, rv = game.reserve || 0;
+  d > 0 ? gainStanding(c, d) : spendStanding(c, -d);
+  const net = (c.standing ?? CONFIG.standingMax) + (c.reserve || 0) - st - rv;
+  return { plain: true, seals: { value: st, projected: c.standing ?? CONFIG.standingMax, reserve: rv, label: `${net >= 0 ? "+" : "−"}${Math.abs(net)}` } };
+}
 // How hard a household is pressed, as the assistant would say it.
 const strainWords = (p) => ((p?.pressure || 0) >= CONFIG.urgent ? "close to breaking" : (p?.pressure || 0) >= CONFIG.pressing ? "hard pressed" : "managing, for now");
 const SOLO_MATTERS = {
@@ -39582,7 +39589,12 @@ const SOLO_MATTERS = {
           },
           {
             label: "Require delivery", note: oddsNote(h),
-            consequence: `${oddsLead(h)}: the stores suffice and the ${h.region}’s ${need} bar rises by ${actualGain} (now ${fmtNum(curBar)}, cap ${CONFIG.needBarMax}), or the endowment fails—ending mortmain on ${duty} at −${CONFIG.mortmainFailStanding} standing and +${CONFIG.mortmainFailDebt} disaster debt.`, rows: [],
+            consequence: `${oddsLead(h)}: the stores suffice, or the endowment fails.`, rows: [],
+            outcomeIcons: ["cross", "cross"],
+            outcomePops: [
+              `The chapter’s barns hold out, and ${duty} is the better kept for it.`,
+              `The Church gives up the land, and ${duty} loses its endowment. The court’s standing suffers, and the realm is the less ready for disaster.`,
+            ],
           },
         ],
       };
@@ -39846,11 +39858,13 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Close the assize", note: "Leave the complaint unentered.",
-            consequence: `Closes the assize in the ${h.region}, leaving the ${label}’s grievance in place and sparing ${duty} the extra ${unitsLabel(CONFIG.assizeAssessment)}.`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: `The complaint goes unentered. The ${label} keep their grievance, and ${duty} is spared the extra work.`, icon: "gavel" }],
           },
           {
             label: "Hear the finding", note: "Enter the assize’s exchange now.",
-            consequence: `Removes ${fmtNum(amt)} grievance from the ${label} and adds +${CONFIG.assizeAssessment} unit to ${duty} (reserving this week’s assize so the weekly reckoning does not settle it twice).`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: `${capFirst(duty)} takes on more work.`, icon: "duties", pop: `The finding is entered now: ${duty} takes on ${unitsLabel(CONFIG.assizeAssessment)} more, and the complaint of the ${label} is answered.` }],
           },
         ],
       };
@@ -40000,11 +40014,17 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Break the seal and take the carts", note: "Reopen the roll and admit the new bearer.",
-            consequence: `Reopens ${duty} (preserving the charter’s list of signers) and admits ${hallName(helper)} for ${unitsLabel(helperShare)}.${easeText} The nobility gain 1 grievance, and the entail no longer shields the realm against quarter-day growth.`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: `The seal is broken, and ${hallName(helper)} joins ${duty}.`, icon: "scroll", pop: `${hallName(helper)} takes on ${unitsLabel(helperShare)}, easing the signers. Their names stay on record, but the entail no longer protects the realm at quarter day.` }],
           },
           {
             label: "Hold the signers to their charter", note: "Let the week’s reckoning decide.",
-            consequence: `The entail stays sealed for now. If ${duty} is met in full at the close of this week, the entail survives and keeps its quarter-day protection. If it falls short, the charter breaks and every signer who contributed takes 1 pressure.`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: `The entail stays sealed, if ${duty} is fully met at the week’s close.`, icon: "hourglass-plain" }],
+            branches: [
+              { tile: "check", tag: "If met", note: "The entail survives, and keeps protecting the realm at quarter day.", rows: [] },
+              { tile: "wrong", tag: "If short", note: "The charter breaks, and every signer who did their part takes 1 pressure.", rows: [] },
+            ],
           },
         ],
       };
@@ -40155,7 +40175,12 @@ const SOLO_MATTERS = {
           },
           {
             label: "Keep the march abroad", note: "Let the home watch decide at week’s close.",
-            consequence: `${name} stays on ${duty} for another week. If military service in the ${h.region} is met at the close, the soldiers win relief; if it falls short, a border raid hits (−${CONFIG.levyMarchRaid} military balance, +${CONFIG.levyMarchRaidG} soldier grievance).`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: `${name} serves abroad another week, if the ${h.region} watch is kept at home.`, icon: "swords" }],
+            branches: [
+              { tile: "check", tag: "If it is kept", note: "The soldiers win relief.", rows: [] },
+              { tile: "wrong", tag: "If it falls short", note: `A border raid strikes the ${h.region}: its soldiers are left the shorter, and their grievance grows.`, rows: [] },
+            ],
           },
         ],
       };
@@ -40220,11 +40245,17 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Bend the registry for urgency", note: "Exempt urgent petitioners this week.",
-            consequence: `Hearing an urgent household ahead of a higher-ranked one this week will not add audit pressure to ${name}. The officials gain 1 grievance.`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: "This week you may hear the urgent before their betters.", icon: "scroll", pop: `Hearing an urgent household ahead of a higher-ranked one will not count against ${name}’s registry. The officials resent the exception.` }],
           },
           {
             label: "Hold strictly to the codified order", note: "Test the registry across this week’s docket.",
-            consequence: `If you keep the order of precedence through this week’s hearings, ${duty} gains 2 codification, ${name} loses 1 pressure, and official grievance falls by 1. Any out-of-order hearing this week hits ${name} for +${CONFIG.codifyFriction + 1} pressure and adds 1 official grievance.`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: "Keep the order of precedence through this week’s hearings.", icon: "scroll" }],
+            branches: [
+              { tile: "check", tag: "If kept", note: `The registry on ${duty} takes firmer hold. ${name} is eased, and the officials’ grievance falls.`, rows: [] },
+              { tile: "wrong", tag: "If broken", note: `${name} takes ${mmNum(CONFIG.codifyFriction + 1)} pressure, and the officials’ grievance grows.`, rows: [] },
+            ],
           },
         ],
       };
@@ -41297,11 +41328,11 @@ const SOLO_MATTERS = {
           {
             label: "Receive them under the Crown’s hospitality", note: "Costs 1 standing.",
             disabled: !canSpendStanding(game, 1),
-            consequence: `Spends 1 standing. Both ${hallName(A)} and ${hallName(B)} finish their talk in private, gaining 1 regard and losing 1 pressure each.`, rows: [],
+            consequence: `Both finish their talk in private.`, rows: [],
           },
           {
             label: "Leave the next visit to the households", note: "Keep the Crown’s standing.",
-            consequence: `${hallName(A)} and ${hallName(B)} arrange their own meeting. Nothing changes.`, rows: [],
+            consequence: `${hallName(A)} and ${hallName(B)} arrange their own meeting.`, rows: [],
           },
         ],
       };
@@ -42044,7 +42075,8 @@ const SOLO_MATTERS = {
       const opts = [
         {
           label: "Accept intercession", note: "Clear the charge immediately.",
-          consequence: `Clears the charge against ${hallName(accused)} (+1 regard). ${hallName(intercessor)} takes 1 pressure, and its name enters ${hallName(accused)}’s memory.`, rows: [],
+          consequence: "", rows: [],
+          terms: [{ text: `The charge against ${hallName(accused)} is cleared.`, icon: "gavel", pop: `${hallName(accused)} will remember who spoke for ${prn(accused).obj}.` }],
         },
         {
           label: "Accept the pardon on surety", note: "Promise a hearing within 2 weeks.",
@@ -42492,12 +42524,16 @@ const SOLO_MATTERS = {
       const opts = [
         {
           label: "Let the household entertain the court at its own expense", note: "Host takes +2 pressure.",
-          consequence: `${hallName(sponsor)} (now at ${fmtNum(sponsor.pressure)} pressure) takes 2 pressure and gains 1 regard. If it survives this week’s reckoning below urgent, the Crown gains 1 standing.`, rows: [],
+          consequence: "", rows: [],
+          branches: [
+            { tile: "check", tag: "If it holds", note: `${hallName(sponsor)} comes through the week short of breaking.`, rows: [standingRow(game, 1)] },
+            { tile: "wrong", tag: "If it buckles", note: `${hallName(sponsor)} looks for respite from ${prn(sponsor).pos} heaviest duty.`, rows: [] },
+          ],
         },
         {
           label: "Put the court’s table on the Crown’s account", note: "Costs 1 standing.",
           disabled: !canSpendStanding(game, 1),
-          consequence: `Spends 1 standing. ${hallName(sponsor)} gains 1 regard and takes no hosting pressure.`, rows: [],
+          consequence: "", rows: [],
         },
       ];
       if (rival) {
@@ -42999,7 +43035,8 @@ const SOLO_MATTERS = {
           },
           {
             label: "Offer to settle the case by restitution", note: "Clear charge and reverse the concession.",
-            consequence: `Surrenders the charge against ${hallName(accused)}${dispLaw ? ` and restores ${hallName(accused)}’s full share on ${dutyTitleOf(dispLaw)}` : ""}. ${hallName(accused)} is free to bring ordinary petitions again.`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: `The charge against ${hallName(accused)} is dropped.`, icon: "gavel", pop: `${hallName(accused)} may bring ordinary petitions again${dispLaw ? `, and takes back ${prn(accused).pos} full share of ${dutyNameInSentence(dutyTitleOf(dispLaw))}` : ""}.` }],
           },
           {
             label: "Leave the case on the docket", note: "Proceed on original terms.",
@@ -43183,16 +43220,22 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Send the garrison out", note: "Spend the garrison’s disaster readiness.",
-            consequence: `Spends the bulwark’s accumulated readiness on ${duty} (weeks reset to 0) and adds +${CONFIG.bulwarkShieldPressure} pressure to ${hallName(commander)}. ${hallName(stranded)} loses 2 pressure and gains 1 regard.`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: "The garrison spends its readiness.", icon: "swords", pop: `The weeks it has held on ${duty} count for nothing now: it will not stand between the region and the next disaster until it has built them up again.` }],
           },
           {
             label: "Send the Crown’s people", note: "Costs 1 standing.",
             disabled: !canSpendStanding(game, 1),
-            consequence: `Spends 1 standing to rescue ${hallName(stranded)} (−2 pressure, +1 regard) while the garrison keeps its disaster readiness.`, rows: [],
+            consequence: "", rows: [],
+            terms: [{ text: "The garrison keeps its readiness.", icon: "swords" }],
           },
           {
             label: "Order the gate kept", note: "Preserve the garrison’s readiness.",
-            consequence: `Preserves the garrison on ${duty}.${kin ? ` ${hallName(kin)} (kin by marriage) goes out privately instead (+2 pressure, −1 regard).` : ` ${hallName(stranded)} weathers the night outside (+1 pressure, −1 regard).`}`, rows: [],
+            consequence: "", rows: [],
+            terms: [
+              { text: "The garrison keeps its readiness.", icon: "swords" },
+              { text: kin ? `${hallName(kin)}, kin by marriage, goes out privately instead.` : `${hallName(stranded)} weathers the night outside.` },
+            ],
           },
         ],
       };
@@ -43271,7 +43314,7 @@ const SOLO_MATTERS = {
           {
             label: "Accept it and pay the poorest house’s subscription", note: "Costs 1 standing.",
             disabled: !canSpendStanding(game, 1),
-            consequence: `Spends 1 standing quietly. ${hallName(founder)} keeps the honor (+1 regard), and ${hallName(poor)} loses 1 pressure and keeps its name on the base (+1 regard).`, rows: [],
+            consequence: `${hallName(founder)} keeps the honor (+1 regard), and ${hallName(poor)} loses 1 pressure and keeps its name on the base (+1 regard).`, rows: [],
           },
           {
             label: "Give it back as the compact’s common cup", note: "Forgo the standing.",
