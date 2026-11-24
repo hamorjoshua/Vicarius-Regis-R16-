@@ -38621,7 +38621,7 @@ function estateRow(game, key, amount, what) {
 function hallKindTerms(game, hall, o, A, B, W, L) {
   const kind = HALL_KIND[hall.matter];
   if (kind === "facts" && o.finds)
-    return [{ tag: "Court inquiry", icon: "inquiry", text: "The court finds out who is telling the truth, and rules for that house." }];
+    return [];
   if (!W) return [];
   if (kind === "estates") return [{ tag: "Read as law", icon: "crown", text: `The ${hall.region} takes this for the law itself. Neither house’s own regard changes.` }];
   if (kind === "facts") return [];
