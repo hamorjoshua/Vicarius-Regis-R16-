@@ -38942,7 +38942,11 @@ const HALL_SEQUELS = [
 const HALL_CAUSED_ONLY = new Set(["peace", "newroll", "favour", "forage", "road", "silk", "press", "tithe", "well", "feast", "overlooked", "fortune", "bells", "burial"]);
 
 // ── Matters of faith ─────────────────────────────────────────────────────────────────────────────
-// A third kind of matter between the weeks, after the hall's quarrel and the works. It comes of the
+// Matters of faith are heard in the hall with every other caller: one hall matter a week at most,
+// drawn from a single pool, so a matter of faith is neither rarer nor commoner for being one. The
+// separate slot below survives only for reigns saved with a matter already waiting in it, and for
+// the one week a promised assay report meets a promised arbitration (see drawFaithMatter).
+// A matter of faith comes of the
 // petitions of devotion and superstition the court heard the week before: each gives a chance of one,
 // and the matter grows out of one of them, in its region and, where it fits, with its petitioner as a
 // party. Besides the usual regard and pressure, the ruling moves the devotion or superstition of a
@@ -38965,10 +38969,23 @@ const FAITH_MATTERS = [
   { id: "interdictFuneral", title: () => "The cleric under interdict asks to bury an enemy" },
   { id: "vowPoverty", title: () => "The new cleric asks for a vow of poverty" },
 ];
-Object.assign(CONFIG, { faithMatterOn: true, faithMatterChance: 0.35, faithMatterRepeatWeeks: 4 });
+Object.assign(CONFIG, { faithMatterOn: true, faithMatterChance: 0.35, faithMatterRepeatWeeks: 4, faithInHall: true });
+const ASSAY_MATTERS = ["assessBell", "assessSnow", "assessStones"];
+// The report the court was promised when it granted Assess the Sign by Count: it comes the week
+// after or not at all, so it is never left to chance or crowded out.
+function drawAssay(game, report) {
+  for (const id of ASSAY_MATTERS) {
+    const m = SOLO_MATTERS[id]?.draw(game, report);
+    if (m) return m;
+  }
+  return null;
+}
 function drawFaithMatter(game, prev = null, report = null) {
   if (!CONFIG.faithMatterOn || !report || game.lesson || game.gameOver || game.week < 2) return null;
-  return drawSoloMatter(game, report, "faith");
+  if (!CONFIG.faithInHall) return drawSoloMatter(game, report, "faith");
+  // The hall has already drawn from faith's callers. Only when a sealed arbitration held the hall
+  // this week does a promised assay report come as a second caller, so that neither promise is broken.
+  return game.hall?.week === game.week && game.hall.asked ? drawAssay(game, report) : null;
 }
 function faithPending(game) {
   const fm = game.faithMatter;
@@ -42991,10 +43008,14 @@ Object.assign(CONFIG, { soloArcRestWeeks: 3 });
 // and one occasion (a page at court, a garrison on the wall) does not send caller after caller:
 // after any visit, standing callers from the same occasion rest for some weeks.
 function drawSoloMatter(game, report, channel, mode = "any") {
+  // With faith heard in the hall, the hall draws from every caller, on one set of rules.
+  const folded = CONFIG.faithInHall && channel === "hall";
   const repeatWeeks = channel === "faith" ? (CONFIG.faithMatterRepeatWeeks ?? 4) : (CONFIG.hallRepeatWeeks ?? 4);
   const log = (game.hallLog || []).filter((x) => SOLO_MATTERS[x.matter]);
   const recent = new Set(log.filter((x) => x.week > game.week - repeatWeeks).map((x) => x.matter));
-  const specs = Object.values(SOLO_MATTERS).filter((s) => s.channel === channel && !recent.has(s.id)
+  const specs = Object.values(SOLO_MATTERS).filter((s) => (folded || s.channel === channel) && !recent.has(s.id)
+    // an assay report is drawn by the hall before anything else, never as a caller who can wait
+    && !(folded && ASSAY_MATTERS.includes(s.id))
     && (mode === "any" || (mode === "timely") === soloTimely(s)));
   if (!specs.length) return null;
   // Keep granted assay reports reliable the week after Assess the Sign by Count.
@@ -43015,6 +43036,11 @@ function drawSoloMatter(game, report, channel, mode = "any") {
     if (!m || (!soloTimely(spec) && resting.has(m.from?.kind))) continue;
     const n = seen[spec.id] || 0;
     if (n < bestSeen) (best = m), (bestSeen = n);
+  }
+  // A matter of faith heard in the hall keeps the line that says what it follows from.
+  if (best && folded && SOLO_MATTERS[best.matter].channel === "faith" && !best.causeFull) {
+    const cause = faithCause(game, best);
+    if (cause) best.causeFull = cause;
   }
   return best;
 }
@@ -43172,6 +43198,11 @@ function drawHall(game, prev = null, report = null) {
     delete game.hallNext;
     if (game.people[next.a] && game.people[next.b])
       return { ...visit("arbitration", next.a, next.b, "", { kind: "arbitrate", week: next.week - 1 }), asked: true };
+  }
+  // A granted assay reports the week after, or never.
+  if (CONFIG.faithInHall) {
+    const assay = drawAssay(game, report);
+    if (assay) return assay;
   }
   // A promised arbitration may delay the visit. Keep the request on the marriage bond until heard.
   for (const bond of game.hallBonds || []) {
