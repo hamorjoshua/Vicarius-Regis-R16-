@@ -39621,7 +39621,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const witness = game.people[h.a], soldier = game.people[h.b], name = hallName(soldier);
-      const law = lawById(game, h.from.lawId), duty = law ? dutyTitleOf(law) : "the works";
+      const law = lawById(game, h.from.lawId), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the works";
       const curWeeks = law?.bulwark?.weeks ?? 0;
       const nextWeeks = curWeeks + 2;
       const shieldNote =
@@ -39646,7 +39646,8 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Stand down the bulwark", note: "End the bulwark safely.",
-            consequence: `Disbands the bulwark on ${duty}, giving up its accumulated military support and any disaster protection it has earned.`, rows: [],
+            consequence: `The bulwark stands down.`, rows: [],
+            terms: [{ text: "The bulwark stands down.", icon: "swords", pop: `It gives up the military support it has built on ${duty}, and any protection against disaster it has earned.` }],
           },
           {
             label: "Hold the wall", note: oddsNote(h),
@@ -39657,7 +39658,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice, keep) {
       const p = g.people[m.b], name = hallName(p), law = lawById(g, m.from.lawId);
-      const duty = law ? dutyTitleOf(law) : "the works";
+      const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the works";
       if (!choice) {
         if (law) delete law.bulwark;
         return `${hallName(g.people[m.a])} rides back with the recall. The bulwark on ${duty} stands down without incident.`;
