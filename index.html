@@ -38581,23 +38581,23 @@ const estateRow = (key, tone, what) => ({ tone, icon: RECKONING_ESTATE_ICON[esta
 function hallKindTerms(game, hall, o, A, B, W, L) {
   const kind = HALL_KIND[hall.matter];
   if (kind === "facts" && o.finds)
-    return [{ tag: "The truth", text: "The court rules for whichever house is in the right. The other takes no grudge." }];
+    return [{ tag: "The truth", icon: "seal", text: "The court rules for whichever house is in the right. The other takes no grudge." }];
   if (!W) return [];
-  if (kind === "estates") return [{ tag: "Read as law", text: `The ${hall.region} takes this for the law itself. Neither house’s own regard changes.` }];
+  if (kind === "estates") return [{ tag: "Read as law", icon: "crown", text: `The ${hall.region} takes this for the law itself. Neither house’s own regard changes.` }];
   if (kind === "facts")
     return [
-      { tag: "A guess", text: "One of them is lying, and the court cannot tell which." },
-      { tag: "If right", text: `${hallName(L)} takes no grudge.` },
-      { tag: "If wrong", tone: "down", text: `It comes out, and the ${constituencyLabel(constituencyOf(L))} take 1 grievance.` },
+      { tag: "A guess", glyph: "?", text: "One of them is lying, and the court cannot tell which." },
+      { tag: "If right", glyph: "▲", tone: "up", text: `${hallName(L)} takes no grudge.` },
+      { tag: "If wrong", glyph: "▼", tone: "down", text: `It comes out, and the ${constituencyLabel(constituencyOf(L))} take 1 grievance.` },
     ];
   if (kind === "needs") {
     const sh = hallNeedShift(game, hall, o.win);
-    return sh ? [{ tag: "The region", tone: sh.to > sh.from ? "up" : "down", text: `${capFirst(sh.need)} bar ${sh.to > sh.from ? "rises" : "falls"} by 1 (now ${fmtNum(sh.from)}).` }] : [];
+    return sh ? [{ tag: "The region", work: sh.key, tone: sh.to > sh.from ? "up" : "down", text: `${capFirst(sh.need)} bar ${sh.to > sh.from ? "rises" : "falls"} by 1 (now ${fmtNum(sh.from)}).` }] : [];
   }
   if (kind === "time" && o.win === "b")
     return [
-      { tag: `In ${mmNum(CONFIG.hallDebtWeeks)} weeks`, text: `If ${hallName(B)} is below pressing pressure, the debt is paid and ${hallName(A)} regains the regard lost today.` },
-      { tag: "Otherwise", tone: "down", text: `${hallName(B)} defaults, and the ${constituencyLabel(constituencyOf(A))} take 1 grievance.` },
+      { tag: `In ${mmNum(CONFIG.hallDebtWeeks)} weeks`, icon: "hourglass", text: `If ${hallName(B)} is below pressing pressure, the debt is paid and ${hallName(A)} regains the regard lost today.` },
+      { tag: "Otherwise", icon: "hourglass", tone: "down", text: `${hallName(B)} defaults, and the ${constituencyLabel(constituencyOf(A))} take 1 grievance.` },
     ];
   return [];
 }
@@ -38605,9 +38605,9 @@ function holdingTerms(game, hall, o, W, L) {
   const hd = hallHolding(game, hall, o);
   if (!hd) return [];
   const then = hd.prior && `week ${hd.prior.week} (${HALL_RECALL[hd.prior.matter] || "an earlier quarrel"})`;
-  if (hd.follows) return [{ tag: "Your rule", tone: "up", text: `Follows ${then}.${HALL_KIND[hall.matter] === "estates" ? "" : ` ${hallName(L)} knew the rule and takes no grudge.`}` }];
-  if (hd.reverses) return [{ tag: "Breaks your rule", tone: "down", text: `Reverses ${then}. New rule: ${HALL_PRINCIPLE[hd.side]}.` }];
-  return [{ tag: "Sets a rule", text: `${capFirst(HALL_PRINCIPLE[hd.side])}.` }];
+  if (hd.follows) return [{ tag: "Your rule", icon: "gavel", tone: "up", text: `Follows ${then}.${HALL_KIND[hall.matter] === "estates" ? "" : ` ${hallName(L)} knew the rule and takes no grudge.`}` }];
+  if (hd.reverses) return [{ tag: "Breaks your rule", icon: "gavel", tone: "down", text: `Reverses ${then}. New rule: ${HALL_PRINCIPLE[hd.side]}.` }];
+  return [{ tag: "Sets a rule", icon: "gavel", text: `${capFirst(HALL_PRINCIPLE[hd.side])}.` }];
 }
 // Constituencies an option moves, as rows beside the households'.
 function hallEstateRows(game, hall, o, W, L) {
@@ -38623,6 +38623,20 @@ function hallEstateRows(game, hall, o, W, L) {
 }
 // A written consequence, broken into lines a steward can scan: one sentence to a line, the price
 // tagged, and a gamble set out as its two outcomes with the odds of each.
+// The mark a line of consequence carries, by what it speaks of: the same marks the reckoning uses.
+const TERM_ICONS = [
+  [/\bstanding\b/i, "crown"],
+  [/\b(devotion|devout|penance|penitent|interdict)\b/i, "cross"],
+  [/\b(superstiti\w*|credulous|miracle|sign)\b/i, "flame"],
+  [/\bgrievance\b/i, "estates"],
+  [/\b(undertaking|court’s word|surety|promise[ds]?)\b/i, "seal"],
+  [/\b(charge[ds]?|accus\w*|pardon\w*|acquit\w*)\b/i, "gavel"],
+  [/\b(writs?|concessions?|charter|title|ennoble\w*)\b/i, "scroll"],
+  [/\b(dut(y|ies)|units?|shares?|roll|repairs|service)\b/i, "duties"],
+  [/\b(weeks?|quarter day|until)\b/i, "hourglass"],
+  [/\bpressure\b/i, "yoke"],
+];
+const termIcon = (text) => TERM_ICONS.find(([re]) => re.test(text))?.[1] || null;
 function hallTermsOf(text) {
   if (!text) return [];
   const out = [];
@@ -38639,19 +38653,21 @@ function hallTermsOf(text) {
       out.push({ tag: first, text: `${capFirst(body)}.` });
       continue;
     }
-    if (/^(Costs|Spends?|Stake) \d+ standing/.test(sentence)) out.push({ tag: "Cost", tone: "down", text: sentence });
-    else if (/^These households will return/.test(sentence)) out.push({ tag: "Returns", text: sentence });
-    else out.push({ text: sentence });
+    if (/^(Costs|Spends?|Stake) \d+ standing/.test(sentence)) out.push({ tag: "Cost", icon: "crown", tone: "down", text: sentence });
+    else if (/^These households will return/.test(sentence)) out.push({ tag: "Returns", icon: "hourglass", text: sentence });
+    else out.push({ text: sentence, icon: termIcon(sentence) });
   }
   return out;
 }
 function HallTerms({ terms }) {
+  const mark = (t, size) => t.work ? jsx(WorkIcon, { work: t.work }) : t.icon ? jsx(Icon, { icon: t.icon, size }) : t.glyph ? jsx("span", { class: "hall-glyph", "aria-hidden": "true", children: t.glyph }) : null;
   return terms.length
     ? jsx("ul", {
         class: "hall-terms",
         children: terms.map((t, i) =>
-          jsx("li", { class: t.tag ? "tagged" : "plain", children: [
-            t.tag && jsx("span", { class: `hall-tag ${t.tone || ""}`, children: t.tag }),
+          jsx("li", { class: t.tag ? "tagged" : t.icon ? "plain marked" : "plain", children: [
+            t.tag ? jsx("span", { class: `hall-tag ${t.tone || ""}`, children: [mark(t, 12), t.tag] })
+              : t.icon && jsx("span", { class: "hall-mark", children: mark(t, 13) }),
             jsx("span", { children: t.text }),
           ] }, i)),
       })
@@ -52636,6 +52652,14 @@ p, li, blockquote {
 .hall-terms li.plain::before { content: "·"; position: absolute; left: .15em; font-weight: 700; }
 .hall-tag { display: inline-block; margin-right: 7px; vertical-align: 1px; font: 600 var(--t-sm)/1 var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); border: 1px solid var(--vellum-rule); border-radius: var(--r-sm); padding: 3px 6px 2px; white-space: nowrap; }
 .hall-tag.down { border-style: dashed; }
+.hall-tag svg, .hall-tag .hall-glyph { display: inline-block; margin-right: 4px; vertical-align: -2px; }
+.hall-tag .hall-glyph { vertical-align: 0; font-size: .85em; }
+.hall-tag.up .hall-glyph { color: #2f6b3a; }
+.hall-tag.down .hall-glyph { color: #8f2f24; }
+.hall-terms li.plain.marked { padding-left: 1.55em; }
+.hall-terms li.plain.marked::before { content: none; }
+.hall-terms .hall-mark { position: absolute; left: 0; top: .12em; color: var(--ink-soft); }
+.hall-terms .hall-mark svg { display: block; }
 .hallway-party, .hallway-visitor { display: inline-flex; align-items: center; gap: .35em; }
 .hallway-party { flex-wrap: wrap; }
 .matter-btn .hallway-subject { display: block; font-weight: normal; }
