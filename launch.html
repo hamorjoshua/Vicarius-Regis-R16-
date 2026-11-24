@@ -35851,7 +35851,7 @@ const HALL_INTRO = {
   watchKey: (A, B) => `word from ${A} about ${B}’s watch key`,
   commendPayment: (A, B) => `word from ${A} about ${B}’s commendation`,
   upstartSeal: (A, B) => `a request from ${A} about a confiscated seal`,
-  pageProcession: (A, B) => `word from ${A} about a place in the royal procession`,
+  pageProcession: (A, B) => `word from ${A} about a place in the court’s procession`,
   keepMiracle: (A, B) => `private word from ${A} about the proclaimed sign`,
   assessBell: (A, B) => `${A}’s inquiry into the great bell`,
   assessSnow: (A, B) => `word from ${A} about the roof that held its snow`,
@@ -38141,10 +38141,10 @@ const HALL_MATTERS = [
   {
     id: "hound", title: () => "Who presented the petition?",
     lede: (A, B) => `On the first morning at court, the heir of ${hallName(A)} taught the king’s old hound to carry a petition in its mouth. It brought yours back quite dry, Vicar. ${hallName(B)} has brought the child who taught it to let go.`,
-    pa: () => "Wait till His Grace comes home and sees it. One whistle and the beast goes straight to the throne.",
+    pa: () => "One whistle and the beast goes straight to your chair, Vicar. We mean to have it perfect by the time His Grace comes home.",
     pb: () => "Whistle all you please. My girl has the sausage. Will her name be given when the trick is shown?",
     options: [
-      { label: "Give the page the whole exhibition", regardA: 1, done: (A, B) => `The page of ${hallName(A)} takes the bow. Halfway back to the throne the hound makes a small detour to visit ${hallName(B)}.` },
+      { label: "Give the page the whole exhibition", regardA: 1, done: (A, B) => `The page of ${hallName(A)} takes the bow. Halfway back to your chair the hound makes a small detour to visit ${hallName(B)}.` },
       { label: "Give the whistle to one child and the bow to the other", done: (A, B) => `One child whistles and the other bows. The hound mistakes the bow for a signal and presents the petition a second time.` },
       { label: "Enter both children as the hound’s tutors · 1 standing", cost: 1, both: 1, done: (A, B) => `The clerk enters both ${hallName(A)} and ${hallName(B)} in the royal accounts under “instruction of one hound in letters.” The children ask for a copy.` },
     ],
@@ -40503,7 +40503,7 @@ const SOLO_MATTERS = {
       const sponsor = game.people[h.a], rival = game.people[h.b];
       return {
         title: "The page has sold their place in the procession",
-        lede: `${hallName(sponsor)} has come alone with a heavy purse, Vicar. The heir you appointed to court has been selling places behind the royal banner—uncovered when two children arrived in the same sash.`,
+        lede: `${hallName(sponsor)} has come alone with a heavy purse, Vicar. The heir you appointed to court has been selling places in the court’s procession, the one that walks behind you on quarter day—uncovered when two children arrived in the same sash.`,
         a: {
           name: hallName(sponsor), estate: sponsor.type, region: sponsor.region, id: sponsor.id,
           plea: `I have brought the money, Vicar. I would have brought my daughter, but she is presently explaining to six families how there came to be only two places.`,
@@ -41397,7 +41397,7 @@ const SOLO_MATTERS = {
       }
       if (choice === 1) {
         addRegard(sponsor, 1);
-        return `Your assistant reads it: the King asks for three weeks’ respite from hearing petitions, and the Vicar asks whether he has brought a surety. ${hallName(sponsor)} goes home (+1 regard), and supper keeps its scheduled reading.`;
+        return `Your assistant reads it: the King, home from abroad, asks for three weeks’ respite from hearing petitions, and the Vicar asks whether he has brought a surety. ${hallName(sponsor)} goes home (+1 regard), and supper keeps its scheduled reading.`;
       }
       if (m.perseveres) {
         addRegard(sponsor, 1);
@@ -41602,7 +41602,7 @@ const SOLO_MATTERS = {
         lede: `${hallName(p)} has returned after last week’s elevation. The clerk enrolled ${hallName(p)} under the name of its holding; ${hallName(p)} wants to keep the familiar name.`,
         a: {
           name: hallName(p), estate: p.type, region: p.region, id: p.id,
-          plea: `My father mended pots under that name. I rather thought the distinction you conferred was that his daughter might one day bear it before the King.`,
+          plea: `My father mended pots under that name. I rather thought the distinction you conferred was that his daughter might bear it at court.`,
         },
         options: [
           {
