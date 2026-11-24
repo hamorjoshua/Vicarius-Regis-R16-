@@ -25834,7 +25834,7 @@ function HouseholdPressurePreview({ game, view, docketed, id }) {
       role: "img",
       "aria-label": `${name}: pressure ${fmtNum(from)}${to !== from ? ` to ${fmtNum(to)}` : ""}`,
       children: [
-        jsx("span", { class: "pc-succour-ico", "aria-hidden": "true", children: jsx(Icon, { icon: RECKONING_ESTATE_ICON[before.type], size: 12 }) }),
+        jsx("span", { class: "pc-succour-ico", "aria-hidden": "true", children: jsx(Icon, { icon: estateIcon(before.type, before.region), size: 12 }) }),
         jsx("span", { class: "pc-succour-name", "aria-hidden": "true", children: name }),
         jsx(ReckPips, { from, to, level: lvl(to) }),
       ],
@@ -26564,11 +26564,7 @@ function audiencePriorityLabel(game, id) {
 function estateSymbol(estate, region) {
   const icon =
     estate === "Commoner"
-      ? {
-          Riverlands: "river",
-          Highlands: "mountain",
-          Capital: "tower",
-        }[region] || "common"
+      ? COMMONER_ICON[region] || "common"
       : {
           Noble: "fleur",
           Merchant: "scales",
@@ -30700,6 +30696,9 @@ function ToolIcon({ d }) {
   });
 }
 function Icon({ icon, className = "st-icon", size = 14 }) {
+  // the commoners' marks, each a region's figure with a figure of a person, drawn as masks in currentColor
+  if (RASTER_ICONS.has(icon))
+    return jsx("i", { class: `${className} raster-icon ricon-${icon}`, style: `width:${size}px;height:${size}px`, "aria-hidden": "true" });
   // the bending arrow of the card's Moving mark, drawn as a mask in currentColor
   if (icon === "move")
     return jsx("i", { class: `${className} pc-badge-ico ico-move icon-move`, style: `width:${size}px;height:${size}px`, "aria-hidden": "true" });
@@ -31170,6 +31169,16 @@ function HearingsSheet({ record, interactive = !0, animate = !1 }) {
 // Structured presentation for the close of the week. No game rules or random
 // state are changed here. The visual object is held only in memory: it is not
 // written into the saved record.
+const RASTER_ICONS = new Set(["commoner-river", "commoner-tower", "commoner-mountain"]);
+// Commoners are three estates, one to a region, each with its own mark; the regions themselves are
+// marked by the same figures without the person (river, mountain, tower).
+const COMMONER_ICON = { Riverlands: "commoner-river", Highlands: "commoner-mountain", Capital: "commoner-tower" };
+const REGION_ICON = { Riverlands: "river", Highlands: "mountain", Capital: "tower" };
+function estateIcon(estate, region) {
+  if (estate === "Commoner") return COMMONER_ICON[region] || "common";
+  return RECKONING_ESTATE_ICON[estate];
+}
+const keyIcon = (key) => { const [region, estate] = String(key).split("|"); return estateIcon(estate, region); };
 const RECKONING_ESTATE_ICON = {
   Noble: "fleur",
   Cleric: "cross",
@@ -31872,7 +31881,7 @@ function buildVisualReckoning(before, after, report, hearings, snapshots) {
     row.related = related(row.key);
     row.details = [];
     if (row.kind === "pressure") {
-      row.icon = RECKONING_ESTATE_ICON[row.estate] || "common";
+      row.icon = estateIcon(row.estate, row.region) || "common";
       const became = row.from < CONFIG.urgent && row.to >= CONFIG.urgent,
         eased = row.from >= CONFIG.urgent && row.to < CONFIG.urgent;
       row.status = became ? "Became urgent" : eased ? "Urgency eased" : row.to > row.from ? "Pressure rose" : "Pressure eased";
@@ -31896,7 +31905,7 @@ function buildVisualReckoning(before, after, report, hearings, snapshots) {
           .map(text),
       );
     } else if (row.kind === "grievance") {
-      row.icon = RECKONING_ESTATE_ICON[row.estate] || "flame";
+      row.icon = (row.constituency ? keyIcon(row.constituency) : estateIcon(row.estate, row.region)) || "flame";
       const breached = events.some((e) => e.kind === "unrest" && e.data?.constituency === row.constituency);
       row.status = breached
         ? "A breach of confidence"
@@ -31913,7 +31922,7 @@ function buildVisualReckoning(before, after, report, hearings, snapshots) {
       row.details.push(...events.filter((e) => e.data?.constituency === row.constituency).map(text));
     } else {
       if (row.amenity) {
-        row.icon = RECKONING_ESTATE_ICON[AMENITIES[row.lawKind]?.estate] || row.icon || "duties";
+        row.icon = estateIcon(AMENITIES[row.lawKind]?.estate, row.region) || row.icon || "duties";
         row.status = amenityDutyStatus(row);
         row.tone =
           !row.closed && row.to > 0
@@ -31968,7 +31977,7 @@ function buildVisualReckoning(before, after, report, hearings, snapshots) {
         subject: capWord(constituencyLabel(key)),
         from: before.grievance?.[key] || 0,
         to: value,
-        icon: RECKONING_ESTATE_ICON[key.split("|")[1]] || "flame",
+        icon: keyIcon(key) || "flame",
         status: "Still near a breach",
         tone: "danger",
         priority: 1,
@@ -31988,7 +31997,7 @@ function buildVisualReckoning(before, after, report, hearings, snapshots) {
         from: shortfall,
         to: shortfall,
         icon: AMENITIES[law.kind]
-          ? RECKONING_ESTATE_ICON[AMENITIES[law.kind].estate] || "duties"
+          ? estateIcon(AMENITIES[law.kind].estate, law.region) || "duties"
           : "duties",
         work: `${law.region}|${NEED_OF_DUTY[law.kind]}`,
         status: AMENITIES[law.kind] ? "Still not kept" : "Still short",
@@ -35078,7 +35087,7 @@ function buildOpeningReckoning(game, { live = false } = {}) {
       kind: "pressure",
       key: `opening-pressure:${name}`,
       subject: person ? householdName(person) : name,
-      icon: RECKONING_ESTATE_ICON[person?.type] || "dot",
+      icon: estateIcon(person?.type, person?.region) || "dot",
       from: value,
       to: value,
       figures: fmtNum(value),
@@ -35205,7 +35214,7 @@ function buildOpeningReckoning(game, { live = false } = {}) {
         kind: "event",
         key: `opening-audience:${id}`,
         subject: householdName(person),
-        icon: RECKONING_ESTATE_ICON[person.type] || "letter",
+        icon: estateIcon(person.type, person.region) || "letter",
         status: "Called to the first audience",
         tone: "neutral",
         priority: 4,
@@ -36189,7 +36198,7 @@ function CalamityDecision({game,onRule}) {
   if (ruled.standing !== forecast.standing || ruled.reserve !== forecast.reserve) rows.push({...calamityStandingRow(ruled,forecast), tone:"down"});
   for (const p of local) {
     const next = later.get(p.id);
-    if (next.pressure !== p.pressure) rows.push({who:householdName(p)+" · Pressure", tone:"down", icon:RECKONING_ESTATE_ICON[p.type], pressure:{from:p.pressure,to:next.pressure}});
+    if (next.pressure !== p.pressure) rows.push({who:householdName(p)+" · Pressure", tone:"down", icon:estateIcon(p.type, p.region), pressure:{from:p.pressure,to:next.pressure}});
   }
   rows.push(...calamityFaithRows(local.map(p => ({name:householdName(p),from:superstitionOf(p),to:superstitionOf(later.get(p.id))}))).map(r => ({...r, tone:"down", icon:"flame"})));
   const note = (text, cls) => jsx("p",{class:"cal-note" + (cls ? " " + cls : ""),children:text});
@@ -38733,7 +38742,7 @@ function soloDiffRows(before, after, hall) {
     return score > 0 ? "up" : score < 0 ? "down" : null;
   };
   const single = (e) => ({
-    tone: tone(e), icon: RECKONING_ESTATE_ICON[e.p0.type], id: e.p0.id, who: hallName(e.p0),
+    tone: tone(e), icon: estateIcon(e.p0.type, e.p0.region), id: e.p0.id, who: hallName(e.p0),
     pressure: e.dp ? { from: e.p0.pressure || 0, to: e.p1.pressure || 0 } : null,
     regard: e.dr ? { from: e.p0.regard ?? 0, to: e.p1.regard ?? 0 } : null,
     faith: e.dd || e.ds ? [
@@ -38775,7 +38784,7 @@ function soloDiffRows(before, after, hall) {
     }
     rows.push({
       tone: tone(e),
-      icon: types.size === 1 ? RECKONING_ESTATE_ICON[e.p0.type] : "estates",
+      icon: types.size === 1 ? (regions.size === 1 ? estateIcon(e.p0.type, e.p0.region) : RECKONING_ESTATE_ICON[e.p0.type]) : "estates",
       who: `${capFirst(mmNum(g.length))} ${types.size === 1 ? ESTATE_PLURAL[e.p0.type] : "households"}${regions.size === 1 ? ` of the ${e.p0.region}` : ""}`,
       what: [
         e.dp ? `each ${e.dp < 0 ? "eased" : "pressed"} by ${Math.abs(e.dp)} pressure` : "",
@@ -38796,7 +38805,7 @@ function soloDiffRows(before, after, hall) {
   for (const key of new Set([...Object.keys(before.needBar || {}), ...Object.keys(after.needBar || {})])) {
     const n0 = before.needBar?.[key] ?? 0, n1 = after.needBar?.[key] ?? 0, [region, need] = key.split("|");
     if (n0 === n1) continue;
-    rows.push({ tone: n1 > n0 ? "up" : "down", icon: need === "commoners" ? COMMONER_REGION_ICON[region] : NEED_ICON[need] || undefined, work: NEED_ICON[need] ? undefined : key, who: `${capFirst(need)} of the ${region}`, what: `Need bar ${fmtNum(n0)} → ${fmtNum(n1)}` });
+    rows.push({ tone: n1 > n0 ? "up" : "down", icon: need === "commoners" ? COMMONER_ICON[region] : NEED_ICON[need] || undefined, work: NEED_ICON[need] ? undefined : key, who: `${capFirst(need)} of the ${region}`, what: `Need bar ${fmtNum(n0)} → ${fmtNum(n1)}` });
   }
   return rows;
 }
@@ -39486,9 +39495,8 @@ const PAGE_QUIPS = [
     after: "The arms are painted on a weathervane within the month." },
 ];
 // An estate's mark as the game's cards draw it: commoners by their region, the others by estate.
-const COMMONER_REGION_ICON = { Riverlands: "river", Highlands: "mountain", Capital: "tower" };
-const estateIconOf = (estate, region) => (estate === "Commoner" && COMMONER_REGION_ICON[region]) || RECKONING_ESTATE_ICON[estate] || "estates";
-const constituencyIcon = (key) => { const [region, estate] = key.split("|"); return estateIconOf(estate, region); };
+const estateIconOf = (estate, region) => estateIcon(estate, region) || "estates";
+const constituencyIcon = (key) => keyIcon(key) || "estates";
 // The standing seals as a change would leave them, worked out on a copy of the realm.
 function standingRow(game, d) {
   const c = cloneState(game), st = game.standing ?? CONFIG.standingMax, rv = game.reserve || 0;
@@ -43992,7 +44000,7 @@ function hallRows(game, hall, o, A, B, W, L) {
         ].filter(Boolean).join(", and ");
       rows.push({
         tone: e.tone,
-        icon: types.size === 1 ? RECKONING_ESTATE_ICON[e.person.type] : "estates",
+        icon: types.size === 1 ? estateIcon(e.person.type, hall.region) : "estates",
         who: `${mmNum(g.length).replace(/^./, (c) => c.toUpperCase())} ${types.size === 1 ? ESTATE_PLURAL[e.person.type] : "households"} of the ${hall.region}`,
         what: [e.what.join(" · "), did].filter(Boolean).join(": "),
       });
@@ -44246,7 +44254,7 @@ function personFx(person, dp, dr, tone, extra = {}) {
     p2 = Math.max(0, Math.min(CONFIG.max, p1 - spill));
   return {
     tone,
-    icon: RECKONING_ESTATE_ICON[person.type],
+    icon: estateIcon(person.type, person.region),
     id: person.id,
     who: hallName(person),
     pressure: dp || spill ? { from: p0, to: p2 } : null,
@@ -44801,7 +44809,7 @@ function hallwayVisitors(game, k) {
     return [{ name: "The master of works", icon: "duties", role: "Master of works" }];
   return [...new Set((SOLO_MATTERS[m.matter] || m.matter === "marriageRank") ? [m.a] : [m.a, m.b])].filter(id => id != null && game.people[id]).map(id => {
     const p = game.people[id];
-    return { id, name: hallName(p), icon: RECKONING_ESTATE_ICON[p.type], role: ESTATE_SINGULAR[p.type] };
+    return { id, name: hallName(p), icon: estateIcon(p.type, p.region), role: ESTATE_SINGULAR[p.type] };
   });
 }
 function mattersSay(game, seen, live, leaving = false) {
@@ -45325,7 +45333,7 @@ function officeView(game, wm) {
           }),
           {
             tone: "down",
-            icon: RECKONING_ESTATE_ICON[A.type],
+            icon: estateIcon(A.type, A.region),
             who: capWord(`the ${estateInRegion(A.region, A.type)}`),
             bar: { kind: "grievance", from: Math.min(g0, CONFIG.grievanceBreach), to: Math.min(g1, CONFIG.grievanceBreach), total: CONFIG.grievanceBreach, label: `Grievance ${step(g0)} → ${step(g1)}` },
           },
@@ -45490,7 +45498,7 @@ function worksView(game) {
             step = (v) => Math.round((10 * Math.min(v, CONFIG.grievanceBreach)) / CONFIG.grievanceBreach);
           rows.push({
             tone: "down",
-            icon: RECKONING_ESTATE_ICON[A.type],
+            icon: estateIcon(A.type, A.region),
             who: capWord(`the ${estateInRegion(A.region, A.type)}`),
             bar: { kind: "grievance", from: Math.min(g0, CONFIG.grievanceBreach), to: Math.min(g1, CONFIG.grievanceBreach), total: CONFIG.grievanceBreach, label: `Grievance ${step(g0)} → ${step(g1)}` },
           });
@@ -53346,7 +53354,10 @@ p, li, blockquote {
 .hall-option .fx-row { align-items: start; }
 .hall-option .fx-row > .fx-icon { height: 22px; }
 /* the commoners' sprout carries its weight in its stem, low in its box; lifted to sit level with the name */
-.hall-option .fx-row > .fx-icon[data-icon="common"] > * { transform: translateY(-2px); }
+.raster-icon { display: inline-block; flex: none; vertical-align: middle; background: currentColor; -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
+.raster-icon.ricon-commoner-river { -webkit-mask-image: url(data:image/png;base64,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); mask-image: url(data:image/png;base64,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); }
+.raster-icon.ricon-commoner-tower { -webkit-mask-image: url(data:image/png;base64,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); mask-image: url(data:image/png;base64,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); }
+.raster-icon.ricon-commoner-mountain { -webkit-mask-image: url(data:image/png;base64,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); mask-image: url(data:image/png;base64,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); }
 .hall-option .fx-text > .fx-who, .hall-option .fx-text > .fx-who-line, .hall-option .fx-text > .fx-meters { min-height: 22px; display: inline-flex; align-items: center; }
 .hall-option .fx-text { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 2px; }
 .hall-option .fx-who { white-space: nowrap; }
