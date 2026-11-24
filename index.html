@@ -39509,6 +39509,37 @@ function standingRow(game, d) {
   const net = (c.standing ?? CONFIG.standingMax) + (c.reserve || 0) - st - rv;
   return { plain: true, seals: { value: st, projected: c.standing ?? CONFIG.standingMax, reserve: rv, label: `${net >= 0 ? "+" : "−"}${Math.abs(net)}` } };
 }
+// The court's word given to a household, as the game settles it at the deadline: the promise (plain
+// hourglass), what keeping it takes (handshake), and what comes of it kept or broken.
+function undertakingParts(game, waiting, by, busy, extra = []) {
+  if (busy) return { consequence: "", rows: [], terms: [{ text: "The court’s word is already given elsewhere, and cannot be given twice." }] };
+  const wName = hallName(waiting), weeks = mmNum(CONFIG.undertakingWeeks);
+  const st = game.standing ?? CONFIG.standingMax, rv = game.reserve || 0;
+  const kept = cloneState(game), broke = cloneState(game);
+  gainStanding(kept, 1);
+  breachConfidence(broke, CONFIG.brokenWordBreaches);
+  const seals = (g2) => {
+    const net = (g2.standing ?? CONFIG.standingMax) + (g2.reserve || 0) - st - rv;
+    return { plain: true, seals: { value: st, projected: g2.standing ?? CONFIG.standingMax, reserve: rv, label: `${net >= 0 ? "+" : "−"}${Math.abs(net)}` } };
+  };
+  const keptNet = (kept.standing ?? CONFIG.standingMax) + (kept.reserve || 0) - st - rv;
+  return {
+    consequence: "", rows: [],
+    terms: [
+      { text: `${wName} attends every audience for ${weeks} weeks and causes no breach while waiting.`, icon: "hourglass-plain" },
+      { text: `Hear ${wName} within ${weeks} weeks, or settle ${prn(waiting).pos} grievance.`, icon: "handshake" },
+      ...extra,
+    ],
+    branches: [
+      { tile: "check", tag: "If kept", rows: [...(keptNet ? [seals(kept)] : []), ...(by && by !== waiting && by.pressure > 0 ? [personFx(by, -1, 0, "up")] : [])] },
+      { tile: "wrong", tag: "If broken", rows: [
+        seals(broke),
+        personFx(waiting, 0, -2 - (waiting.regard ?? 0), "down"),
+        ...(by && by !== waiting ? [personFx(by, CONFIG.accusedCost, 0, "down")] : []),
+      ] },
+    ],
+  };
+}
 // How hard a household is pressed, as the assistant would say it.
 const strainWords = (p) => ((p?.pressure || 0) >= CONFIG.urgent ? "close to breaking" : (p?.pressure || 0) >= CONFIG.pressing ? "hard pressed" : "managing, for now");
 const SOLO_MATTERS = {
@@ -41095,9 +41126,7 @@ const SOLO_MATTERS = {
       opts.push({
         label: "Bring the two official weights before the court", note: "Grant an Undertaking to the regional official.",
         disabled: busyUndertaking,
-        consequence: busyUndertaking
-          ? `An undertaking is already active; cannot commit another right now.`
-          : `Gives ${hallName(official)} the court’s word for ${CONFIG.undertakingWeeks} weeks to examine both standard weights. ${hallName(suspect)} keeps its writs while you investigate.`, rows: [],
+        ...undertakingParts(game, official, witness, busyUndertaking, [{ text: `${hallName(suspect)} keeps ${prn(suspect).pos} writs while both weights are examined.`, icon: "scroll" }]),
       });
       return {
         title: "Who owns the stones?",
@@ -41831,9 +41860,7 @@ const SOLO_MATTERS = {
           {
             label: "Take the testimony at the next audience", note: "Grant an Undertaking.",
             disabled: busyUndertaking,
-            consequence: busyUndertaking
-              ? `An undertaking is already active.`
-              : `Gives ${hallName(absent)} the court’s word for ${CONFIG.undertakingWeeks} weeks so its name can be cleared formally on the docket.`, rows: [],
+            ...undertakingParts(game, absent, watchman, busyUndertaking),
           },
         ],
       };
@@ -42125,9 +42152,7 @@ const SOLO_MATTERS = {
         {
           label: "Accept the pardon on surety", note: "Promise a hearing within 2 weeks.",
           disabled: busyUndertaking,
-          consequence: busyUndertaking
-            ? `An undertaking is already active.`
-            : `The charge stays open, but ${hallName(accused)} holds the court’s word for ${CONFIG.undertakingWeeks} weeks with ${hallName(intercessor)} standing surety.`, rows: [],
+          ...undertakingParts(game, accused, intercessor, busyUndertaking, [{ text: `The charge against ${hallName(accused)} stays open until heard.`, icon: "gavel" }]),
         },
       ];
       if (hasOwnGrudge) {
@@ -42311,9 +42336,7 @@ const SOLO_MATTERS = {
           {
             label: "Hear the defence under oath", note: "Grant a promised hearing.",
             disabled: busyUndertaking,
-            consequence: busyUndertaking
-              ? `An undertaking is already active.`
-              : `Gives ${hallName(accused)} the court’s word for ${CONFIG.undertakingWeeks} weeks so the defence is heard under oath on the docket.`, rows: [],
+            ...undertakingParts(game, accused, accuser, busyUndertaking, [{ text: `The charge stays open until ${hallName(accused)}’s defence is heard.`, icon: "gavel" }]),
           },
         ],
       };
@@ -42835,9 +42858,7 @@ const SOLO_MATTERS = {
           {
             label: "Hear the two households together", note: "Undertaking for the earlier beneficiary.",
             disabled: busyUndertaking,
-            consequence: busyUndertaking
-              ? `An undertaking is already active.`
-              : `Gives ${hallName(precedent)} an undertaking for ${CONFIG.undertakingWeeks} weeks and brings both before the audience. ${hallName(accused)} remains under charge until heard.`, rows: [],
+            ...undertakingParts(game, precedent, accused, busyUndertaking, [{ text: `${hallName(accused)} stays under charge until heard.`, icon: "gavel" }]),
           },
         ],
       };
@@ -43073,9 +43094,7 @@ const SOLO_MATTERS = {
           {
             label: "Accept the accuser’s surety", note: "Grant a 2-week Undertaking.",
             disabled: busyUndertaking,
-            consequence: busyUndertaking
-              ? `An undertaking is already active.`
-              : `The charge stays open while ${hallName(accused)} holds the court’s word for ${CONFIG.undertakingWeeks} weeks with ${hallName(accuser)} standing surety (preventing breaches on ${hallName(accused)}’s account).`, rows: [],
+            ...undertakingParts(game, accused, accuser, busyUndertaking, [{ text: `The charge against ${hallName(accused)} stays open until heard.`, icon: "gavel" }]),
           },
           {
             label: "Offer to settle the case by restitution", note: "Clear charge and reverse the concession.",
