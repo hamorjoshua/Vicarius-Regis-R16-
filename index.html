@@ -38957,7 +38957,7 @@ function HallOption({ game, v, o, onRule }) {
                 // what the rows cannot say is a line item of its own, beside them
                 (() => {
                   const said = oddsTerms.length === 2 ? (oc.rows.length ? pruneCovered(oddsTerms[i].text, { outcome: true }) : oddsTerms[i].text) : "";
-                  return said ? jsx(HallTerms, { terms: [{ text: said }] }) : null;
+                  return said ? jsx(HallTerms, { terms: [{ text: said, pop: o.outcomePops?.[i] || null }] }) : null;
                 })(),
                 oc.rows.length > 0 && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, oc.rows)) }),
               ] }, i)),
@@ -39466,10 +39466,9 @@ const SOLO_MATTERS = {
           {
             label: "Ask the penitent to persevere", note: "",
             // the devotion it wins either way is drawn above both outcomes; each outcome says only what is its own
-            consequence: `${oddsLead(h)}: ${name} perseveres, and the penance eases 2 pressure a week instead of 1, or ${name} falls ill and the penance ends${(() => {
-              const duties = dutiesPaidBy(game, penitent).map((l) => dutyTitleOf(l));
-              return duties.length ? `, and ${prn(penitent).pos} shares of ${nameList(duties)} are cleared` : "";
-            })()}.`, rows: [],
+            consequence: `${oddsLead(h)}: ${name} perseveres, and the penance eases 2 pressure a week instead of 1, or ${name} falls ill and the penance ends.`, rows: [],
+            // what falling ill means, opened from its outcome
+            outcomePops: [null, `The penance ends: it no longer eases pressure each week, and can no longer clear a breach at quarter day. And ${name} is too ill to serve: ${prn(penitent).pos} share of every duty is set to nothing, and the others on the rolls must carry it.`],
           },
         ],
       };
@@ -53102,7 +53101,6 @@ p, li, blockquote {
 .hall-option .hall-outcomes { margin-top: 0; }
 /* a line with more to say: tap it, and the rest opens beneath it, anchored by a caret */
 .hall-option .hall-terms li.has-pop { position: relative; cursor: pointer; }
-.hall-option .hall-terms li.has-pop .hall-term-text { text-decoration: underline dotted; text-decoration-color: var(--ink-soft); text-underline-offset: 3px; }
 .hall-pop {
   position: absolute; z-index: 6; left: 0; right: 0; top: calc(100% + 8px);
   padding: 8px 11px; border-radius: var(--r-sm);
