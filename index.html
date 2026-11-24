@@ -38841,6 +38841,9 @@ function hallCost(o) {
 }
 // The odds of an outcome as the game's own figure: this outcome's chance over the other's.
 const oddsGlyph = (odds) => (/^7\b/.test(odds) ? "70-30" : /^3\b/.test(odds) ? "30-70" : "50-50");
+// A household's name as a decision row shows it: long titles shortened, so name and meters share a line.
+const shortWho = (who) => (typeof who === "string" ? who.replace(/^Commander\b/, "Cmdr.") : who);
+const shortRows = (rows) => rows.map((r) => (r.who ? { ...r, who: shortWho(r.who) } : r));
 // One option of a matter in the hall: the choice, its price, what it means, and what it moves.
 function HallOption({ game, v, o, onRule }) {
   const { label, cost } = hallCost(o),
@@ -38885,10 +38888,10 @@ function HallOption({ game, v, o, onRule }) {
                   jsx("i", { class: `odds-ico odds-${oddsGlyph(oc.odds)}`, role: "img", "aria-label": `${oc.odds === "Even" ? "Even chances" : `${oc.odds} chances`}`, title: oc.odds === "Even" ? "Even chances" : `${oc.odds} chances` }),
                   oddsTerms.length === 2 ? (oc.rows.length ? pruneCovered(oddsTerms[i].text, { outcome: true }) : oddsTerms[i].text) : "",
                 ] }),
-                oc.rows.length > 0 && jsx(EffectRows, { rows: withOfficeTags(game, oc.rows) }),
+                oc.rows.length > 0 && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, oc.rows)) }),
               ] }, i)),
           }),
-      !preview?.outcomes && jsx(EffectRows, { rows: withOfficeTags(game, preview?.rows || o.rows) }),
+      !preview?.outcomes && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, preview?.rows || o.rows)) }),
     ],
   });
 }
@@ -45387,7 +45390,7 @@ function WorksOverlay({ game, onRule, view }) {
                       o.cost > 0 && jsx("span", { class: "flip-cost hall-coin", title: `Costs ${o.cost} standing`, "aria-label": `Costs ${o.cost} standing`, children: `−${o.cost}` }),
                     ],
                   }),
-                  jsx(EffectRows, { rows: withOfficeTags(game, o.rows) }),
+                  jsx(EffectRows, { rows: shortRows(withOfficeTags(game, o.rows)) }),
                 ],
               },
               i,
@@ -52978,6 +52981,21 @@ p, li, blockquote {
 }
 .hall-option .hall-outcome { background: transparent; padding: 8px 8px 8px; }
 .hall-option .hall-outcome .fx-list { margin-top: 7px; }
+/* A household on one line: icon, name, pressure pips and regard, drawn smaller. A note that regard
+   spilled into pressure, or anything else said about the row, takes the line below. */
+.hall-option .fx-row { align-items: center; }
+.hall-option .fx-text { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 2px; }
+.hall-option .fx-who { white-space: nowrap; }
+.hall-option .fx-who-line { display: inline-flex; align-items: center; gap: 6px; }
+.hall-option .fx-text > .fx-meters { margin: 0; flex-wrap: nowrap; gap: 8px; }
+.hall-option .fx-text > .fx-what { flex-basis: 100%; }
+.hall-option .fx-text > .fx-bar-row { flex-basis: 100%; }
+.hall-option .fx-meters .pips { gap: 2px; }
+.hall-option .fx-meters .pip { width: 8px; height: 8px; border-width: 1.2px; }
+.hall-option .fx-meters .pip.gap { margin-left: 4px; }
+.hall-option .fx-regard { gap: 4px; font-size: var(--t-xs); }
+.hall-option .fx-regard .rg-graph { width: 11px; height: 13px; }
+.hall-option .fx-regard-mark { font-size: 9px; }
 .hallway-party, .hallway-visitor { display: inline-flex; align-items: center; gap: .35em; }
 .hallway-party { flex-wrap: wrap; }
 .matter-btn .hallway-subject { display: block; font-weight: normal; }
