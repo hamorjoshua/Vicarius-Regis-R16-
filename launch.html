@@ -38813,6 +38813,9 @@ function pruneCovered(text, { outcome = false } = {}) {
   // an outcome's own "if the hall laughs," is said by its odds chip
   const lead = outcome ? t.match(/^(if|should)\b[^,]*,\s*/i) : null;
   if (lead) t = t.slice(lead[0].length);
+  // a sentence that turns on a condition anywhere is kept whole: cut into clauses, a consequence
+  // ("the court suffers two breaches") would lose the "break the promise" it hangs on
+  if (CONDITION.test(t) || /\b(break|fail|miss|neglect)\w*\b/i.test(t)) return text;
   const parts = t.split(/\s*;\s*|,\s+and\s+(?=[a-z])|\s+and\s+(?=[a-z])|,\s+(?=(?:but|though)\b)|\s+while\s+(?=(?:the|its|his|her|their)\b)/);
   const kept = [];
   let subject = "", lastCut = false, cut = !!lead;
@@ -38891,7 +38894,7 @@ function HallOption({ game, v, o, onRule }) {
     // a gamble is always set out as its two outcomes, with what each moves where the court can tell
     outcomes = preview?.outcomes || o.outcomes || (oddsTerms.length === 2 ? oddsTerms.map((t) => ({ odds: t.tag, rows: [] })) : null),
     // a sure cost is drawn before the ways an option can fall, when the outcomes are its own
-    rowsFirst = !!o.outcomes,
+    rowsFirst = !!o.outcomes || (!!outcomes && !preview?.outcomes && !!(preview?.rows || o.rows || []).length),
     terms = all.filter((t) => !(outcomes && oddsTerms.length === 2 && oddsTerms.includes(t)))
       // what the rows (and the coin on the button) already show is cut from the words
       .map((t) => (drawn && (!t.tag || t.tag === "Cost") ? { ...t, text: pruneCovered(t.text), tag: t.tag === "Cost" ? null : t.tag, icon: t.tag === "Cost" ? null : t.icon } : t))
@@ -38921,7 +38924,7 @@ function HallOption({ game, v, o, onRule }) {
       }),
       note && jsx("p", { class: "hall-summary", children: note }),
       jsx(HallTerms, { terms }),
-      rowsFirst && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, o.rows)) }),
+      rowsFirst && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, preview?.rows || o.rows)) }),
       outcomes
         && jsx("div", {
             class: "hall-outcomes",
@@ -39434,11 +39437,15 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Bring the penitent home", note: "End the penance.",
-            consequence: `The weekly relief ends, and this penance can no longer clear a breach at quarter day. Devotion falls 1 among the laity of the ${h.region}.`, rows: [],
+            consequence: `It no longer eases pressure each week, and can no longer clear a breach at quarter day.`, rows: [],
           },
           {
             label: "Ask the penitent to persevere", note: oddsNote(h),
-            consequence: `Devotion rises 1 among the laity of the ${h.region} either way. ${oddsLead(h)}: the penitent perseveres and weekly relief doubles to 2, or falls ill and the penance ends. Illness resets ${name}’s duty shares to zero.${soloDutySummary(game, penitent)}`, rows: [],
+            // the devotion it wins either way is drawn above both outcomes; each outcome says only what is its own
+            consequence: `${oddsLead(h)}: ${name} perseveres, and the penance eases 2 pressure a week instead of 1, or ${name} falls ill and the penance ends${(() => {
+              const duties = dutiesPaidBy(game, penitent).map((l) => dutyTitleOf(l));
+              return duties.length ? `, and ${prn(penitent).pos} shares of ${nameList(duties)} are cleared` : "";
+            })()}.`, rows: [],
           },
         ],
       };
