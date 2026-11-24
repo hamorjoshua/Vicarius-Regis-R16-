@@ -38796,7 +38796,7 @@ function soloDiffRows(before, after, hall) {
   for (const key of new Set([...Object.keys(before.needBar || {}), ...Object.keys(after.needBar || {})])) {
     const n0 = before.needBar?.[key] ?? 0, n1 = after.needBar?.[key] ?? 0, [region, need] = key.split("|");
     if (n0 === n1) continue;
-    rows.push({ tone: n1 > n0 ? "up" : "down", work: key, who: `${capFirst(need)} of the ${region}`, what: `Need bar ${fmtNum(n0)} → ${fmtNum(n1)}` });
+    rows.push({ tone: n1 > n0 ? "up" : "down", icon: NEED_ICON[need] || undefined, work: NEED_ICON[need] ? undefined : key, who: `${capFirst(need)} of the ${region}`, what: `Need bar ${fmtNum(n0)} → ${fmtNum(n1)}` });
   }
   return rows;
 }
@@ -39613,13 +39613,13 @@ const SOLO_MATTERS = {
           },
           {
             label: "Require delivery", note: oddsNote(h),
-            consequence: `${oddsLead(h)}: the stores suffice, or the endowment fails.`, rows: [],
+            consequence: `${oddsLead(h)}: the stores suffice, or the endowment ends.`, rows: [],
             // the stores sufficing is said by the need bar drawn beneath
             outcomeHide: [true, false],
             outcomeIcons: ["cross", "cross"],
             outcomePops: [
               `The chapter’s barns hold out, and ${duty} is the better kept for it.`,
-              `The Church gives up the land, and ${duty} loses its endowment. The court’s standing suffers, and the realm is the less ready for disaster.`,
+              `${capFirst(duty)} no longer gains its extra 2 a week. And should it ever lapse and be founded again, it will need ${mmNum(CONFIG.mortmainFailDebt)} more units of work than before.`,
             ],
           },
         ],
