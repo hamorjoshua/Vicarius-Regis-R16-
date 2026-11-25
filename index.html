@@ -40378,12 +40378,12 @@ const SOLO_MATTERS = {
             consequence: "", rows: [],
             // an order for the week, which the signers then keep or fail by the reckoning
             scope: { tile: "scroll", tag: "Ordinance", lead: [{ tag: "1 week", icon: "hourglass" }],
-              note: `The charter stays sealed: only the signers may carry ${duty}.` },
+              note: `${capFirst(duty)} is fully met.` },
             branches: (() => {
               const signers = (law?.charter || []).map((id) => game.people[id]).filter((p) => p && paidShare(game, p, law) > 1e-9);
               return [
-                { tile: "check", tag: `${capFirst(duty)} fully met`, note: "The entail holds.", rows: [] },
-                { tile: "wrong", tag: `${capFirst(duty)} falls short`, note: "The entail is broken.",
+                { tile: "check", tag: "Ordinance kept", note: "The entail holds.", rows: [] },
+                { tile: "wrong", tag: "Ordinance broken", note: "The entail is broken.",
                   rows: signers.map((p) => personFx(p, 1, 0, "down")) },
               ];
             })(),
