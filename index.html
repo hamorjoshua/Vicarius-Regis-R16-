@@ -40369,16 +40369,24 @@ const SOLO_MATTERS = {
           {
             label: "Break the seal and take the carts", note: "Reopen the roll and admit the new bearer.",
             consequence: "", rows: [],
-            terms: [{ text: `The seal is broken, and ${hallName(helper)} joins ${duty}.`, icon: "scroll", pop: `${hallName(helper)} takes on ${unitsLabel(helperShare)}, easing the signers. Their names stay on record, but the entail no longer protects the realm at quarter day.` }],
+            // the share bar shows the new bearer; what it does not show is the entail lost
+            terms: [{ text: "The entail is broken.", icon: "chain",
+              pop: `The signers may leave ${duty} again, and it no longer spares the realm growth on quarter days.` }],
           },
           {
             label: "Hold the signers to their charter", note: "Let the week’s reckoning decide.",
             consequence: "", rows: [],
-            terms: [{ text: `The entail stays sealed, if ${duty} is fully met at the week’s close.`, icon: "hourglass-plain" }],
-            branches: [
-              { tile: "check", tag: "If met", note: "The entail survives, and keeps protecting the realm at quarter day.", rows: [] },
-              { tile: "wrong", tag: "If short", note: "The charter breaks, and every signer who did their part takes 1 pressure.", rows: [] },
-            ],
+            // an order for the week, which the signers then keep or fail by the reckoning
+            scope: { tile: "scroll", tag: "Ordinance", lead: [{ tag: "1 week", icon: "hourglass" }],
+              note: `The charter stays sealed: only the signers may carry ${duty}.` },
+            branches: (() => {
+              const signers = (law?.charter || []).map((id) => game.people[id]).filter((p) => p && paidShare(game, p, law) > 1e-9);
+              return [
+                { tile: "check", tag: `${capFirst(duty)} fully met`, note: "The entail holds.", rows: [] },
+                { tile: "wrong", tag: `${capFirst(duty)} falls short`, note: "The entail is broken.",
+                  rows: signers.map((p) => personFx(p, 1, 0, "down")) },
+              ];
+            })(),
           },
         ],
       };
