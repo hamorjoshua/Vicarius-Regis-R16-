@@ -38664,14 +38664,16 @@ const HALL_RECALL = {
 // the court last held on a question is cited at the next quarrel that turns on it: following it is
 // expected, and the house that loses knew the rule; reversing it costs the court with those who
 // relied on it. No ruling moves pressure, so the choice is never simply which house is nearer breaking.
+// Each rule is a short maxim, written as it is cut in stone and always quoted word for word.
 const HALL_PRINCIPLE = {
-  letter: "what was bound must be rendered in full",
-  mercy: "the last grain is not to be exacted",
-  crown: "the realm’s need comes before the household’s",
-  hearth: "the realm’s need stops at the household’s door",
-  old: "the older right stands",
-  fresh: "an old right must make room for a new claim",
+  letter: "The bond binds in full",
+  mercy: "Mercy tempers the bond",
+  crown: "The realm before the hearth",
+  hearth: "The hearth before the realm",
+  old: "The older right stands",
+  fresh: "Old rights yield to new",
 };
+const ruleQuote = (side) => `“${HALL_PRINCIPLE[side]}”`;
 const HALL_QUESTION = { letter: "bond", mercy: "bond", crown: "realm", hearth: "realm", old: "custom", fresh: "custom" };
 // A quarrel of fact (the mill, the hedge) holds no principle: it is right or wrong.
 const HALL_HOLDS = {
@@ -38810,7 +38812,7 @@ function holdingTerms(game, hall, o, W, L) {
   if (hd.follows) return [{ tag: `Follows your rule of week ${hd.prior.week}`, icon: "gavel", text: rule, stone: true,
     pop: `The court held the same in ${then}.${HALL_KIND[hall.matter] === "estates" ? "" : ` ${hallName(L)} knew the rule, and takes no grudge.`}` }];
   if (hd.reverses) return [{ tag: `Breaks your rule of week ${hd.prior.week}`, icon: "gavel", text: rule, stone: true,
-    pop: `In ${then} the court held that ${HALL_PRINCIPLE[hd.prior.side]}. This ruling overturns it, and those who relied on the old rule take it ill.` }];
+    pop: `In ${then} the court held: ${ruleQuote(hd.prior.side)}. This ruling overturns it, and those who relied on the old rule take it ill.` }];
   return [{ tag: "Sets a rule", icon: "gavel", text: capFirst(HALL_PRINCIPLE[hd.side]), stone: true,
     pop: "The court will be held to this in later quarrels on the same question. A house that loses by the rule takes no grudge; overturning it angers those who relied on it." }];
 }
@@ -44061,7 +44063,7 @@ function hallView(game, hall = game.hall) {
       ? matterEntry(game, "hall").cause : hall === game.faithMatter ? faithCause(game, hall) : "",
       (() => {
         const side = HALL_HOLDS[hall.matter]?.a, prior = side && game.holdings?.[HALL_QUESTION[side]];
-        return prior ? `Both have heard what the court held in ${holdingCase(prior)}: that ${HALL_PRINCIPLE[prior.side]}.` : "";
+        return prior ? `Both have heard what the court held in ${holdingCase(prior)}: ${ruleQuote(prior.side)}.` : "";
       })()].filter(Boolean).join(" "),
     asked: !!hall.asked,
     shared: hall.matter !== "marriageRank" && HALL_RETURN_OF[hall.matter] ? "Whatever you rule, these households will come back about it in a week or two."
@@ -44343,8 +44345,8 @@ function ruleHall(game, choice) {
   }
   const held = hallHolding(game, hall, o),
     holdingLine = !held ? "" : held.reverses
-      ? `The court reverses itself: it now holds that ${HALL_PRINCIPLE[held.side]}, and ${grievanceTold(game, held.prior.c, 1)}.`
-      : held.follows ? `The court holds, as before, that ${HALL_PRINCIPLE[held.side]}.` : `The court holds that ${HALL_PRINCIPLE[held.side]}.`;
+      ? `The court reverses itself and now holds: ${ruleQuote(held.side)}. ${capFirst(grievanceTold(game, held.prior.c, 1))}.`
+      : held.follows ? `The court holds, as before: ${ruleQuote(held.side)}.` : `The court holds: ${ruleQuote(held.side)}.`;
   const text = [o.done(A, B, hall.region, hall), kindLine, holdingLine, peerResponse].filter(Boolean).join(" ");
   for (const [P, O] of [[A, B], [B, A]])
     P.hallMem = [
