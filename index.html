@@ -13670,7 +13670,7 @@ function epWeekly(game, R) {
     const noble = game.people[sq.nobleId], target = game.people[sq.targetId], law = lawById(game, sq.lawId);
     if (sq.authenticated) {
       if (law && noble) {
-        law.personal = { ...(law.personal || {}), [noble.id]: 1 };
+        law.personal = { ...(law.personal || {}), [noble.id]: sq.weight ?? 1 };
         resetAllocCache(game);
       }
       if (target && sq.writ != null) target.writs = [...(target.writs || []), sq.writ];
@@ -39135,7 +39135,8 @@ function BranchHead({ br }) {
     document.addEventListener("pointerdown", shut);
     return () => document.removeEventListener("pointerdown", shut);
   }, [open]);
-  const head = [hallTile(br.tile), jsx("span", { class: "hall-tag", children: br.tag })];
+  const head = [hallTile(br.tile), jsx("span", { class: "hall-tag", children: br.tag }),
+    br.odds && jsx("span", { class: "hall-tag hall-odds-tag", children: br.odds })];
   if (!br.pop) return jsx("p", { class: "hall-wrong-head", children: head });
   return jsx("p", {
     class: `hall-wrong-head has-pop${open ? " open" : ""}`, role: "button", tabIndex: 0, "aria-expanded": open,
@@ -42493,9 +42494,9 @@ const SOLO_MATTERS = {
       );
       for (const target of demoted) {
         const noble = game.people[target.distrainedBy];
-        const nobleLaw = epActive(game, noble.region).find((l) => (l.personal?.[noble.id] ?? 2) < 2)
-          || epActive(game, noble.region).find((l) => paidShare(game, noble, l) > 0);
-        if (!nobleLaw) continue;
+        // the noble's grant must be a real lighter share, and the house must have had a writ to lose
+        const nobleLaw = epActive(game, noble.region).find((l) => (l.personal?.[noble.id] ?? 2) < 2);
+        if (!nobleLaw || !target.distrainedWrits?.length) continue;
         const official = game.people.find((p) => p.type === "Official" && p.region === target.region && !p.charge)
           || game.people.find((p) => p.type === "Official" && !p.charge);
         if (!official) continue;
@@ -42503,7 +42504,7 @@ const SOLO_MATTERS = {
         return {
           matter: "matchingSeal", ruled: null, week: game.week,
           a: official.id, b: noble.id, region: target.region,
-          from: { kind: "distrain", officialId: official.id, nobleId: noble.id, targetId: target.id, lawId: nobleLaw.id, writ: target.distrainedWrits?.[0] ?? "exemption" },
+          from: { kind: "distrain", officialId: official.id, nobleId: noble.id, targetId: target.id, lawId: nobleLaw.id, writ: target.distrainedWrits[0], weight: nobleLaw.personal[noble.id] },
           perseveres: hallHash(game, 2213) < 0.5,
         };
       }
@@ -42530,20 +42531,36 @@ const SOLO_MATTERS = {
           name: hallName(official), estate: official.type, region: official.region, id: official.id,
           plea: `There is a chip above the crown in both impressions. I had hoped it was a speck on my spectacles. I have cleaned them twice.`,
         },
-        options: [
-          {
-            label: "Call in the noble’s matching writ", note: "Suspend the accuser’s lighter share.",
-            consequence: `Suspends ${hallName(noble)}’s lighter share on ${duty} (${unitsLabel(before)} → ${unitsLabel(after)}).${ease}`, rows: [],
-          },
-          {
-            label: "Restore the confiscated writ on the same evidence", note: "Return the concession to the demoted house.",
-            consequence: `${hallName(target)} recovers its confiscated writ while its former title stays forfeit. ${hallName(noble)} takes a grudge against the ${constituencyLabel(constituencyOf(target))}.`, rows: [],
-          },
-          {
-            label: "Put both writs to an inquest", note: "Suspend both until week’s close.",
-            consequence: `Both concessions are suspended while ${hallName(official)} checks the rolls (${duty}: ${hallName(noble)} resumes ${unitsLabel(after)} meanwhile). At week’s close, both impressions are either authenticated or voided.`, rows: [],
-          },
-        ],
+        options: (() => {
+          const wLaw = lawById(game, h.from.writ?.lawId), wDuty = wLaw ? dutyNameInSentence(dutyTitleOf(wLaw)) : "its duty";
+          const writLine = `${hallName(target)} recovers ${prn(target).pos} writ on ${wDuty}.`;
+          return [
+            {
+              label: "Call in the noble’s matching writ", note: "Suspend the accuser’s lighter share.",
+              consequence: "", rows: [],
+            },
+            {
+              label: "Restore the confiscated writ on the same evidence", note: "Return the concession to the demoted house.",
+              consequence: "", rows: [],
+              terms: [
+                { text: writLine, icon: "seal" },
+                { text: `${hallName(noble)} takes a grudge against the ${constituencyLabel(constituencyOf(target))}.`, icon: "grudge" },
+              ],
+            },
+            {
+              label: "Put both writs to an inquest", note: "Suspend both until week’s close.",
+              consequence: "", rows: [],
+              scope: { tile: "inquiry", tag: "Inquest", lead: [{ tag: "1 week", icon: "hourglass" }],
+                notes: [`${hallName(noble)}’s lighter share on ${duty} is suspended.`, `${hallName(target)}’s writ stays confiscated.`] },
+              branches: [
+                { tile: "check", tag: "Seal authenticated", odds: "1 in 2",
+                  note: `${hallName(noble)}’s lighter share returns, and ${writLine}` },
+                { tile: "wrong", tag: "Seal voided", odds: "1 in 2",
+                  note: `Both grants fall: ${hallName(noble)} keeps the full share, and ${hallName(target)}’s writ stays confiscated.` },
+              ],
+            },
+          ];
+        })(),
       };
     },
     apply(g, m, choice) {
@@ -42557,7 +42574,7 @@ const SOLO_MATTERS = {
         return `${hallName(noble)}’s matching writ on ${duty} is called in; ${hallName(noble)} resumes a full share until the writ is confirmed.`;
       }
       if (choice === 1) {
-        if (m.from.writ != null) target.writs = [...(target.writs || []), m.from.writ];
+        if (m.from.writ && typeof m.from.writ === "object") target.writs = [...(target.writs || []), m.from.writ];
         noble.grudge = { c: constituencyOf(target), until: g.week + CONFIG.hallGrudgeWeeks, amount: 1 };
         return `On the same evidence, ${hallName(target)} recovers its confiscated writ (title still forfeit). ${hallName(noble)} leaves with a grudge.`;
       }
@@ -42565,7 +42582,7 @@ const SOLO_MATTERS = {
         law.personal = { ...(law.personal || {}), [noble.id]: 2 };
         resetAllocCache(g);
       }
-      g.sealInquest = { week: g.week, nobleId: noble.id, targetId: target.id, lawId: law?.id, writ: m.from.writ, authenticated: !!m.perseveres };
+      g.sealInquest = { week: g.week, nobleId: noble.id, targetId: target.id, lawId: law?.id, writ: m.from.writ, weight: m.from.weight, authenticated: !!m.perseveres };
       return `Both writs are suspended and placed before ${hallName(official)}’s inquest, to be resolved at the close of this week.`;
     },
   },
