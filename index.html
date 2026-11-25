@@ -39164,8 +39164,9 @@ function StoneLine({ t }) {
       jsx("span", { class: "hall-term-text", children: [
         jsx("span", { class: `hall-stone${t.stone === "bronze" ? " bronze" : ""}`, children: t.text }),
         t.tag && jsx("span", { class: "hall-stone-kind", children: t.tag }),
+        // the note hangs from the plate's own column, its caret under the plate
+        open && jsx("span", { class: "hall-pop hall-stone-pop", role: "note", children: t.pop }),
       ] }),
-      open && jsx("span", { class: "hall-pop", role: "note", children: t.pop }),
     ],
   });
 }
@@ -53654,7 +53655,9 @@ p, li, blockquote {
 .hall-option .hall-terms li.hall-stone-line .hall-mark { padding-top: 0; height: 22px; align-items: center; }
 .hall-option .hall-terms li.hall-stone-line .hall-stone { margin-top: 0; }
 .hall-stone-line.stone .hall-tile { background: #7d7c76; }
-.hall-option .hall-terms li.hall-stone-line.has-pop { position: relative; cursor: pointer; }
+.hall-option .hall-terms li.hall-stone-line.has-pop { cursor: pointer; }
+.hall-option .hall-terms li.hall-stone-line .hall-term-text { position: relative; }
+.hall-stone-pop { right: -8px; }
 .hall-stone-line.bronze .hall-tile { background: #8a6a3a; }
 .hall-stone-kind { display: block; margin-top: 3px; font: 400 var(--t-sm)/1.25 var(--sans); color: var(--ink-soft); }
 /* an empty list of rows takes no place, so the boxes keep the option's even gaps */
