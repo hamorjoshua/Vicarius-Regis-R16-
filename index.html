@@ -40501,12 +40501,12 @@ const SOLO_MATTERS = {
                 note: `${region} households are heard in order of rank: none immediately before a higher-ranked one.`,
                 pop: rank },
               branches: [
-                { tile: "check", tag: "If kept", rows: [
+                { tile: "check", tag: "Ordinance kept", rows: [
                   ...(official.pressure > 0 ? [personFx(official, -1, 0, "up")] : []),
                   estateRow(game, "Realm|Official", -1),
                   ...(gain > 0 ? [{ term: true, text: `The registry’s precedent covers ${halves(gain)} more unit of ${duty} (${halves(cover(c0))} now, ${halves(cover(c0 + 2))} after).` }] : []),
                 ].filter(Boolean) },
-                { tile: "wrong", tag: "Each time it is broken", rows: [
+                { tile: "wrong", tag: "Each time ordinance broken", rows: [
                   personFx(official, CONFIG.codifyFriction + 1, 0, "down"),
                   estateRow(game, "Realm|Official", 1),
                 ].filter(Boolean) },
@@ -53520,7 +53520,8 @@ p, li, blockquote {
 .hall-option .hall-wrong-head .hall-tag { margin: 0; }
 /* a long condition wraps inside its strip, the strip growing to hold it; the box stays by the first line */
 .hall-option .hall-wrong-head { align-items: flex-start; }
-.hall-option .hall-scope { margin-bottom: 8px; }
+/* an empty list of rows takes no place, so the boxes keep the option's even gaps */
+.hall-option > .fx-list:empty, .hall-option > .hall-terms:empty { display: none; }
 .hall-option .hall-wrong-head .hall-tag:not(.hall-odds-tag) { height: auto; min-height: 20px; padding: 1px 6px; line-height: 18px; }
 .hall-option .hall-wrong-head.has-pop { position: relative; cursor: pointer; }
 .hall-option .hall-branch-flavor { margin: -2px 0 7px; font: italic var(--t-sm)/1.35 var(--serif); color: var(--ink-soft); text-align: center; }
