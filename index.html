@@ -31781,14 +31781,16 @@ function ReckDutyChange({ d }) {
     class: "duties-item reck-duty",
     "data-reck": `duty:${d.id}`,
     children: [
-      // what happened to the duty heads the box, centred; the region is the mark before its name
-      d.status && jsx("p", { class: `duties-state reck-duty-state${after.shortfall > 1e-6 ? " short" : ""}`, children: d.status }),
+      // the region is the mark before the duty's name; what happened to the duty stands at the right
       jsx("p", {
         class: "duties-title reck-duty-name",
         children: [
-          d.region && REGION_ICON[d.region] && jsx("span", { class: "reck-duty-region-mark", role: "img", "aria-label": d.region, title: d.region, children: jsx(Icon, { icon: REGION_ICON[d.region], size: 17 }) }),
-          jsx("span", { children: d.title }),
-          d.region && !REGION_ICON[d.region] ? jsx("span", { class: "reck-duty-region", children: ` · ${d.region}` }) : null,
+          jsx("span", { class: "reck-duty-named", children: [
+            d.region && REGION_ICON[d.region] && jsx("span", { class: "reck-duty-region-mark", role: "img", "aria-label": d.region, title: d.region, children: jsx(Icon, { icon: REGION_ICON[d.region], size: 17 }) }),
+            jsx("span", { children: d.title }),
+            d.region && !REGION_ICON[d.region] ? jsx("span", { class: "reck-duty-region", children: ` · ${d.region}` }) : null,
+          ] }),
+          jsx("span", { class: `duties-state${after.shortfall > 1e-6 ? " short" : ""}`, children: d.status }),
         ],
       }),
       units > 0 &&
@@ -54385,13 +54387,12 @@ p, li, blockquote {
   font: 400 var(--t-md)/var(--lh-ui) var(--serif);
 }
 
-.reck-duty .reck-duty-state {
-  margin: 0 0 3px;
-  text-align: center;
+.reck-duty .reck-duty-name {
+  align-items: center;
 }
 
-.reck-duty .reck-duty-name {
-  justify-content: flex-start;
+.reck-duty-named {
+  display: inline-flex;
   align-items: center;
   gap: 7px;
 }
