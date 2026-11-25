@@ -39744,8 +39744,8 @@ function undertakingParts(game, waiting, by, busy, extra = []) {
     terms: extra.length ? extra : null,
     scopes: undertakingScopes(waiting),
     branches: [
-      { tile: "check", tag: "Word kept", rows: [...(keptNet ? [seals(kept)] : []), ...(by && by !== waiting && by.pressure > 0 ? [personFx(by, -1, 0, "up")] : [])] },
-      { tile: "wrong", tag: "Word broken", rows: [
+      { tile: "check", tag: "Court’s word kept", rows: [...(keptNet ? [seals(kept)] : []), ...(by && by !== waiting && by.pressure > 0 ? [personFx(by, -1, 0, "up")] : [])] },
+      { tile: "wrong", tag: "Court’s word broken", rows: [
         seals(broke),
         personFx(waiting, 0, -2 - (waiting.regard ?? 0), "down"),
         ...(by && by !== waiting ? [personFx(by, CONFIG.accusedCost, 0, "down")] : []),
@@ -40650,11 +40650,11 @@ const SOLO_MATTERS = {
               const seals = (g2) => ({ plain: true, seals: { value: st, projected: g2.standing ?? CONFIG.standingMax, reserve: rv,
                 label: `${(g2.standing + (g2.reserve || 0)) - (st + rv) >= 0 ? "+" : "−"}${Math.abs((g2.standing + (g2.reserve || 0)) - (st + rv))}` } });
               return [
-                { tile: "check", tag: "Word kept", rows: [
+                { tile: "check", tag: "Court’s word kept", rows: [
                   ...((kept.standing + (kept.reserve || 0)) !== st + rv ? [seals(kept)] : []),
                   ...(sponsor.pressure > 0 ? [personFx(sponsor, -1, 0, "up")] : []),
                 ] },
-                { tile: "wrong", tag: "Word broken", rows: [
+                { tile: "wrong", tag: "Court’s word broken", rows: [
                   seals(broke),
                   personFx(waiting, 0, -2 - (waiting.regard ?? 0), "down"),
                   personFx(sponsor, CONFIG.accusedCost, 0, "down"),
