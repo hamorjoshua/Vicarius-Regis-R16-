@@ -38804,8 +38804,12 @@ function holdingTerms(game, hall, o, W, L) {
   const hd = hallHolding(game, hall, o);
   if (!hd) return [];
   const then = hd.prior && `week ${hd.prior.week} (${HALL_RECALL[hd.prior.matter] || "an earlier quarrel"})`;
-  if (hd.follows) return [{ tag: "Your rule", icon: "gavel", tone: "up", text: `Follows ${then}.${HALL_KIND[hall.matter] === "estates" ? "" : ` ${hallName(L)} knew the rule and takes no grudge.`}` }];
-  if (hd.reverses) return [{ tag: "Breaks your rule", icon: "gavel", tone: "down", text: `Reverses ${then}. New rule: ${HALL_PRINCIPLE[hd.side]}.` }];
+  // a rule the court keeps, sets or overturns is always the same stone; the caption says which
+  const rule = capFirst(HALL_PRINCIPLE[hd.side]);
+  if (hd.follows) return [{ tag: `Follows your rule of week ${hd.prior.week}`, icon: "gavel", text: rule, stone: true,
+    rest: HALL_KIND[hall.matter] === "estates" ? null : `${hallName(L)} knew the rule and takes no grudge.` }];
+  if (hd.reverses) return [{ tag: `Breaks your rule of week ${hd.prior.week}`, icon: "gavel", text: rule, stone: true,
+    pop: `Overturns “${capFirst(HALL_PRINCIPLE[hd.prior.side])}”` }];
   return [{ tag: "Sets a rule", icon: "gavel", text: capFirst(HALL_PRINCIPLE[hd.side]), stone: true }];
 }
 // Constituencies an option moves, as rows beside the households'.
@@ -39152,6 +39156,8 @@ function HallTerms({ terms }) {
             jsx("span", { class: "hall-term-text", children: [
               jsx("span", { class: `hall-stone${t.stone === "bronze" ? " bronze" : ""}`, children: t.text }),
               t.tag && jsx("span", { class: "hall-stone-kind", children: t.tag }),
+              t.pop && jsx("span", { class: "hall-stone-kind", children: t.pop }),
+              t.rest && jsx("span", { class: "hall-stone-rest", children: t.rest }),
             ] }),
           ] }, i) :
           t.pop ? jsx(HallPopLine, { t, mark: mark(t), cls: mark(t) ? "" : "unmarked" }, i) : jsx("li", { class: mark(t) ? "" : "unmarked", children: [
@@ -53630,7 +53636,7 @@ p, li, blockquote {
 .hall-option .hall-terms li.hall-stone-line .hall-stone { margin-top: 0; }
 .hall-stone-line.stone .hall-tile { background: #7d7c76; }
 .hall-stone-line.bronze .hall-tile { background: #8a6a3a; }
-.hall-stone-kind { display: block; margin-top: 3px; font: 500 var(--t-xs)/1.2 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+.hall-stone-kind { display: block; margin-top: 3px; font: 400 var(--t-sm)/1.25 var(--sans); color: var(--ink-soft); }
 /* an empty list of rows takes no place, so the boxes keep the option's even gaps */
 .hall-option > .fx-list:empty, .hall-option > .hall-terms:empty { display: none; }
 .hall-option .hall-wrong-head .hall-tag:not(.hall-odds-tag) { height: auto; min-height: 20px; padding: 1px 6px; line-height: 18px; }
