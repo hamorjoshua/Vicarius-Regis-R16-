@@ -38654,12 +38654,23 @@ function hallKindTerms(game, hall, o, A, B, W, L) {
     const sh = hallNeedShift(game, hall, o.win);
     return sh ? [{ tag: "The region", work: sh.key, tone: sh.to > sh.from ? "up" : "down", text: `${capFirst(sh.need)} bar ${sh.to > sh.from ? "rises" : "falls"} by 1 (now ${fmtNum(sh.from)}).` }] : [];
   }
-  if (kind === "time" && o.win === "b")
-    return [
-      { tag: `In ${mmNum(CONFIG.hallDebtWeeks)} weeks`, icon: "hourglass", text: `If ${hallName(B)} is below pressing pressure, the debt is paid and ${hallName(A)} regains the regard lost today.` },
-      { tag: "Otherwise", icon: "hourglass", tone: "down", text: `${hallName(B)} defaults, and ${grievanceTold(game, constituencyOf(A), 1)}.` },
-    ];
   return [];
+}
+// Time given on a debt: the lender's loss waits on the borrower, and is drawn as what a default costs.
+const hallDefers = (hall, o) => HALL_KIND[hall.matter] === "time" && o.win === "b";
+function hallDefaultBranch(game, hall, o, A, B) {
+  if (!hallDefers(hall, o)) return null;
+  return {
+    tile: "wrong",
+    tag: `If ${hallName(B)} does not stay short of urgent for ${mmNum(CONFIG.hallDebtWeeks)} weeks`,
+    flavor: `${hallName(B)} defaults.`,
+    pop: `${hallName(B)} must end each of the next ${mmNum(CONFIG.hallDebtWeeks)} weeks with fewer than ${mmNum(CONFIG.urgent)} pressure. The first week ${prn(B).sub} does not, the debt is called in.`,
+    rows: [
+      personFx(A, 0, -CONFIG.hallRegard, "down"),
+      ...hallKin(game, A.id).filter((k) => k !== B.id).map((k) => personFx(game.people[k], 0, -CONFIG.hallRegard, "down", { what: `kin by marriage to ${hallName(A)}` })),
+      estateRow(game, constituencyOf(A), 1),
+    ].filter(Boolean),
+  };
 }
 function holdingTerms(game, hall, o, W, L) {
   const hd = hallHolding(game, hall, o);
@@ -39084,14 +39095,24 @@ function HallOption({ game, v, o, onRule }) {
 }
 // Debts the court gave time on, come due.
 function settleHallDue(game, report) {
-  const due = (game.hallDue || []).filter((d) => d.week <= game.week);
+  // a debt given time on the new terms falls due the first week the borrower ends urgent
+  const urgentNow = (d) => d.deferred && game.people[d.b] && game.people[d.b].pressure >= CONFIG.urgent;
+  const due = (game.hallDue || []).filter((d) => d.week <= game.week || urgentNow(d));
   if (!due.length) return;
-  game.hallDue = game.hallDue.filter((d) => d.week > game.week);
+  game.hallDue = game.hallDue.filter((d) => !due.includes(d));
   for (const d of due) {
     const A = game.people[d.a], B = game.people[d.b];
     if (!A || !B) continue;
     let text;
-    if (B.pressure < CONFIG.pressing) {
+    if (d.deferred) {
+      if (!urgentNow(d)) text = `The harvest is in, and ${hallName(B)} repays ${hallName(A)} in full.`;
+      else {
+        text = `${hallName(B)} cannot meet the debt to ${hallName(A)} and defaults. ${capFirst(grievanceTold(game, constituencyOf(A), 1))}.`;
+        addRegard(A, -CONFIG.hallRegard);
+        for (const k of hallKin(game, A.id)) if (k !== B.id) addRegard(game.people[k], -CONFIG.hallRegard);
+        addGrievance(game, constituencyOf(A), 1);
+      }
+    } else if (B.pressure < CONFIG.pressing) {
       addRegard(A, CONFIG.hallRegard);
       if (A.grudge?.c === constituencyOf(B)) A.grudge = null;
       text = `The harvest is in, and ${hallName(B)} repays ${hallName(A)} in full. ${hallName(A)} allows that the court was right to wait.`;
@@ -43919,6 +43940,7 @@ function hallView(game, hall = game.hall) {
             ...(W && L && kind !== "estates" && kind !== "facts" && !hallHolding(game, hall, o)?.follows && (hall.matter === "feud" || !(L.grudge && L.grudge.until > game.week))
               ? [{ text: `${hallName(L)} takes a grudge against the ${estateInRegion(W.region, W.type)}.`, icon: "grudge" }] : [])],
         disabled: !!o.cost && !canSpendStanding(game, o.cost),
+        branches: [hallDefaultBranch(game, hall, o, A, B)].filter(Boolean),
         win: W ? hallName(W) : null,
         winSide: o.win,
         // in a quarrel of fact, the button says whose word the ruling takes
@@ -44001,9 +44023,11 @@ function hallEffects(game, hall, o, A, B, W, L) {
     const w = at(W), l = at(L);
     w.dr += CONFIG.hallRegard;
     w.tone = "up";
+    if (!hallDefers(hall, o)) {
     l.dr -= CONFIG.hallRegard;
     l.tone = "down";
-    for (const k of hallKin(game, L.id)) {
+    }
+    if (!hallDefers(hall, o)) for (const k of hallKin(game, L.id)) {
       if (k === W.id) continue;
       const e = at(game.people[k]);
       e.dr -= CONFIG.hallRegard;
@@ -44117,7 +44141,8 @@ function ruleHall(game, choice) {
   } else if (W) {
     const rightOnFacts = kind === "facts" && (o.finds || side === truth);
     addRegard(W, CONFIG.hallRegard);
-    if (!rightOnFacts) addRegard(L, -CONFIG.hallRegard);
+    // time given on a debt: the lender loses regard only if the borrower defaults
+    if (!rightOnFacts && !hallDefers(hall, o)) addRegard(L, -CONFIG.hallRegard);
     if (kind === "facts") {
       const out = HALL_TRUTH_OUT[hall.matter];
       // the assistant tells it plainly: whose word you took, and whether it was the true one
@@ -44134,7 +44159,7 @@ function ruleHall(game, choice) {
       kindLine = `The ${hall.region}’s ${sh.need} bar ${sh.to > sh.from ? "rises" : "falls"} by 1.`;
     }
     if (kind === "time" && side === "b") {
-      g.hallDue = [...(g.hallDue || []), { week: g.week + CONFIG.hallDebtWeeks, a: A.id, b: B.id }];
+      g.hallDue = [...(g.hallDue || []), { week: g.week + CONFIG.hallDebtWeeks, a: A.id, b: B.id, deferred: true }];
       kindLine = `The court will see how ${hallName(B)} stands when the harvest is in.`;
     }
     const hd = hallHolding(g, hall, o);
@@ -44148,7 +44173,7 @@ function ruleHall(game, choice) {
     } else if (!(L.grudge && L.grudge.until > g.week) || hall.matter === "feud")
       L.grudge = { c: constituencyOf(W), until: g.week + CONFIG.hallGrudgeWeeks, amount: 1 };
     // its kin by marriage take its part
-    if (!rightOnFacts) for (const k of hallKin(g, L.id)) if (k !== W.id) addRegard(g.people[k], -CONFIG.hallRegard);
+    if (!rightOnFacts && !hallDefers(hall, o)) for (const k of hallKin(g, L.id)) if (k !== W.id) addRegard(g.people[k], -CONFIG.hallRegard);
     // the aggrieved house, ruled for at last, lets its grudge go
     if (hall.matter === "feud" && W === A && A.grudge?.c === constituencyOf(B)) A.grudge = null;
   }
@@ -53348,6 +53373,9 @@ p, li, blockquote {
 .hall-option .hall-wrong-head { display: flex; align-items: center; gap: 8px; margin: 0 0 7px; }
 .hall-option .hall-wrong-head .hall-tile { width: 20px; height: 20px; }
 .hall-option .hall-wrong-head .hall-tag { margin: 0; }
+/* a long condition wraps inside its strip, the strip growing to hold it; the box stays by the first line */
+.hall-option .hall-wrong-head { align-items: flex-start; }
+.hall-option .hall-wrong-head .hall-tag:not(.hall-odds-tag) { height: auto; min-height: 20px; padding: 1px 6px; line-height: 18px; }
 .hall-option .hall-wrong-head.has-pop { position: relative; cursor: pointer; }
 .hall-option .hall-branch-flavor { margin: -2px 0 7px; font: italic var(--t-sm)/1.35 var(--serif); color: var(--ink-soft); text-align: center; }
 .hall-option .hall-wrong-head .hall-odds-tag { margin-left: auto; }
