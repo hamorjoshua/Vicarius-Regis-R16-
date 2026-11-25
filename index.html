@@ -39152,10 +39152,10 @@ function HallOption({ game, v, o, onRule }) {
         ],
       }),
       note && jsx("p", { class: "hall-summary", children: note }),
-      // an order of the court for a set time: its span, what kind of order it is, and what it says
+      // an order of the court for a set time: what kind of order it is, its span, and what it says
       o.scope && jsx("div", { class: "hall-wrong hall-scope", children: [
-        ...(o.scope.lead || []).map((t, j) => jsx("p", { class: "hall-wrong-head", children: [hallTile(t.icon), jsx("span", { class: "hall-tag", children: t.tag })] }, `l${j}`)),
         jsx(BranchHead, { br: o.scope }),
+        ...(o.scope.lead || []).map((t, j) => jsx("p", { class: "hall-wrong-head", children: [hallTile(t.icon), jsx("span", { class: "hall-tag", children: t.tag })] }, `l${j}`)),
         o.scope.note && jsx(HallTerms, { terms: [{ text: o.scope.note }] }),
       ] }),
       jsx(HallTerms, { terms: [...(preview?.rows || o.rows || []).filter((r) => r.term), ...terms] }),
