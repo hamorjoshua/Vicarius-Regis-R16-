@@ -15210,7 +15210,7 @@ Object.assign(CONFIG, {
   distrainTransferUnits: 1.5,
   codifySupportPerStack: 0.5,
   codifySupportCap: 2,
-  codifyFriction: 0,
+  codifyFriction: 1,
   codifyFrictionWeeks: 2,
   assizeWeeks: 4,
   assizeIdlePressure: 1,
@@ -39128,7 +39128,7 @@ function HallOption({ game, v, o, onRule }) {
       .filter((t) => t.text && !(cost > 0 && t.tag === "Cost" && /^(Costs|Spends?|Stake) \d+ standing\.?$/.test(t.text))),
     shown = (preview?.rows || o.rows || []).filter((r) => !r.term),
     // an option that moves nothing says so, rather than standing empty
-    quiet = !outcomes && !terms.length && !shown.length && !(o.branches || []).length,
+    quiet = !outcomes && !terms.length && !shown.length && !(o.branches || []).length && !o.scope,
     // the summary under the button: never the price or the odds again, which coin and chips show
     bareNote = (o.note || "").replace(/^(Seven|Three) chances in ten\.\s*|^Even chances\.\s*/, "").trim(),
     // no summary under the button: an option speaks through its lines and rows. Only an option
@@ -39152,6 +39152,12 @@ function HallOption({ game, v, o, onRule }) {
         ],
       }),
       note && jsx("p", { class: "hall-summary", children: note }),
+      // an order of the court for a set time: its span, what kind of order it is, and what it says
+      o.scope && jsx("div", { class: "hall-wrong hall-scope", children: [
+        ...(o.scope.lead || []).map((t, j) => jsx("p", { class: "hall-wrong-head", children: [hallTile(t.icon), jsx("span", { class: "hall-tag", children: t.tag })] }, `l${j}`)),
+        jsx(BranchHead, { br: o.scope }),
+        o.scope.note && jsx(HallTerms, { terms: [{ text: o.scope.note }] }),
+      ] }),
       jsx(HallTerms, { terms: [...(preview?.rows || o.rows || []).filter((r) => r.term), ...terms] }),
       rowsFirst && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, (preview?.rows || o.rows).filter((r) => !r.term)), game) }),
       outcomes
@@ -39175,7 +39181,8 @@ function HallOption({ game, v, o, onRule }) {
         jsx(BranchHead, { br }),
         br.flavor && jsx("p", { class: "hall-branch-flavor", children: br.flavor }),
         br.note && jsx(HallTerms, { terms: [{ text: br.note }] }),
-        br.rows?.length > 0 && jsx(EffectRows, { rows: shortRows(br.rows, game) }),
+        br.rows?.some((r) => r.term) && jsx(HallTerms, { terms: br.rows.filter((r) => r.term) }),
+        br.rows?.some((r) => !r.term) && jsx(EffectRows, { rows: shortRows(br.rows.filter((r) => !r.term), game) }),
       ] }, `br${k}`)),
       o.ifWrong && jsx("div", { class: "hall-wrong", children: [
         jsx("p", { class: "hall-wrong-head", children: [
@@ -40471,22 +40478,42 @@ const SOLO_MATTERS = {
           name: hallName(witness), estate: witness.type, region: witness.region, id: witness.id,
           plea: `The ink is scarcely dry on ${name}’s order of precedence between ${hallName(senior)} and ${hallName(junior)}. Does the codified order bind even an urgent petitioner this week, or shall the clerk bend it for urgency?`,
         },
-        options: [
-          {
-            label: "Bend the registry for urgency", note: "Exempt urgent petitioners this week.",
-            consequence: "", rows: [],
-            terms: [{ text: "This week you may hear the urgent before their betters.", icon: "scroll", pop: `Hearing an urgent household ahead of a higher-ranked one will not count against ${name}’s registry. The officials resent the exception.` }],
-          },
-          {
-            label: "Hold strictly to the codified order", note: "Test the registry across this week’s docket.",
-            consequence: "", rows: [],
-            terms: [{ text: "Keep the order of precedence through this week’s hearings.", icon: "scroll" }],
-            branches: [
-              { tile: "check", tag: "If kept", note: `The registry on ${duty} takes firmer hold. ${name} is eased, and the officials’ grievance falls.`, rows: [] },
-              { tile: "wrong", tag: "If broken", note: `${name} takes ${mmNum(CONFIG.codifyFriction + 1)} pressure, and the officials’ grievance grows.`, rows: [] },
-            ],
-          },
-        ],
+        options: (() => {
+          const region = h.region, week = [{ tag: "1 week", icon: "hourglass" }],
+            rank = `The registry’s order is the order of rank: nobles, then clergy and officials, then merchants and soldiers, then commoners; within an estate, by name. The order is broken when a ${region} household is heard immediately before a higher-ranked ${region} household.`,
+            normal = `While the registry stands, each time the order is broken ${name} takes ${mmNum(CONFIG.codifyFriction)} pressure.`;
+          // the registry's settled precedent covers half a unit a stack, up to its cap, while an official bears the duty
+          const cover = (c) => Math.min(CONFIG.codifySupportCap, (c || 0) * CONFIG.codifySupportPerStack),
+            halves = (x) => (x % 1 ? `${Math.floor(x) || ""}½` : `${x}`),
+            c0 = law?.codified || 0, gain = cover(c0 + 2) - cover(c0);
+          return [
+            {
+              label: "Bend the registry for urgency", note: "A dispensation for urgent households this week.",
+              consequence: "", rows: [],
+              scope: { lead: week, tile: "scroll", tag: "Dispensation",
+                note: `An urgent ${region} household may be heard immediately before a higher-ranked one without breaking the registry.`,
+                pop: `${rank} ${normal} The dispensation spares ${prn(official).obj} that when the household heard first is urgent.` },
+            },
+            {
+              label: "Hold strictly to the codified order", note: "An ordinance holding this week’s hearings to the registry.",
+              consequence: "", rows: [],
+              scope: { lead: week, tile: "scroll", tag: "Ordinance",
+                note: `${region} households are heard in order of rank: none immediately before a higher-ranked one.`,
+                pop: rank },
+              branches: [
+                { tile: "check", tag: "If kept", rows: [
+                  ...(official.pressure > 0 ? [personFx(official, -1, 0, "up")] : []),
+                  estateRow(game, "Realm|Official", -1),
+                  ...(gain > 0 ? [{ term: true, text: `The registry’s precedent covers ${halves(gain)} more unit of ${duty} (${halves(cover(c0))} now, ${halves(cover(c0 + 2))} after).`, icon: "scroll" }] : []),
+                ].filter(Boolean) },
+                { tile: "wrong", tag: "If broken", flavor: "Each time it is broken.", rows: [
+                  personFx(official, CONFIG.codifyFriction + 1, 0, "down"),
+                  estateRow(game, "Realm|Official", 1),
+                ].filter(Boolean) },
+              ],
+            },
+          ];
+        })(),
       };
     },
     apply(g, m, choice) {
@@ -53493,6 +53520,7 @@ p, li, blockquote {
 .hall-option .hall-wrong-head .hall-tag { margin: 0; }
 /* a long condition wraps inside its strip, the strip growing to hold it; the box stays by the first line */
 .hall-option .hall-wrong-head { align-items: flex-start; }
+.hall-option .hall-scope { margin-bottom: 8px; }
 .hall-option .hall-wrong-head .hall-tag:not(.hall-odds-tag) { height: auto; min-height: 20px; padding: 1px 6px; line-height: 18px; }
 .hall-option .hall-wrong-head.has-pop { position: relative; cursor: pointer; }
 .hall-option .hall-branch-flavor { margin: -2px 0 7px; font: italic var(--t-sm)/1.35 var(--serif); color: var(--ink-soft); text-align: center; }
