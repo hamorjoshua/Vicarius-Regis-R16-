@@ -40288,9 +40288,6 @@ const SOLO_MATTERS = {
         options: (() => {
           const stint = game.compacts?.[h.region + "|Commoner"]?.stint, earned = stint?.weeks || 0,
             pooled = Math.round(mean * 100) / 100,
-            // at the close each commoner's pressure is pooled to the mean; three such weeks, none urgent, earn the dividend
-            pool = members.filter((p) => Math.abs((p.pressure || 0) - pooled) > 1e-6).map((p) => personFx(p, pooled - (p.pressure || 0), 0, pooled > (p.pressure || 0) ? "down" : "up")),
-            divd = members.filter(() => pooled > 0).map((p) => ({ ...personFx({ ...p, pressure: pooled }, -CONFIG.stintDividendRelief, 0, "up"), id: p.id })),
             cut = law ? Math.min(CONFIG.stintDividendUnits, law.requirement - 2) : 0,
             halves = (x) => (x % 1 ? `${Math.floor(x) || ""}½` : `${x}`);
           return [
@@ -40303,19 +40300,14 @@ const SOLO_MATTERS = {
             {
               label: "Finish together", note: "Keep the stint for the coming close.",
               consequence: "", rows: [],
-              // the terms the stint must meet this week; the sharing itself is shown in what comes of it
+              // the compact as it already stands: its terms for the week; the sharing it brings is the same either way
               scope: { tile: "handshake", tag: "Compact", lead: [{ tag: "1 week", icon: "hourglass" }],
                 notes: [`No ${h.region} commoner ends the week urgent.`, `Every ${h.region} duty keeps someone other than a commoner on its roll.`],
-                pop: `The commoners of the ${h.region} share their pressure at each week’s close, so all end the week at the same level. A third week kept in a row pays the stint’s dividend.` },
+                pop: `While the compact stands, the commoners of the ${h.region} pool their duty load all week and share their pressure at its close, so all end the week at the same level. ${capFirst(mmNum(earned))} week${earned === 1 ? " is" : "s are"} kept already; a third kept in a row pays the dividend. A week not kept starts the count again.` },
               branches: [
                 { tile: "check", tag: "Compact kept",
                   note: law && cut > 0 ? `${capFirst(duty)} requires ${halves(cut)} unit less.` : null,
-                  rows: members.map((p) => personFx(p, Math.max(0, pooled - CONFIG.stintDividendRelief) - (p.pressure || 0), 0, "up"))
-                    .filter((r) => r.pressure && Math.abs(r.pressure.to - r.pressure.from) > 1e-6) },
-                // broken, the sharing still happens; shown only when it moves someone
-                ...(pool.length ? [{ tile: "wrong", tag: "Compact broken",
-                  pop: `The pressure is still shared, but the count toward the dividend starts again from nothing.`,
-                  rows: pool }] : []),
+                  rows: members.filter((p) => (p.pressure || 0) > 0).map((p) => personFx(p, -CONFIG.stintDividendRelief, 0, "up")) },
               ],
             },
           ];
