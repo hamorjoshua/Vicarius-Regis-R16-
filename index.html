@@ -40382,8 +40382,7 @@ const SOLO_MATTERS = {
             branches: (() => {
               const signers = (law?.charter || []).map((id) => game.people[id]).filter((p) => p && paidShare(game, p, law) > 1e-9);
               return [
-                { tile: "check", tag: "Ordinance kept", note: "The entail holds.", rows: [] },
-                { tile: "wrong", tag: "Ordinance broken", note: "The entail is broken.",
+                { tile: "wrong", tag: "Ordinance broken",
                   rows: signers.map((p) => personFx(p, 1, 0, "down")) },
               ];
             })(),
