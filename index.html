@@ -40558,8 +40558,17 @@ const SOLO_MATTERS = {
             // the march stands as it is; what the week's close decides is whether the watch at home holds
             // the levy the court granted stands until recalled, and is tested at every week's close
             scope: { tile: "scroll", tag: "Ordinance", lead: [{ tag: "Each week", icon: "hourglass" }],
-              notes: [`${name} serves abroad on ${duty}.`, `The ${h.region} watch is kept at home.`],
-              pop: `The ordinance stands until ${name} is recalled. At each week’s close it is kept if the soldiers’ need in the ${h.region} is met by those at home.` },
+              // kept when any military duty at home is fully staffed (or a standing army stands)
+              ...(() => {
+                const home = epActive(game, h.region).filter((l) => NEED_OF_DUTY[l.kind] === "soldiers"),
+                  names = home.map((l) => dutyNameInSentence(dutyTitleOf(l)));
+                const met = home.length === 1 ? `${capFirst(names[0])} in the ${h.region} is fully met.`
+                  : home.length ? `A ${h.region} military duty is fully met.` : `The ${h.region}’s soldiers’ need is met.`;
+                return {
+                  notes: [`${name} serves abroad on ${duty}.`, met],
+                  pop: `The ordinance stands until ${name} is recalled. It is kept at each week’s close if ${home.length > 1 ? `any of ${listWithAnd(names)}` : home.length ? names[0] : "a military duty"} in the ${h.region} is fully met${game.policies?.army ? ", which a standing army always counts as" : ""}.`,
+                };
+              })() },
             branches: (() => {
               // half a pip does not show on the pips, so the soldiers' ease is told in a line
               const half = CONFIG.levyMarchRelief % 1 ? `${Math.floor(CONFIG.levyMarchRelief) || ""}½` : `${CONFIG.levyMarchRelief}`;
