@@ -38777,7 +38777,7 @@ function hallDefaultBranch(game, hall, o, A, B) {
   return {
     tile: "wrong",
     // the span opens the box as an hourglass line of its own; the cross beneath it strikes out the condition
-    lead: [{ tag: `${capFirst(mmNum(CONFIG.hallDebtWeeks))} weeks`, icon: "hourglass" }],
+    lead: [{ tag: `${CONFIG.hallDebtWeeks} weeks`, icon: "hourglass" }],
     tag: `${hallName(B)} stays short of urgent`,
     flavor: `${hallName(B)} defaults.`,
     pop: `${hallName(B)} must end each of the next ${mmNum(CONFIG.hallDebtWeeks)} weeks with fewer than ${mmNum(CONFIG.urgent)} pressure. The first week ${prn(B).sub} does not, the debt is called in.`,
@@ -39178,7 +39178,7 @@ function HallOption({ game, v, o, onRule }) {
       .filter((t) => t.text && !(cost > 0 && t.tag === "Cost" && /^(Costs|Spends?|Stake) \d+ standing\.?$/.test(t.text))),
     shown = (preview?.rows || o.rows || []).filter((r) => !r.term),
     // an option that moves nothing says so, rather than standing empty
-    quiet = !outcomes && !terms.length && !shown.length && !(o.branches || []).length && !o.scope,
+    quiet = !outcomes && !terms.length && !shown.length && !(o.branches || []).length && !o.scope && !(o.scopes || []).length,
     // the summary under the button: never the price or the odds again, which coin and chips show
     bareNote = (o.note || "").replace(/^(Seven|Three) chances in ten\.\s*|^Even chances\.\s*/, "").trim(),
     // no summary under the button: an option speaks through its lines and rows. Only an option
@@ -39203,11 +39203,11 @@ function HallOption({ game, v, o, onRule }) {
       }),
       note && jsx("p", { class: "hall-summary", children: note }),
       // an order of the court for a set time: what kind of order it is, its span, and what it says
-      o.scope && jsx("div", { class: "hall-wrong hall-scope", children: [
-        jsx(BranchHead, { br: o.scope }),
-        ...(o.scope.lead || []).map((t, j) => jsx("p", { class: "hall-wrong-head", children: [hallTile(t.icon), jsx("span", { class: "hall-tag", children: t.tag })] }, `l${j}`)),
-        o.scope.note && jsx(HallTerms, { terms: [{ text: o.scope.note }] }),
-      ] }),
+      ...(o.scopes || (o.scope ? [o.scope] : [])).map((sc, k) => jsx("div", { class: "hall-wrong hall-scope", children: [
+        sc.tag && jsx(BranchHead, { br: sc }),
+        ...(sc.lead || []).map((t, j) => jsx("p", { class: "hall-wrong-head", children: [hallTile(t.icon), jsx("span", { class: "hall-tag", children: t.tag })] }, `l${j}`)),
+        (sc.notes || sc.note) && jsx(HallTerms, { terms: (sc.notes || [sc.note]).map((x) => (typeof x === "string" ? { text: x } : x)) }),
+      ] }, `sc${k}`)),
       jsx(HallTerms, { terms: [...(preview?.rows || o.rows || []).filter((r) => r.term), ...terms] }),
       rowsFirst && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, (preview?.rows || o.rows).filter((r) => !r.term)), game) }),
       outcomes
@@ -39716,8 +39716,17 @@ function standingRow(game, d) {
   const net = (c.standing ?? CONFIG.standingMax) + (c.reserve || 0) - st - rv;
   return { plain: true, seals: { value: st, projected: c.standing ?? CONFIG.standingMax, reserve: rv, label: `${net >= 0 ? "+" : "−"}${Math.abs(net)}` } };
 }
-// The court's word given to a household, as the game settles it at the deadline: the promise (plain
-// hourglass), what keeping it takes (handshake), and what comes of it kept or broken.
+// The court's word as two boxes: what the household does while it waits, for the span; then the
+// court's own word, its span, and what keeping it takes.
+function undertakingScopes(waiting) {
+  const wName = hallName(waiting), span = [{ tag: `${CONFIG.undertakingWeeks} week${CONFIG.undertakingWeeks === 1 ? "" : "s"}`, icon: "hourglass" }];
+  return [
+    { lead: span, notes: [`${wName} attends every audience.`, `${wName} causes no breaches while waiting.`] },
+    { tile: "scroll", tag: "The court’s word", lead: span, notes: [`Hear ${wName}, or settle ${prn(waiting).pos} grievance.`] },
+  ];
+}
+// The court's word given to a household, as the game settles it at the deadline: what the household
+// and the court each undertake, and what comes of it kept or broken.
 function undertakingParts(game, waiting, by, busy, extra = []) {
   if (busy) return { consequence: "", rows: [], terms: [{ text: "The court’s word is already given elsewhere, and cannot be given twice." }] };
   const wName = hallName(waiting), weeks = mmNum(CONFIG.undertakingWeeks);
@@ -39732,14 +39741,11 @@ function undertakingParts(game, waiting, by, busy, extra = []) {
   const keptNet = (kept.standing ?? CONFIG.standingMax) + (kept.reserve || 0) - st - rv;
   return {
     consequence: "", rows: [],
-    terms: [
-      { text: `${wName} attends every audience for ${weeks} weeks and causes no breach while waiting.`, icon: "hourglass-plain" },
-      { text: `Hear ${wName} within ${weeks} weeks, or settle ${prn(waiting).pos} grievance.`, icon: "handshake" },
-      ...extra,
-    ],
+    terms: extra.length ? extra : null,
+    scopes: undertakingScopes(waiting),
     branches: [
-      { tile: "check", tag: "If kept", rows: [...(keptNet ? [seals(kept)] : []), ...(by && by !== waiting && by.pressure > 0 ? [personFx(by, -1, 0, "up")] : [])] },
-      { tile: "wrong", tag: "If broken", rows: [
+      { tile: "check", tag: "Word kept", rows: [...(keptNet ? [seals(kept)] : []), ...(by && by !== waiting && by.pressure > 0 ? [personFx(by, -1, 0, "up")] : [])] },
+      { tile: "wrong", tag: "Word broken", rows: [
         seals(broke),
         personFx(waiting, 0, -2 - (waiting.regard ?? 0), "down"),
         ...(by && by !== waiting ? [personFx(by, CONFIG.accusedCost, 0, "down")] : []),
@@ -40634,10 +40640,7 @@ const SOLO_MATTERS = {
           {
             label: "Let the house stand surety", note: "",
             consequence: "", rows: [],
-            terms: [
-              { text: `${wName} attends every audience for ${mmNum(CONFIG.undertakingWeeks)} weeks and causes no breach while waiting.`, icon: "hourglass-plain" },
-              { text: `Hear ${wName} within ${mmNum(CONFIG.undertakingWeeks)} weeks, or settle ${prn(waiting).pos} grievance.`, icon: "handshake" },
-            ],
+            scopes: undertakingScopes(waiting),
             // what comes of the promise, kept or broken, drawn as the game settles it at the deadline
             branches: (() => {
               const st = game.standing ?? CONFIG.standingMax, rv = game.reserve || 0;
@@ -40647,11 +40650,11 @@ const SOLO_MATTERS = {
               const seals = (g2) => ({ plain: true, seals: { value: st, projected: g2.standing ?? CONFIG.standingMax, reserve: rv,
                 label: `${(g2.standing + (g2.reserve || 0)) - (st + rv) >= 0 ? "+" : "−"}${Math.abs((g2.standing + (g2.reserve || 0)) - (st + rv))}` } });
               return [
-                { tile: "check", tag: "If kept", rows: [
+                { tile: "check", tag: "Word kept", rows: [
                   ...((kept.standing + (kept.reserve || 0)) !== st + rv ? [seals(kept)] : []),
                   ...(sponsor.pressure > 0 ? [personFx(sponsor, -1, 0, "up")] : []),
                 ] },
-                { tile: "wrong", tag: "If broken", rows: [
+                { tile: "wrong", tag: "Word broken", rows: [
                   seals(broke),
                   personFx(waiting, 0, -2 - (waiting.regard ?? 0), "down"),
                   personFx(sponsor, CONFIG.accusedCost, 0, "down"),
