@@ -38674,6 +38674,15 @@ const HALL_PRINCIPLE = {
   fresh: "Old rights yield to new",
 };
 const ruleQuote = (side) => `“${HALL_PRINCIPLE[side]}”`;
+// What each maxim means in plain words, for the popup on its plate.
+const HALL_MEANING = {
+  letter: "What a house owes under a bond or a duty, it owes in full and on time, whatever its hardship.",
+  mercy: "A house in hardship may be given time or relief; a debt need not be pressed to the last.",
+  crown: "When the realm’s need and a household’s good conflict, the realm’s need prevails.",
+  hearth: "When the realm’s need and a household’s good conflict, the household is protected.",
+  old: "A long-held right or custom keeps its place against newer claims.",
+  fresh: "A long-held right may give way to a newer or rising claim.",
+};
 const HALL_QUESTION = { letter: "bond", mercy: "bond", crown: "realm", hearth: "realm", old: "custom", fresh: "custom" };
 // A quarrel of fact (the mill, the hedge) holds no principle: it is right or wrong.
 const HALL_HOLDS = {
@@ -38810,11 +38819,11 @@ function holdingTerms(game, hall, o, W, L) {
   // a rule the court keeps, sets or overturns is always the same stone; the caption says which
   const rule = capFirst(HALL_PRINCIPLE[hd.side]);
   if (hd.follows) return [{ tag: `Follows your rule of week ${hd.prior.week}`, icon: "gavel", text: rule, stone: true,
-    pop: `The court held the same in ${then}.${HALL_KIND[hall.matter] === "estates" ? "" : ` ${hallName(L)} knew the rule, and takes no grudge.`}` }];
+    pop: [HALL_MEANING[hd.side], `The court held the same in ${then}.${HALL_KIND[hall.matter] === "estates" ? "" : ` ${hallName(L)} knew the rule, and takes no grudge.`}`] }];
   if (hd.reverses) return [{ tag: `Breaks your rule of week ${hd.prior.week}`, icon: "gavel", text: rule, stone: true,
-    pop: `In ${then} the court held: ${ruleQuote(hd.prior.side)}. This ruling overturns it, and those who relied on the old rule take it ill.` }];
+    pop: [HALL_MEANING[hd.side], `In ${then} the court held: ${ruleQuote(hd.prior.side)}. This ruling overturns it, and those who relied on the old rule take it ill.`] }];
   return [{ tag: "Sets a rule", icon: "gavel", text: capFirst(HALL_PRINCIPLE[hd.side]), stone: true,
-    pop: "The court will be held to this in later quarrels on the same question. A house that loses by the rule takes no grudge; overturning it angers those who relied on it." }];
+    pop: [HALL_MEANING[hd.side], "The court will be held to this in later quarrels on the same question. A house that loses by the rule takes no grudge; overturning it angers those who relied on it."] }];
 }
 // Constituencies an option moves, as rows beside the households'.
 function hallEstateRows(game, hall, o, W, L) {
@@ -39168,7 +39177,7 @@ function StoneLine({ t }) {
         // the note hangs from the plate itself, its caret just under the plate
         jsx("span", { class: "hall-stone-anchor", children: [
           jsx("span", { class: `hall-stone${t.stone === "bronze" ? " bronze" : ""}`, children: t.text }),
-          open && jsx("span", { class: "hall-pop hall-stone-pop", role: "note", children: t.pop }),
+          open && jsx("span", { class: "hall-pop hall-stone-pop", role: "note", children: (Array.isArray(t.pop) ? t.pop : [t.pop]).map((x, k) => jsx("span", { class: "rs-pop-line", children: x }, k)) }),
         ] }),
         t.tag && jsx("span", { class: "hall-stone-kind", children: t.tag }),
       ] }),
