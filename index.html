@@ -38224,7 +38224,8 @@ const HALL_MATTERS = [
     lede: (A, B) => `${hallName(A)} has brought the marriage entry back, Vicar. The clerk has written both names. Beside ${hallName(B)}’s he has left a space where the noble style would go.`,
     pa: (A, B) => `My mother has sent the wedding cup. My father says it is to stay in its case until both our names are on that roll. Grant ${hallName(B)} letters of nobility, Vicar, so we may wed.`,
     options: [
-      { label: "Grant the title and bless the wedding", ennoble: true, done: (A, B) => `The clerk enters ${hallName(B)} on the noble roll and records the marriage. ${hallName(A)} sends word to have the wedding cup polished for the feast.` },
+      // granted, both houses have what they came for, as refused both think the worse of the court
+      { label: "Grant the title and bless the wedding", ennoble: true, both: 1, done: (A, B) => `The clerk enters ${hallName(B)} on the noble roll and records the marriage. ${hallName(A)} sends word to have the wedding cup polished for the feast.` },
       // refused, the match is forbidden as a petition forbids one: both houses think the worse of the court
       { label: "Refuse the title and call off the wedding", both: -1, done: (A, B) => `${hallName(A)} returns the cup to its case. The clerk strikes the proposed marriage to ${hallName(B)} from the roll.` },
     ],
