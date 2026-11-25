@@ -13683,6 +13683,46 @@ function epWeekly(game, R) {
       epEvent(R, `The writ inquest voids both impressions of the chipped seal: both grants fall.`, [sq.nobleId, sq.targetId]);
     }
   }
+  // the tithe audit falls one way or the other
+  if (game.titheAudit && game.titheAudit.week === game.week) {
+    const ta = game.titheAudit, bishop = game.people[ta.bishopId], law = lawById(game, ta.lawId);
+    delete game.titheAudit;
+    if (ta.honest) { if (bishop) addRegard(bishop, 1); epEvent(R, `The tithe audit finds the bishop’s barn honest.`, bishop ? [bishop.id] : []); }
+    else {
+      if (law?.seeWeights) {
+        const personal = { ...law.personal };
+        for (const [id, w] of Object.entries(law.seeWeights)) { if (w == null) delete personal[id]; else personal[id] = w; }
+        law.personal = personal; delete law.seeWeights; delete law.seeLaxDone; resetAllocCache(game);
+      }
+      if (bishop) addRegard(bishop, -1);
+      epEvent(R, `The tithe audit finds the barn padded; the heavier shares are lifted.`, bishop ? [bishop.id] : []);
+    }
+  }
+  // slates paid for by the Crown: if neither house breaks, the court is thought the better of
+  if (game.slateCheck && game.slateCheck.week === game.week) {
+    const sc = game.slateCheck, A = game.people[sc.a], B = game.people[sc.b];
+    delete game.slateCheck;
+    if (A && B && A.pressure < CONFIG.urgent && B.pressure < CONFIG.urgent) {
+      const got = gainStanding(game, 1);
+      epEvent(R, `${hallName(A)} and ${hallName(B)} come through the week together${got ? `; the court gains ${got} standing` : ""}.`, [A.id, B.id]);
+    }
+  }
+  // a summoned lord: thought the better of the court if it came, the nobles aggrieved if not
+  if (game.lordSummons && game.lordSummons.week === game.week) {
+    const ls = game.lordSummons, lord = game.people[ls.id];
+    delete game.lordSummons;
+    if (lord && (game.audience || []).includes(lord.id)) { addRegard(lord, 1); epEvent(R, `${hallName(lord)} answers the summons and comes to court.`, [lord.id]); }
+    else if (lord) { addGrievance(game, "Realm|Noble", 1); epEvent(R, `${hallName(lord)} ignores the summons; the nobles take the court’s weakness ill.`, [lord.id]); }
+  }
+  // a proclaimed fast: kept if the need's duty is met, and the need eases
+  if (game.fastWeek && game.fastWeek.week === game.week) {
+    const fw = game.fastWeek, [r, need] = fw.key.split("|");
+    delete game.fastWeek;
+    if (needMet(game, r, need) && game.needBar?.[fw.key] !== undefined) {
+      game.needBar[fw.key] = Math.min(CONFIG.needBarMax, game.needBar[fw.key] + 2);
+      epEvent(R, `${r}: the fast is kept, and the ${need === "works" ? "works" : need} need eases.`);
+    }
+  }
   // the bread assize: each week it stands, the commoners' need is eased
   if (game.breadAssize && game.week <= game.breadAssize.until) {
     const key = game.breadAssize.region + "|commoners";
@@ -35973,6 +36013,11 @@ function AssistantScreen({ say, button, onNext, label = "Your assistant" }) {
   });
 }
 const HALL_INTRO = {
+  officeWarm: (A) => `${A}, who can no longer carry both house and office`,
+  titheBarn: (A, B) => `word from ${A} about the tithe barn of ${B}`,
+  grudgeDown: (A, B) => `an offer from ${A} to make peace with ${B}`,
+  absentLord: (A, B) => `word from ${A} that ${B} no longer comes to court`,
+  disasterNear: (A) => `a warning from ${A}`,
   commanderLeave: (A) => `a request for leave from ${A}`,
   kinWitness: (A, B) => `word that ${A} is the only witness against ${B}`,
   breadPrice: (A, B) => `a complaint from ${A} about the price of bread kept by ${B}`,
@@ -43134,6 +43179,260 @@ const SOLO_MATTERS = {
       return `${name} is sent away, and tells ${prn(p).pos} estate what the Crown’s word is worth.`;
     },
   },
+  officeWarm: {
+    id: "officeWarm",
+    channel: "hall",
+    title: () => "The office kept warm",
+    lapseChoice: 1,
+    lapseNote: () => "Left unanswered, the officer is held to the office.",
+    draw(game) {
+      for (const key of Object.keys(game.offices || {})) {
+        if (isSee(key)) continue;
+        const o = game.offices[key], p = game.people[o.id];
+        if (!p || p.charge || p.pressure < CONFIG.urgent || o.deputyUntil != null || !officeLaw(game, key)) continue;
+        if (hallHash(game, 2411) >= 0.5) return null;
+        return { matter: "officeWarm", ruled: null, week: game.week, a: p.id, b: p.id, region: p.region, from: { kind: "office", key } };
+      }
+      return null;
+    },
+    valid(game, h) {
+      return game.offices?.[h.from?.key]?.id === h.a && !!game.people[h.a];
+    },
+    view(game, h) {
+      const p = game.people[h.a], name = hallName(p), title = OFFICES[h.from.key].title;
+      return {
+        title: "The office kept warm",
+        lede: `${name}, ${title}, has come alone, Vicar, and looks it.`,
+        a: { name, estate: p.type, region: p.region, id: p.id, plea: "I can keep the office or keep my house. Not both, Vicar, and not this month." },
+        options: [
+          { label: "Lend a deputy", note: "", consequence: "", rows: [],
+            scope: { tile: "scroll", tag: "Ordinance", lead: [{ tag: "2 weeks", icon: "hourglass" }],
+              notes: [`A Crown clerk carries the office of ${title}.`, "The work goes forward at half pace."] } },
+          { label: "Hold the officer to the office", note: "", consequence: "", rows: [] },
+          { label: "Accept the resignation", note: "", consequence: "", rows: [],
+            terms: [{ text: `The office of ${title} falls vacant.`, icon: "scroll" }] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const p = g.people[m.a], name = hallName(p), key = m.from.key, title = OFFICES[key].title;
+      if (choice === 0) {
+        g.offices = { ...g.offices, [key]: { ...g.offices[key], deputyUntil: g.week + 1 } };
+        addPressure(p, -2);
+        return `A Crown clerk takes up the office of ${title} for a fortnight, and ${name} goes home to ${prn(p).pos} own affairs.`;
+      }
+      if (choice === 2) {
+        officeLapse(g, key, null, "");
+        addRegard(p, 1);
+        addGrievance(g, constituencyOf(p), 1);
+        return `${name} lays down the office of ${title}, grateful to be let go; ${prn(p).pos} estate thinks the office was owed better.`;
+      }
+      addRegard(p, -1);
+      return `${name} goes back to the office of ${title}, and the work goes on; ${prn(p).sub} does not thank the court for it.`;
+    },
+  },
+  titheBarn: {
+    id: "titheBarn",
+    channel: "hall",
+    title: () => "The bishop’s tithe barn",
+    lapseChoice: 0,
+    lapseNote: () => "Left unanswered, the barn is filled as the bishop wishes.",
+    draw(game, report) {
+      const see = game.offices?.["Realm|see"], bishop = see && game.people[see.id];
+      if (!bishop || bishop.charge || !soloGrantedLastWeek(report, "seelax").length) return null;
+      const law = game.laws.find((l) => l.active && l.seeWeights && l.seeLaxDone);
+      if (!law || hallHash(game, 2421) >= 0.5) return null;
+      const witness = game.people.find((p) => p.region === law.region && !p.charge && p.type !== "Cleric" && law.seeWeights?.[p.id] !== undefined)
+        || game.people.find((p) => p.region === law.region && !p.charge && p.type === "Commoner");
+      if (!witness) return null;
+      return { matter: "titheBarn", ruled: null, week: game.week, a: witness.id, b: bishop.id, region: law.region,
+        from: { kind: "see", lawId: law.id, honest: hallHash(game, 2423) < 0.5 } };
+    },
+    valid(game, h) {
+      const law = lawById(game, h.from?.lawId);
+      return !!(law?.active && law.seeWeights && game.people[h.a] && game.offices?.["Realm|see"]?.id === h.b);
+    },
+    view(game, h) {
+      const w = game.people[h.a], bishop = game.people[h.b], law = lawById(game, h.from.lawId), duty = dutyNameInSentence(dutyTitleOf(law));
+      return {
+        title: "The bishop’s tithe barn",
+        lede: `${hallName(w)} has come alone, Vicar, from the ${law.region}, where ${hallName(bishop)} has laid ${duty} heavier on the lax houses. The tithe barn is filling.`,
+        a: { name: hallName(w), estate: w.type, region: w.region, id: w.id, plea: "The barn is full to the rafters, and the poor at its door are thin. Whose barn is it, Vicar?" },
+        options: [
+          { label: "Let the barn be filled", note: "", consequence: "", rows: [] },
+          { label: "Open the barn to the poor", note: "", consequence: "", rows: [] },
+          { label: "Audit the tithe", note: "", consequence: "", rows: [],
+            scope: { tile: "inquiry", tag: "Inquest", lead: [{ tag: "1 week", icon: "hourglass" }], notes: [`The tithe on ${duty} is counted against the barn.`] },
+            branches: [
+              { tile: "check", tag: "Tithe honest", odds: "1 in 2", rows: [personFx(bishop, 0, 1, "up")] },
+              { tile: "wrong", tag: "Tithe padded", odds: "1 in 2", note: "The heavier shares on the lax houses are lifted.", rows: [personFx(bishop, 0, -1, "down")] },
+            ] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const bishop = g.people[m.b], law = lawById(g, m.from.lawId), key = `${law.region}|commoners`;
+      if (choice === 0) {
+        addGrievance(g, "Realm|Cleric", -1);
+        addRegard(bishop, 1);
+        return `The tithe barn of ${hallName(bishop)} is filled, and the clergy are content.`;
+      }
+      if (choice === 1) {
+        if (g.needBar?.[key] !== undefined) g.needBar = { ...g.needBar, [key]: Math.min(CONFIG.needBarMax, g.needBar[key] + 1) };
+        addRegard(bishop, -1);
+        return `The barn doors are opened to the poor of the ${law.region}. ${hallName(bishop)} does not thank the court for it.`;
+      }
+      g.titheAudit = { week: g.week, lawId: law.id, bishopId: bishop.id, honest: !!m.from.honest };
+      return `The court sends clerks to count the tithe against the barn of ${hallName(bishop)}.`;
+    },
+  },
+  grudgeDown: {
+    id: "grudgeDown",
+    channel: "hall",
+    title: () => "The grudge laid down",
+    lapseChoice: 2,
+    lapseNote: () => "Left unanswered, the grudge stands.",
+    draw(game) {
+      for (const A of game.people.filter((p) => p.grudge && !p.charge && p.grudge.until - CONFIG.hallGrudgeWeeks <= game.week - 4)) {
+        const [r, est] = String(A.grudge.c).split("|");
+        const B = game.people.filter((p) => p.id !== A.id && !p.charge && p.type === est && (r === "Realm" || p.region === r) && p.pressure >= CONFIG.pressing)
+          .sort((x, y) => Number(y.region === A.region) - Number(x.region === A.region) || y.pressure - x.pressure)[0];
+        if (!B) continue;
+        if (hallHash(game, 2431) >= 0.4) return null;
+        return { matter: "grudgeDown", ruled: null, week: game.week, a: A.id, b: B.id, region: A.region, from: { kind: "grudge", c: A.grudge.c } };
+      }
+      return null;
+    },
+    valid(game, h) {
+      return !!(game.people[h.a]?.grudge && game.people[h.b]);
+    },
+    view(game, h) {
+      const A = game.people[h.a], B = game.people[h.b], who = constituencyLabel(h.from.c);
+      const end = { text: `${hallName(A)} lays down the grudge against the ${who}.`, icon: "grudge-end" };
+      return {
+        title: "The grudge laid down",
+        lede: `${hallName(A)} has come, Vicar, and wishes to speak about ${hallName(B)}.`,
+        a: { name: hallName(A), estate: A.type, region: A.region, id: A.id, plea: `We have not spoken since the quarrel. ${hallName(B)}’s roof is falling in. My sons have the slates.` },
+        options: [
+          { label: "Bless the reconciliation", note: "", consequence: "", rows: [], terms: [end] },
+          { label: "Pay for the slates · 1 standing", note: "", consequence: "", rows: [], terms: [end], disabled: !canSpendStanding(game, 1),
+            branches: [{ lead: [{ tag: "1 week", icon: "hourglass" }], tile: "check", tag: "Neither house ends the week urgent", rows: [standingRow(game, 1)] }] },
+          { label: "Let the grudge stand", note: "", consequence: "", rows: [] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const A = g.people[m.a], B = g.people[m.b];
+      if (choice === 2) return `${hallName(A)} goes home, and the grudge goes home with ${prn(A).obj}.`;
+      if (choice === 1) { trySpendStanding(g, 1); g.slateCheck = { week: g.week, a: A.id, b: B.id }; }
+      A.grudge = null;
+      if (B.pressure > 0) addPressure(B, -1);
+      addRegard(A, 1);
+      addRegard(B, 1);
+      return `${hallName(A)}’s sons carry the slates to ${hallName(B)}’s roof${choice === 1 ? ", at the Crown’s expense" : ""}, and the grudge is laid down.`;
+    },
+  },
+  absentLord: {
+    id: "absentLord",
+    channel: "hall",
+    title: () => "The absent lord",
+    lapseChoice: 2,
+    lapseNote: () => "Left unanswered, the chair stays empty.",
+    draw(game) {
+      for (const lord of game.people.filter((p) => p.type === "Noble" && !p.charge && (p.regard ?? 0) <= -2 && !(game.audience || []).includes(p.id) && dutiesPaidBy(game, p).length)) {
+        const w = game.people.find((p) => p.type === "Official" && p.region === lord.region && !p.charge) || game.people.find((p) => p.type === "Official" && !p.charge);
+        if (!w || hallHash(game, 2441) >= 0.35) return null;
+        return { matter: "absentLord", ruled: null, week: game.week, a: w.id, b: lord.id, region: lord.region, from: { kind: "regard" } };
+      }
+      return null;
+    },
+    valid(game, h) {
+      return !!(game.people[h.a] && game.people[h.b] && dutiesPaidBy(game, game.people[h.b]).length);
+    },
+    view(game, h) {
+      const w = game.people[h.a], lord = game.people[h.b], name = hallName(lord);
+      return {
+        title: "The absent lord",
+        lede: `${hallName(w)} has come alone, Vicar. ${name} thinks so little of the court that ${prn(lord).sub} no longer comes to it, though ${prn(lord).pos} name is still on the rolls.`,
+        a: { name: hallName(w), estate: w.type, region: w.region, id: w.id, plea: `The chair is kept for ${prn(lord).obj} every week. The others have begun to notice it is empty.` },
+        options: [
+          { label: `Summon ${name}`, note: "", consequence: "", rows: [],
+            scope: { tile: "scroll", tag: "Ordinance", lead: [{ tag: "1 week", icon: "hourglass" }], notes: [`${name} attends the next audience.`] },
+            branches: [
+              { tile: "check", tag: "Ordinance kept", rows: [personFx(lord, 0, 1, "up")] },
+              { tile: "wrong", tag: "Ordinance broken", rows: [estateRow(game, "Realm|Noble", 1)].filter(Boolean) },
+            ] },
+          { label: `Distrain ${name}’s share`, note: "", consequence: "", rows: [] },
+          { label: "Leave the chair empty", note: "", consequence: "", rows: [] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const lord = g.people[m.b], name = hallName(lord);
+      if (choice === 0) { g.lordSummons = { id: lord.id, week: g.week + 1 }; return `The court summons ${name} to the next audience.`; }
+      if (choice === 1) {
+        const law = dutiesPaidBy(g, lord).sort((a, b) => paidShare(g, lord, b) - paidShare(g, lord, a))[0];
+        if (law) { law.personal = { ...law.personal, [lord.id]: 0 }; resetAllocCache(g); }
+        addGrievance(g, "Realm|Noble", 1);
+        return `${name}’s share is distrained and laid on the others; the nobles think the court high-handed.`;
+      }
+      return `The chair of ${name} stays empty.`;
+    },
+  },
+  disasterNear: {
+    id: "disasterNear",
+    channel: "hall",
+    title: () => "The disaster foretold",
+    lapseChoice: 2,
+    lapseNote: () => "Left unanswered, the region waits for what comes.",
+    draw(game) {
+      for (const [key, v] of Object.entries(game.needBar || {})) {
+        if (v !== CONFIG.needBarMin + 1) continue;
+        const [r] = key.split("|");
+        const w = game.people.find((p) => p.region === r && !p.charge && p.type === "Cleric") || game.people.find((p) => p.region === r && !p.charge && p.type === "Official");
+        if (!w || hallHash(game, 2451) >= 0.6) continue;
+        return { matter: "disasterNear", ruled: null, week: game.week, a: w.id, b: w.id, region: r, from: { kind: "need", key } };
+      }
+      return null;
+    },
+    valid(game, h) {
+      return !!game.people[h.a] && (game.needBar?.[h.from?.key] ?? 0) <= CONFIG.needBarMin + 1;
+    },
+    view(game, h) {
+      const w = game.people[h.a], [r, need] = h.from.key.split("|"), what = need === "works" ? "the works" : `the ${need}`;
+      const law = epActive(game, r).find((l) => NEED_OF_DUTY[l.kind] === need), duty = law ? dutyNameInSentence(dutyTitleOf(law)) : null;
+      const ready = epActive(game, r).find((l) => l.bulwark && l.bulwark.weeks >= CONFIG.bulwarkSlot3Start), cmd = ready && game.people[ready.bulwark.soldierId];
+      return {
+        title: "The disaster foretold",
+        lede: `${hallName(w)} has come alone, Vicar, from the ${r}. The need of ${what} there is one step from disaster.`,
+        a: { name: hallName(w), estate: w.type, region: w.region, id: w.id, plea: "Everyone can see it coming. The question is only who will be standing under it." },
+        options: [
+          { label: "Proclaim a fast", note: "", consequence: "", rows: [],
+            scope: { tile: "compact", tag: "Compact", lead: [{ tag: "1 week", icon: "hourglass" }], notes: [duty ? `${capFirst(duty)} in the ${r} is fully met.` : `The ${r}’s need of ${what} is met.`],
+              pop: `Every household of the ${r} is eased now, and the fast is kept if ${duty || `the need of ${what}`} is met at the week’s close.` },
+            branches: [{ tile: "check", tag: "Compact kept", note: `The ${r}’s need of ${what} eases 2 steps.`, rows: [] }] },
+          { label: "Spend the Crown’s reserve · 2 standing", note: "", consequence: "", rows: [], disabled: !canSpendStanding(game, 2) },
+          cmd ? { label: "Trust the garrison", note: "", consequence: "", rows: [],
+              terms: [{ text: `If disaster comes, ${hallName(cmd)}’s garrison takes the blow.`, icon: "gate" }] }
+            : { label: "Let it come", note: "", consequence: "", rows: [] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const r = m.region, key = m.from.key;
+      if (choice === 0) {
+        for (const p of g.people.filter((x) => x.region === r && x.pressure > 0)) addPressure(p, -1);
+        g.fastWeek = { week: g.week, key };
+        return `A fast is proclaimed in the ${r}, and every house sets its hand to the work.`;
+      }
+      if (choice === 1) {
+        trySpendStanding(g, 2);
+        if (g.needBar?.[key] !== undefined) g.needBar = { ...g.needBar, [key]: Math.min(CONFIG.needBarMax, g.needBar[key] + 3) };
+        return `The Crown’s reserve is spent in the ${r}, and the danger recedes.`;
+      }
+      return `The court waits on what comes in the ${r}.`;
+    },
+  },
   kingChair: {
     id: "kingChair",
     channel: "hall",
@@ -45597,7 +45896,9 @@ const OFFICE_PACE_WORDS = ["at half its usual pace", "at three-quarters of its u
 function officePace(game, key) {
   const o = game.offices?.[key],
     p = o && !isSee(key) ? game.people[o.id] : null;
-  const pace = p ? OFFICE_PACE[Math.max(-2, Math.min(2, p.regard ?? 0)) + 2] : 1;
+  let pace = p ? OFFICE_PACE[Math.max(-2, Math.min(2, p.regard ?? 0)) + 2] : 1;
+  // a Crown clerk deputising carries the work at half pace
+  if (o?.deputyUntil != null && o.deputyUntil >= game.week) pace = Math.min(pace, 0.5);
   // a slackened work stands still
   return o && officeLaw(game, key)?.slack ? 0 : pace;
 }
