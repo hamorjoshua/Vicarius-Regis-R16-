@@ -38803,7 +38803,8 @@ function readinessRows(before, after) {
       `Each week of readiness also covers ${halves(CONFIG.bulwarkSupportStep)} unit of the ${l0.region}’s military duty, up to the whole of it${w1 == null ? "" : `: ${units(w0)} now, ${units(w1)} after`}.`,
     ];
     out.push({
-      tone: w1 != null && w1 > w0 ? "up" : "down", icon: "swords",
+      // the garrison itself wears the gate; the commander's own name keeps his estate's mark
+      tone: w1 != null && w1 > w0 ? "up" : "down", icon: "gate", garrison: true,
       ...(cmd ? { id: cmd.id } : {}), who: cmd ? hallName(cmd) : "The garrison",
       readiness: { from: w0, to: w1, pop },
     });
@@ -39096,7 +39097,7 @@ const oddsGlyph = (odds) => (/^7\b/.test(odds) ? "70-30" : /^3\b/.test(odds) ? "
 const shortWho = (who) => (typeof who === "string" ? who.replace(/^Commander\b/, "Cmdr.") : who);
 const shortRows = (rows, game) => rows.map((r) => {
   const p = r.id != null && game ? game.people[r.id] : null;
-  return r.who ? { ...r, who: shortWho(r.who), ...(p ? { icon: estateIconOf(p.type, p.region) } : {}) } : r;
+  return r.who ? { ...r, who: shortWho(r.who), ...(p && !r.garrison ? { icon: estateIconOf(p.type, p.region) } : {}) } : r;
 });
 // One option of a matter in the hall: the choice, its price, what it means, and what it moves.
 function HallOption({ game, v, o, onRule }) {
