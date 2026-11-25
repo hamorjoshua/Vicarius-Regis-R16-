@@ -38773,7 +38773,7 @@ function hallKindTerms(game, hall, o, A, B, W, L) {
   if (kind === "facts" && o.finds)
     return [];
   if (!W) return [];
-  if (kind === "estates") return [{ tag: "Read as law", icon: "crown", text: `The ${hall.region} takes this for the law itself. Neither house’s own regard changes.` }];
+  if (kind === "estates") return [{ tag: "Read as law", icon: "crown", text: `The ${hall.region} takes this for the law itself`, stone: "bronze", rest: "Neither house’s own regard changes." }];
   if (kind === "facts") return [];
   if (kind === "needs") {
     const sh = hallNeedShift(game, hall, o.win);
@@ -39151,7 +39151,8 @@ function HallTerms({ terms }) {
             jsx("span", { class: "hall-term-text", children: [
               t.tag && jsx("span", { class: `hall-tag ${t.tone || ""}`, children: t.tag }),
               // a rule the court sets is cut in stone
-              t.stone ? jsx("span", { class: "hall-stone", children: t.text }) : t.text,
+              t.stone ? jsx("span", { class: `hall-stone${t.stone === "bronze" ? " bronze" : ""}`, children: t.text }) : t.text,
+              t.rest && jsx("span", { class: "hall-stone-rest", children: t.rest }),
             ] }),
           ] }, i)),
       })
@@ -53610,6 +53611,9 @@ p, li, blockquote {
   font: 600 var(--t-sm)/1.3 var(--serif); font-variant: small-caps; letter-spacing: .05em; color: #f3f0e9;
   background: #7d7c76; border-radius: 3px;
 }
+/* what the region reads as law is cast in bronze */
+.hall-stone.bronze { background: #8a6a3a; color: #f7ecd6; }
+.hall-stone-rest { display: block; margin-top: 4px; }
 /* an empty list of rows takes no place, so the boxes keep the option's even gaps */
 .hall-option > .fx-list:empty, .hall-option > .hall-terms:empty { display: none; }
 .hall-option .hall-wrong-head .hall-tag:not(.hall-odds-tag) { height: auto; min-height: 20px; padding: 1px 6px; line-height: 18px; }
