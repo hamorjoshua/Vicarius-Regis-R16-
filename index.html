@@ -4139,6 +4139,23 @@ function objectionNote(person) {
 // A household's coming move, as an arrow on the badge line; touching it gives the notice.
 // Regard as four bars beside the pressure pips: the upper two fill green for +1 and +2, the lower
 // two red for −1 and −2.
+// A garrison's readiness as a shield that fills from the point up: empty, half, then full once ready.
+let shieldSeq = 0;
+const SHIELD_PATH = "M12 1.6C10 3.3 7 4 3.2 4.1V10.4C3.2 15.6 6.6 19.6 12 22.4C17.4 19.6 20.8 15.6 20.8 10.4V4.1C17 4 14 3.3 12 1.6Z";
+function ReadinessShield({ weeks }) {
+  const ready = CONFIG.bulwarkSlot3Start, frac = Math.max(0, Math.min(1, (weeks || 0) / ready)), id = `rs${++shieldSeq}`;
+  // the fill is the shield itself, cut off above the level reached
+  const top = 1.6 + (22.4 - 1.6) * (1 - frac);
+  return jsx("svg", {
+    class: "rs-shield", viewBox: "0 0 24 24", "aria-hidden": "true",
+    children: [
+      jsx("defs", { children: jsx("clipPath", { id, children: jsx("rect", { x: 0, y: top, width: 24, height: 24 }) }) }),
+      frac > 0 && jsx("path", { class: "rs-fill", d: SHIELD_PATH, "clip-path": `url(#${id})` }),
+      jsx("path", { class: "rs-edge", d: SHIELD_PATH }),
+    ],
+  });
+}
+const readinessLabel = (w) => (w == null ? "Disbanded" : w >= CONFIG.bulwarkSlot3Start ? "Ready" : `${w} of ${CONFIG.bulwarkSlot3Start} weeks`);
 function RegardGraph({ value }) {
   const step = (y, on, cls) => jsx("rect", { class: `rg-step ${cls}${on ? " on" : ""}`, x: 1, y, width: 12, height: 2.6, rx: 0.6 });
   return jsx("svg", {
@@ -38735,6 +38752,24 @@ function hallTermsOf(text) {
 // A single caller's options say what they do in words. To draw the same pips, bars and seals the
 // quarrels and the works show, the court tries each option on a copy of the realm and reads off
 // what moved. A gamble is tried both ways, and shown as its two outcomes.
+// Each garrison whose readiness a ruling moves, drawn as its shield before and after.
+function readinessRows(before, after) {
+  const out = [];
+  for (const l0 of before.laws || []) {
+    if (!l0.bulwark) continue;
+    const l1 = (after.laws || []).find((l) => l.id === l0.id), w0 = l0.bulwark.weeks || 0,
+      w1 = l1?.active && l1.bulwark ? l1.bulwark.weeks || 0 : null,
+      cap = (w) => (w == null ? w : Math.min(w, CONFIG.bulwarkSlot3Start));
+    if (cap(w0) === cap(w1)) continue;
+    const cmd = before.people[l0.bulwark.soldierId];
+    out.push({
+      tone: w1 != null && w1 > w0 ? "up" : "down", icon: "swords",
+      who: `${cmd ? hallName(cmd) + "’s garrison" : "The garrison"}`,
+      readiness: { from: w0, to: w1 },
+    });
+  }
+  return out;
+}
 function soloDiffRows(before, after, hall, spills = {}) {
   const rows = [];
   const st0 = before.standing ?? CONFIG.standingMax, st1 = after.standing ?? CONFIG.standingMax,
@@ -38742,6 +38777,7 @@ function soloDiffRows(before, after, hall, spills = {}) {
   if (d)
     rows.push({ plain: true,
       seals: { value: st0, projected: st1, reserve: before.reserve || 0, label: `${d > 0 ? "+" : "−"}${Math.abs(d)}` } });
+  rows.push(...readinessRows(before, after));
   const moved = [];
   for (const p0 of before.people) {
     const p1 = after.people[p0.id];
@@ -39822,14 +39858,16 @@ const SOLO_MATTERS = {
         options: [
           {
             label: "Stand down the bulwark", note: "End the bulwark safely.",
-            consequence: `The bulwark is disbanded.`, rows: [],
-            terms: [{ text: "The bulwark is disbanded.", icon: "swords", pop: disbandPop }],
+            // the shield row, crossed out, says the bulwark is disbanded
+            consequence: "", rows: [],
           },
           {
             label: "Hold the wall", note: oddsNote(h),
             // a mutiny disbands the bulwark just as standing it down does; its other costs are drawn as rows
             consequence: `${oddsLead(h)}: the garrison gains two weeks of readiness, or the bulwark is disbanded.`, rows: [],
             outcomeIcons: ["swords", "swords"],
+            // the mutiny's crossed-out shield says the bulwark is disbanded
+            outcomeHide: [false, true],
             outcomePops: [
               `Readiness is the count of weeks the bulwark has held. At ${mmNum(CONFIG.bulwarkSlot3Start)} weeks it is ready: when disaster next strikes the ${law?.region || "region"}, ${name} takes the blow as pressure and the court is spared a breach of confidence. ${curWeeks >= CONFIG.bulwarkSlot3Start ? "It is ready already, and the weeks keep it so." : nextWeeks >= CONFIG.bulwarkSlot3Start ? "These two weeks would make it ready." : `These two weeks would bring it to ${mmNum(nextWeeks)}.`}`,
               `The garrison mutinies. ${disbandPop}`,
@@ -43342,7 +43380,7 @@ const SOLO_MATTERS = {
           {
             label: "Send the garrison out", note: "Spend the garrison’s disaster readiness.",
             consequence: "", rows: [],
-            terms: [{ text: "The garrison spends its readiness.", icon: "swords", pop: `The weeks it has held on ${duty} count for nothing now: it will not stand between the region and the next disaster until it has built them up again.` }],
+            // the shield row in the preview shows the readiness spent
           },
           {
             label: "Send the Crown’s people", note: "Costs 1 standing.",
@@ -44305,6 +44343,18 @@ function EffectRows({ rows }) {
                               jsx("span", { class: `fx-regard-mark ${(r.regard.dir || r.regard.to - r.regard.from) > 0 ? "up" : "down"}`, children: (r.regard.dir || r.regard.to - r.regard.from) > 0 ? "▲" : "▼" }),
                           ],
                         }),
+                    ],
+                  }),
+                r.readiness &&
+                  jsx("span", {
+                    class: "fx-meters fx-readiness",
+                    role: "img",
+                    "aria-label": `Readiness: ${readinessLabel(r.readiness.from)} to ${readinessLabel(r.readiness.to)}`,
+                    children: [
+                      jsx(ReadinessShield, { weeks: r.readiness.from }),
+                      jsx("span", { class: "fx-faith-arrow", children: "→" }),
+                      r.readiness.to == null ? jsx("span", { class: "rs-gone", children: jsx(ReadinessShield, { weeks: 0 }) }) : jsx(ReadinessShield, { weeks: r.readiness.to }),
+                      jsx("span", { class: "fx-bar-num", children: readinessLabel(r.readiness.to) }),
                     ],
                   }),
                 r.faith &&
@@ -48891,6 +48941,12 @@ img, .pc-figure, .sheet-figure, .pc-strip, .pc-scene, .hb-scene, .close-scene, .
   color: var(--ink-soft);
 }
 
+.rs-shield { width: 19px; height: 19px; flex: none; color: var(--ink); }
+.rs-shield .rs-edge { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linejoin: round; }
+.rs-shield .rs-fill { fill: var(--wax); }
+.fx-readiness { align-items: center; gap: 5px; }
+.rs-gone { position: relative; display: inline-flex; opacity: .5; }
+.rs-gone::after { content: ""; position: absolute; left: -2px; right: -2px; top: 50%; border-top: 1.5px solid var(--ink); transform: rotate(-35deg); }
 .fx-regard .rg-graph {
   color: var(--ink);
 }
