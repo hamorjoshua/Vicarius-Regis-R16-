@@ -4156,6 +4156,37 @@ function ReadinessShield({ weeks }) {
   });
 }
 const readinessLabel = (w) => (w == null ? "Disbanded" : w >= CONFIG.bulwarkSlot3Start ? "Ready" : `${w} of ${CONFIG.bulwarkSlot3Start} weeks`);
+const romanNum = (n) => {
+  let out = "";
+  for (const [v, r] of [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]]) while (n >= v) (out += r), (n -= v);
+  return out;
+};
+// One state of readiness: the shield, and beside it the weeks held in Roman numerals (none at nought).
+// A disbanded bulwark is the empty shield struck through.
+const readinessMark = (w) => w == null
+  ? jsx("span", { class: "rs-gone", children: jsx(ReadinessShield, { weeks: 0 }) })
+  : jsx("span", { class: "rs-state", children: [jsx(ReadinessShield, { weeks: w }), w > 0 && jsx("span", { class: "rs-num", children: romanNum(w) })] });
+// The shields of a row; tapped, they say what the weeks are worth.
+function ReadinessMeter({ r }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const shut = () => setOpen(false);
+    document.addEventListener("pointerdown", shut);
+    return () => document.removeEventListener("pointerdown", shut);
+  }, [open]);
+  const { from, to, pop } = r.readiness;
+  return jsx("span", {
+    class: `fx-meters fx-readiness${pop ? " has-pop" : ""}${open ? " open" : ""}`,
+    role: pop ? "button" : "img", tabIndex: pop ? 0 : undefined, "aria-expanded": pop ? open : undefined,
+    "aria-label": `Readiness: ${readinessLabel(from)} to ${readinessLabel(to)}`,
+    onPointerDown: pop ? (e) => e.stopPropagation() : undefined,
+    onClick: pop ? () => setOpen(!open) : undefined,
+    onKeyDown: pop ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(!open); } } : undefined,
+    children: [readinessMark(from), jsx("span", { class: "fx-faith-arrow", children: "→" }), readinessMark(to),
+      open && jsx("span", { class: "hall-pop", role: "note", children: (Array.isArray(pop) ? pop : [pop]).map((x, k) => jsx("span", { class: "rs-pop-line", children: x }, k)) })],
+  });
+}
 function RegardGraph({ value }) {
   const step = (y, on, cls) => jsx("rect", { class: `rg-step ${cls}${on ? " on" : ""}`, x: 1, y, width: 12, height: 2.6, rx: 0.6 });
   return jsx("svg", {
@@ -38758,14 +38789,23 @@ function readinessRows(before, after) {
   for (const l0 of before.laws || []) {
     if (!l0.bulwark) continue;
     const l1 = (after.laws || []).find((l) => l.id === l0.id), w0 = l0.bulwark.weeks || 0,
-      w1 = l1?.active && l1.bulwark ? l1.bulwark.weeks || 0 : null,
-      cap = (w) => (w == null ? w : Math.min(w, CONFIG.bulwarkSlot3Start));
-    if (cap(w0) === cap(w1)) continue;
-    const cmd = before.people[l0.bulwark.soldierId];
+      w1 = l1?.active && l1.bulwark ? l1.bulwark.weeks || 0 : null;
+    if (w0 === w1) continue;
+    const cmd = before.people[l0.bulwark.soldierId], name = cmd ? hallName(cmd) : "the commander",
+      ready = CONFIG.bulwarkSlot3Start,
+      halves = (x) => (x % 1 ? `${Math.floor(x) || ""}½` : `${x}`), units = (w) => halves(w * CONFIG.bulwarkSupportStep),
+      weeksTold = (w) => (w === 1 ? "one week" : `${mmNum(w)} weeks`);
+    const pop = [
+      w1 == null
+        ? `The garrison ${name} keeps on ${dutyNameInSentence(dutyTitleOf(l0))} is disbanded, and its ${weeksTold(w0)} of readiness with it.`
+        : `The garrison ${name} keeps on ${dutyNameInSentence(dutyTitleOf(l0))} goes from ${w0 ? weeksTold(w0) : "no weeks"} of readiness to ${w1 ? weeksTold(w1) : "none"}.`,
+      `At ${mmNum(ready)} weeks a garrison is ready: when disaster next strikes the ${l0.region}, ${name} takes the blow as ${CONFIG.bulwarkShieldPressure} pressure in the court’s place, and its readiness starts again from nothing.`,
+      `Each week of readiness also covers ${halves(CONFIG.bulwarkSupportStep)} unit of the ${l0.region}’s military duty, up to the whole of it${w1 == null ? "" : `: ${units(w0)} now, ${units(w1)} after`}.`,
+    ];
     out.push({
       tone: w1 != null && w1 > w0 ? "up" : "down", icon: "swords",
-      who: `${cmd ? hallName(cmd) + "’s garrison" : "The garrison"}`,
-      readiness: { from: w0, to: w1 },
+      ...(cmd ? { id: cmd.id } : {}), who: cmd ? hallName(cmd) : "The garrison",
+      readiness: { from: w0, to: w1, pop },
     });
   }
   return out;
@@ -38861,6 +38901,11 @@ function soloDiffRows(before, after, hall, spills = {}) {
     const n0 = before.needBar?.[key] ?? 0, n1 = after.needBar?.[key] ?? 0, [region, need] = key.split("|");
     if (n0 === n1) continue;
     rows.push({ tone: n1 > n0 ? "up" : "down", icon: need === "commoners" ? COMMONER_ICON[region] : NEED_ICON[need] || undefined, work: NEED_ICON[need] ? undefined : key, who: `${capFirst(need)} of the ${region}`, what: `Need bar ${fmtNum(n0)} → ${fmtNum(n1)}` });
+  }
+  // a commander whose own pressure or regard also moves is one row: the shields beside the pips
+  for (const rr of rows.filter((x) => x.readiness && x.id != null)) {
+    const own = rows.find((x) => x !== rr && x.id === rr.id && !x.readiness);
+    if (own) { own.readiness = rr.readiness; rows.splice(rows.indexOf(rr), 1); }
   }
   return rows;
 }
@@ -39866,8 +39911,8 @@ const SOLO_MATTERS = {
             // a mutiny disbands the bulwark just as standing it down does; its other costs are drawn as rows
             consequence: `${oddsLead(h)}: the garrison gains two weeks of readiness, or the bulwark is disbanded.`, rows: [],
             outcomeIcons: ["swords", "swords"],
-            // the mutiny's crossed-out shield says the bulwark is disbanded
-            outcomeHide: [false, true],
+            // each outcome's shields say it: the weeks gained, or the bulwark struck through
+            outcomeHide: [true, true],
             outcomePops: [
               `Readiness is the count of weeks the bulwark has held. At ${mmNum(CONFIG.bulwarkSlot3Start)} weeks it is ready: when disaster next strikes the ${law?.region || "region"}, ${name} takes the blow as pressure and the court is spared a breach of confidence. ${curWeeks >= CONFIG.bulwarkSlot3Start ? "It is ready already, and the weeks keep it so." : nextWeeks >= CONFIG.bulwarkSlot3Start ? "These two weeks would make it ready." : `These two weeks would bring it to ${mmNum(nextWeeks)}.`}`,
               `The garrison mutinies. ${disbandPop}`,
@@ -44345,18 +44390,7 @@ function EffectRows({ rows }) {
                         }),
                     ],
                   }),
-                r.readiness &&
-                  jsx("span", {
-                    class: "fx-meters fx-readiness",
-                    role: "img",
-                    "aria-label": `Readiness: ${readinessLabel(r.readiness.from)} to ${readinessLabel(r.readiness.to)}`,
-                    children: [
-                      jsx(ReadinessShield, { weeks: r.readiness.from }),
-                      jsx("span", { class: "fx-faith-arrow", children: "→" }),
-                      r.readiness.to == null ? jsx("span", { class: "rs-gone", children: jsx(ReadinessShield, { weeks: 0 }) }) : jsx(ReadinessShield, { weeks: r.readiness.to }),
-                      jsx("span", { class: "fx-bar-num", children: readinessLabel(r.readiness.to) }),
-                    ],
-                  }),
+                r.readiness && jsx(ReadinessMeter, { r }),
                 r.faith &&
                   jsx("span", {
                     class: "fx-meters",
@@ -48945,6 +48979,13 @@ img, .pc-figure, .sheet-figure, .pc-strip, .pc-scene, .hb-scene, .close-scene, .
 .rs-shield .rs-edge { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linejoin: round; }
 .rs-shield .rs-fill { fill: var(--wax); }
 .fx-readiness { align-items: center; gap: 5px; }
+/* the popup opens across the whole row, under the shields that were tapped */
+.fx-readiness.has-pop { cursor: pointer; }
+.fx-row:has(> .fx-text > .fx-readiness.has-pop) { position: relative; }
+.rs-pop-line { display: block; }
+.rs-pop-line + .rs-pop-line { margin-top: 5px; }
+.rs-state { display: inline-flex; align-items: center; gap: 2px; }
+.rs-num { font: 600 var(--t-sm)/1 var(--serif); color: var(--ink); letter-spacing: .02em; }
 .rs-gone { position: relative; display: inline-flex; opacity: .5; }
 .rs-gone::after { content: ""; position: absolute; left: -2px; right: -2px; top: 50%; border-top: 1.5px solid var(--ink); transform: rotate(-35deg); }
 .fx-regard .rg-graph {
