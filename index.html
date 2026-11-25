@@ -39162,10 +39162,12 @@ function StoneLine({ t }) {
     children: [
       jsx("span", { class: "hall-mark", children: hallTile(t.icon) }),
       jsx("span", { class: "hall-term-text", children: [
-        jsx("span", { class: `hall-stone${t.stone === "bronze" ? " bronze" : ""}`, children: t.text }),
+        // the note hangs from the plate itself, its caret just under the plate
+        jsx("span", { class: "hall-stone-anchor", children: [
+          jsx("span", { class: `hall-stone${t.stone === "bronze" ? " bronze" : ""}`, children: t.text }),
+          open && jsx("span", { class: "hall-pop hall-stone-pop", role: "note", children: t.pop }),
+        ] }),
         t.tag && jsx("span", { class: "hall-stone-kind", children: t.tag }),
-        // the note hangs from the plate's own column, its caret under the plate
-        open && jsx("span", { class: "hall-pop hall-stone-pop", role: "note", children: t.pop }),
       ] }),
     ],
   });
@@ -53656,8 +53658,10 @@ p, li, blockquote {
 .hall-option .hall-terms li.hall-stone-line .hall-stone { margin-top: 0; }
 .hall-stone-line.stone .hall-tile { background: #7d7c76; }
 .hall-option .hall-terms li.hall-stone-line.has-pop { cursor: pointer; }
-.hall-option .hall-terms li.hall-stone-line .hall-term-text { position: relative; }
-.hall-stone-pop { right: -8px; }
+.hall-stone-anchor { position: relative; display: block; }
+/* the open note stands in for the caption it covers */
+.hall-stone-line.open .hall-stone-kind { visibility: hidden; }
+.hall-option .hall-terms li.hall-stone-line .hall-stone-pop { left: 0; right: -8px; top: calc(100% + 8px); }
 .hall-stone-line.bronze .hall-tile { background: #8a6a3a; }
 .hall-stone-kind { display: block; margin-top: 3px; font: 400 var(--t-sm)/1.25 var(--sans); color: var(--ink-soft); }
 /* an empty list of rows takes no place, so the boxes keep the option's even gaps */
