@@ -38662,7 +38662,9 @@ function hallDefaultBranch(game, hall, o, A, B) {
   if (!hallDefers(hall, o)) return null;
   return {
     tile: "wrong",
-    tag: `If ${hallName(B)} does not stay short of urgent for ${mmNum(CONFIG.hallDebtWeeks)} weeks`,
+    // the span stands above the box as an hourglass line of its own; the box crosses out the condition
+    lead: [{ tag: `${capFirst(mmNum(CONFIG.hallDebtWeeks))} weeks`, icon: "hourglass", text: "" }],
+    tag: `${hallName(B)} stays short of urgent`,
     flavor: `${hallName(B)} defaults.`,
     pop: `${hallName(B)} must end each of the next ${mmNum(CONFIG.hallDebtWeeks)} weeks with fewer than ${mmNum(CONFIG.urgent)} pressure. The first week ${prn(B).sub} does not, the debt is called in.`,
     rows: [
@@ -38992,7 +38994,7 @@ function HallTerms({ terms }) {
           t.pop ? jsx(HallPopLine, { t, mark: mark(t), cls: mark(t) ? "" : "unmarked" }, i) : jsx("li", { class: mark(t) ? "" : "unmarked", children: [
             mark(t) && jsx("span", { class: "hall-mark", children: mark(t) }),
             jsx("span", { class: "hall-term-text", children: [
-              t.tag && jsx("span", { class: `hall-tag ${t.tone || ""}`, children: t.tag }),
+              t.tag && jsx("span", { class: `hall-tag ${t.tone || ""}${t.text ? "" : " alone"}`, children: t.tag }),
               t.text,
             ] }),
           ] }, i)),
@@ -39074,12 +39076,12 @@ function HallOption({ game, v, o, onRule }) {
               ] }, i)),
           }),
       !preview?.outcomes && !rowsFirst && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, (preview?.rows || o.rows).filter((r) => !r.term)), game) }),
-      ...(o.branches || []).map((br, k) => jsx("div", { class: "hall-wrong", children: [
+      ...(o.branches || []).flatMap((br, k) => [br.lead && jsx(HallTerms, { terms: br.lead }, `brl${k}`), jsx("div", { class: "hall-wrong", children: [
         jsx(BranchHead, { br }),
         br.flavor && jsx("p", { class: "hall-branch-flavor", children: br.flavor }),
         br.note && jsx(HallTerms, { terms: [{ text: br.note }] }),
         br.rows?.length > 0 && jsx(EffectRows, { rows: shortRows(br.rows, game) }),
-      ] }, `br${k}`)),
+      ] }, `br${k}`)]),
       o.ifWrong && jsx("div", { class: "hall-wrong", children: [
         jsx("p", { class: "hall-wrong-head", children: [
           hallTile("wrong"), jsx("span", { class: "hall-tag", children: "If wrong" }),
@@ -53375,6 +53377,8 @@ p, li, blockquote {
 .hall-option .hall-wrong-head .hall-tag { margin: 0; }
 /* a long condition wraps inside its strip, the strip growing to hold it; the box stays by the first line */
 .hall-option .hall-wrong-head { align-items: flex-start; }
+/* a label that stands alone, with no line under it, keeps no room for one */
+.hall-option .hall-term-text > .hall-tag.alone { margin-bottom: 0; }
 .hall-option .hall-wrong-head .hall-tag:not(.hall-odds-tag) { height: auto; min-height: 20px; padding: 1px 6px; line-height: 18px; }
 .hall-option .hall-wrong-head.has-pop { position: relative; cursor: pointer; }
 .hall-option .hall-branch-flavor { margin: -2px 0 7px; font: italic var(--t-sm)/1.35 var(--serif); color: var(--ink-soft); text-align: center; }
