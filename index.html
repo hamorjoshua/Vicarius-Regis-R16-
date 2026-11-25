@@ -10055,8 +10055,10 @@ function addUnheardGrievance(game, heard, R, before) {
       const f5 = heard.includes(personId7) || !!d8.answered,
         person11 = game.people[d8.by];
       if (f5) {
+        // a word given again, after one was broken, earns back more regard
+        if (d8.again) addRegard(person52, 2);
         (delete game.undertakings[personId7],
-          person11.pressure > 0 && addPressure(person11, -1),
+          !d8.again && person11.pressure > 0 && addPressure(person11, -1),
           logEvent(
             R,
             `The court keeps its word to ${person52.name}; ${person11.name} is relieved 1.`,
@@ -10076,8 +10078,10 @@ function addUnheardGrievance(game, heard, R, before) {
         game.week >= d8.due &&
           (delete game.undertakings[personId7],
           breachConfidence(game, CONFIG.brokenWordBreaches),
+          // the household remembers, and may come back about it
+          (game.brokenWords = [...(game.brokenWords || []), { id: personId7, week: game.week, regard: person52.regard ?? 0 }].slice(-6)),
           (person52.regard = -2),
-          addPressure(person11, CONFIG.accusedCost),
+          d8.again ? addGrievance(game, constituencyOf(person52), 1) : addPressure(person11, CONFIG.accusedCost),
           logEvent(
             R,
             `The court breaks its word to ${person52.name}: ${CONFIG.brokenWordBreaches} breaches of confidence, and ${person11.name} answers for it.`,
@@ -13495,7 +13499,7 @@ function epWeekly(game, R) {
           `${dutyTitleOf(law)}: the garrison mutinies; the others on the roll gain ${CONFIG.bulwarkMutinyPressure} pressure, and the soldiers ${CONFIG.bulwarkMutinyG} grievance.`,
           [person.id],
         );
-      } else bulwark.weeks++;
+      } else if (bulwark.heldWeek !== game.week) bulwark.weeks++;
     }
     if (law.syndicate) {
       const syndicate = law.syndicate,
@@ -13678,6 +13682,34 @@ function epWeekly(game, R) {
     } else {
       epEvent(R, `The writ inquest voids both impressions of the chipped seal: both grants fall.`, [sq.nobleId, sq.targetId]);
     }
+  }
+  // the bread assize: each week it stands, the commoners' need is eased
+  if (game.breadAssize && game.week <= game.breadAssize.until) {
+    const key = game.breadAssize.region + "|commoners";
+    if (game.needBar?.[key] !== undefined) game.needBar[key] = Math.min(CONFIG.needBarMax, game.needBar[key] + 1);
+    epEvent(R, `${game.breadAssize.region}: bread sells at the assize; the commoners’ need eases.`);
+    if (game.week >= game.breadAssize.until) delete game.breadAssize;
+  }
+  // neighbours' compacts: their pressure is shared; three weeks with neither urgent lighten the duty
+  if (game.neighbourCompacts?.length) {
+    const still = [];
+    for (const nc of game.neighbourCompacts) {
+      const A = game.people[nc.a], B = game.people[nc.b], law = lawById(game, nc.lawId);
+      if (!A || !B || !law?.active) continue;
+      const mean = Math.round(((A.pressure + B.pressure) / 2) * 100) / 100;
+      A.pressure = B.pressure = mean;
+      if (mean >= CONFIG.urgent) { epEvent(R, `${hallName(A)} and ${hallName(B)}: the compact breaks under the load.`, [A.id, B.id]); continue; }
+      nc.kept = (nc.kept || 0) + 1;
+      if (nc.kept >= 3) {
+        const cut = Math.min(CONFIG.stintDividendUnits, law.requirement - 2);
+        if (cut > 0) { law.requirement -= cut; recordRetiredUnits(law, cut); }
+        addRegard(A, 1); addRegard(B, 1);
+        epEvent(R, `${hallName(A)} and ${hallName(B)} keep their compact${cut > 0 ? `; ${dutyNameOf(law)} requires ${fmtNum(cut)} unit less` : ""}.`, [A.id, B.id]);
+        continue;
+      }
+      still.push(nc);
+    }
+    game.neighbourCompacts = still;
   }
   if (game.kingDinner && game.kingDinner.week === game.week) {
     const kd = game.kingDinner;
@@ -35941,6 +35973,11 @@ function AssistantScreen({ say, button, onNext, label = "Your assistant" }) {
   });
 }
 const HALL_INTRO = {
+  commanderLeave: (A) => `a request for leave from ${A}`,
+  kinWitness: (A, B) => `word that ${A} is the only witness against ${B}`,
+  breadPrice: (A, B) => `a complaint from ${A} about the price of bread kept by ${B}`,
+  neighboursCompact: (A, B) => `an offer from ${A} and ${B} to share their load`,
+  wordRemembered: (A) => `${A}, come back about the court’s broken word`,
   marriageRank: (A, B) => `a request from ${A} to raise ${B} to noble rank on their marriage`,
   penitentHealth: (A, B) => `word from ${A} about the health of ${B}, who is keeping penance`,
   mortmainGlebe: (A, B) => `word from ${A} about the endowment kept by ${B}`,
@@ -38672,6 +38709,8 @@ const HALL_PRINCIPLE = {
   hearth: "The hearth before the realm",
   old: "The older right stands",
   fresh: "Old rights yield to new",
+  kin: "Kin need not accuse kin",
+  oath: "The oath before kin",
 };
 const ruleQuote = (side) => `“${HALL_PRINCIPLE[side]}”`;
 // What each maxim means in plain words, for the popup on its plate.
@@ -38682,8 +38721,10 @@ const HALL_MEANING = {
   hearth: "When the realm’s need and a household’s good conflict, the household is protected.",
   old: "A long-held right or custom keeps its place against newer claims.",
   fresh: "A long-held right may give way to a newer or rising claim.",
+  kin: "No house is made to bear witness against a house it is married to.",
+  oath: "A witness must speak under oath, even against its own kin by marriage.",
 };
-const HALL_QUESTION = { letter: "bond", mercy: "bond", crown: "realm", hearth: "realm", old: "custom", fresh: "custom" };
+const HALL_QUESTION = { letter: "bond", mercy: "bond", crown: "realm", hearth: "realm", old: "custom", fresh: "custom", kin: "kinship", oath: "kinship" };
 // A quarrel of fact (the mill, the hedge) holds no principle: it is right or wrong.
 const HALL_HOLDS = {
   debt: { a: "letter", b: "mercy" }, silk: { a: "letter", b: "mercy" },
@@ -39780,8 +39821,8 @@ function standingRow(game, d) {
 }
 // The court's word as two boxes: first what holds while the household waits, for the span; then
 // the court's word itself.
-function undertakingScopes(waiting) {
-  const wName = hallName(waiting), weeks = CONFIG.undertakingWeeks,
+function undertakingScopes(waiting, weeks = CONFIG.undertakingWeeks) {
+  const wName = hallName(waiting),
     span = [{ tag: `${weeks} week${weeks === 1 ? "" : "s"}`, icon: "hourglass" }];
   return [
     { lead: span, notes: [`${wName} attends every audience.`, `${wName} causes no breaches while waiting.`] },
@@ -39815,6 +39856,22 @@ function undertakingParts(game, waiting, by, busy, extra = []) {
       ] },
     ],
   };
+}
+// A rule set, followed or broken by a single caller's matter, drawn on its stone as the hall draws it.
+function soloRuleTerm(game, side) {
+  const prior = game.holdings?.[HALL_QUESTION[side]], text = HALL_PRINCIPLE[side];
+  if (prior && prior.side === side)
+    return { tag: `Follows your rule of week ${prior.week}`, icon: "gavel", text, stone: true, pop: [HALL_MEANING[side], `The court held the same in week ${prior.week}.`] };
+  if (prior)
+    return { tag: `Breaks your rule of week ${prior.week}`, icon: "gavel", text, stone: true,
+      pop: [HALL_MEANING[side], `In week ${prior.week} the court held: ${ruleQuote(prior.side)}. This ruling overturns it, and those who relied on the old rule take it ill.`] };
+  return { icon: "gavel", text, stone: true,
+    pop: [HALL_MEANING[side], "This sets a rule. The court will be held to this in later quarrels on the same question. A house that loses by the rule takes no grudge; overturning it angers those who relied on it."] };
+}
+function soloSetRule(g, side, matter, c) {
+  const q = HALL_QUESTION[side], prior = g.holdings?.[q];
+  if (prior && prior.side !== side && prior.c) addGrievance(g, prior.c, 1);
+  g.holdings = { ...(g.holdings || {}), [q]: { side, week: g.week, matter, c } };
 }
 // How hard a household is pressed, as the assistant would say it.
 const strainWords = (p) => ((p?.pressure || 0) >= CONFIG.urgent ? "close to breaking" : (p?.pressure || 0) >= CONFIG.pressing ? "hard pressed" : "managing, for now");
@@ -42811,6 +42868,270 @@ const SOLO_MATTERS = {
       cleric.chargedWeek = g.week;
       addPressure(cleric, CONFIG.accusedCost);
       return `${hallName(cleric)} conducts the burial in defiance of the decree. The grudge clears, and ${hallName(cleric)} returns under open charge (+${CONFIG.accusedCost} pressure).`;
+    },
+  },
+  commanderLeave: {
+    id: "commanderLeave",
+    channel: "hall",
+    title: () => "The commander asks for leave",
+    lapseChoice: 1,
+    lapseNote: () => "Left unanswered, the commander stays at the wall and misses the wedding.",
+    draw(game) {
+      for (const law of epActive(game).filter((l) => l.bulwark && (l.bulwark.weeks || 0) >= 3)) {
+        const c = game.people[law.bulwark.soldierId];
+        if (!c || c.charge || c.rites?.leaveWeek != null) continue;
+        if (hallHash(game, 2311) >= 0.3) return null;
+        return { matter: "commanderLeave", ruled: null, week: game.week, a: c.id, b: c.id, region: c.region, from: { kind: "bulwark", lawId: law.id } };
+      }
+      return null;
+    },
+    valid(game, h) {
+      const law = lawById(game, h.from?.lawId);
+      return !!(law?.active && law.bulwark?.soldierId === h.a && game.people[h.a] && !game.people[h.a].charge);
+    },
+    view(game, h) {
+      const c = game.people[h.a], name = hallName(c), law = lawById(game, h.from.lawId), duty = dutyNameInSentence(dutyTitleOf(law));
+      return {
+        title: "The commander asks for leave",
+        lede: `${name} has come down from the garrison on ${duty}, Vicar, with a request ${prn(c).sub} would rather make in person.`,
+        a: { name, estate: c.type, region: c.region, id: c.id, plea: "My daughter is married on Sunday. The wall will not miss me for one week. The readiness might." },
+        options: [
+          { label: "Grant the commander leave", note: "", consequence: "", rows: [],
+            scope: { tile: "scroll", tag: "Ordinance", lead: [{ tag: "1 week", icon: "hourglass" }],
+              notes: ["The garrison holds without its commander.", "Its readiness does not grow this week."] } },
+          { label: "Keep the commander at the wall", note: "", consequence: "", rows: [] },
+          { label: `Send the Crown’s sergeant in ${prn(c).pos} place · 1 standing`, note: "", consequence: "", rows: [], disabled: !canSpendStanding(game, 1) },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const c = g.people[m.a], name = hallName(c), law = lawById(g, m.from.lawId);
+      c.rites = { ...(c.rites || {}), leaveWeek: g.week };
+      if (choice === 0) {
+        if (law?.bulwark) law.bulwark.heldWeek = g.week;
+        addRegard(c, 1);
+        return `${name} rides home for the wedding. The garrison holds the wall without ${prn(c).obj}, and its readiness waits for ${prn(c).pos} return.`;
+      }
+      if (choice === 2) {
+        trySpendStanding(g, 1);
+        addRegard(c, 1);
+        return `A sergeant of the Crown takes ${name}’s place on the wall for the week, and ${name} goes to the wedding.`;
+      }
+      addRegard(c, -1);
+      addPressure(c, 1);
+      return `${name} returns to the wall. The wedding goes ahead without ${prn(c).obj}.`;
+    },
+  },
+  kinWitness: {
+    id: "kinWitness",
+    channel: "hall",
+    title: () => "Kin against kin",
+    lapseChoice: 1,
+    lapseNote: () => "Left unanswered, the witness would be compelled to speak.",
+    draw(game) {
+      for (const p of game.people.filter((x) => x.charge && x.charge.week >= game.week - 2)) {
+        const kin = hallKin(game, p.id).map((k) => game.people[k]).find((k) => k && !k.charge && k.id !== p.charge.by);
+        if (!kin) continue;
+        if (hallHash(game, 2321) >= 0.4) return null;
+        return { matter: "kinWitness", ruled: null, week: game.week, a: kin.id, b: p.id, region: kin.region, from: { kind: "charge", accuserId: p.charge.by ?? null } };
+      }
+      return null;
+    },
+    valid(game, h) {
+      return !!(game.people[h.a] && game.people[h.b]?.charge);
+    },
+    view(game, h) {
+      const kin = game.people[h.a], accused = game.people[h.b], accuser = h.from.accuserId != null ? game.people[h.from.accuserId] : null;
+      return {
+        title: "Kin against kin",
+        lede: `${hallName(kin)} has come alone, Vicar. ${capFirst(prn(kin).sub)} is the only witness to the charge against ${hallName(accused)}, the house ${prn(kin).sub} is married to${accuser ? `, brought by ${hallName(accuser)}` : ""}.`,
+        a: { name: hallName(kin), estate: kin.type, region: kin.region, id: kin.id, plea: "You ask me to speak against the house my son sleeps in." },
+        options: [
+          { label: "Excuse the witness", note: "", consequence: "", rows: [],
+            terms: [soloRuleTerm(game, "kin"), { text: `The charge against ${hallName(accused)} is dropped.` }] },
+          { label: "Compel the witness", note: "", consequence: "", rows: [],
+            terms: [soloRuleTerm(game, "oath")] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const kin = g.people[m.a], accused = g.people[m.b], accuser = m.from.accuserId != null ? g.people[m.from.accuserId] : null;
+      if (choice === 0) {
+        soloSetRule(g, "kin", m.matter, constituencyOf(kin));
+        accused.charge = null;
+        if (accuser) accuser.grudge = { c: constituencyOf(accused), until: g.week + CONFIG.hallGrudgeWeeks, amount: 1 };
+        return `${hallName(kin)} is excused, and with no other witness the charge against ${hallName(accused)} falls. The court holds: ${ruleQuote("kin")}.`;
+      }
+      soloSetRule(g, "oath", m.matter, accuser ? constituencyOf(accuser) : constituencyOf(kin));
+      addRegard(kin, -1);
+      addRegard(accused, -1);
+      return `${hallName(kin)} speaks under oath against ${hallName(accused)}, and neither house forgives the court for it. The court holds: ${ruleQuote("oath")}.`;
+    },
+  },
+  breadPrice: {
+    id: "breadPrice",
+    channel: "hall",
+    title: () => "The price of bread",
+    lapseChoice: 2,
+    lapseNote: () => "Left unanswered, bread is left to the market.",
+    draw(game) {
+      for (const [i, region] of REGIONS.entries()) {
+        const bar = game.needBar?.[`${region}|commoners`];
+        if (bar == null || bar > -3 || game.breadAssize?.region === region) continue;
+        const merchant = game.people.find((p) => p.type === "Merchant" && p.region === region && !p.charge && p.pressure < CONFIG.pressing);
+        const commoner = game.people.filter((p) => p.type === "Commoner" && p.region === region && !p.charge).sort((a, b) => b.pressure - a.pressure || a.id - b.id)[0];
+        if (!merchant || !commoner) continue;
+        if (hallHash(game, 2331 + i) >= 0.35) continue;
+        return { matter: "breadPrice", ruled: null, week: game.week, a: commoner.id, b: merchant.id, region, from: { kind: "need" } };
+      }
+      return null;
+    },
+    valid(game, h) {
+      return !!(game.people[h.a] && game.people[h.b]);
+    },
+    view(game, h) {
+      const commoner = game.people[h.a], merchant = game.people[h.b], r = h.region;
+      return {
+        title: "The price of bread",
+        lede: `${hallName(commoner)} has come alone, Vicar. The commoners of the ${r} are going short, and ${hallName(merchant)} still sells bread at the market price.`,
+        a: { name: hallName(commoner), estate: commoner.type, region: commoner.region, id: commoner.id,
+          plea: `The loaf is the same size it was at Easter. The price is not. ${hallName(merchant)} says that is the harvest’s doing, not the oven’s.` },
+        options: [
+          { label: "Fix the price of bread", note: "", consequence: "", rows: [],
+            scope: { tile: "scroll", tag: "Ordinance", lead: [{ tag: "2 weeks", icon: "hourglass" }],
+              notes: [`Bread in the ${r} sells at the assize price.`, `Each week, the ${r} commoners’ need eases 1 step.`] } },
+          { label: "Buy grain on the Crown’s account · 2 standing", note: "", consequence: "", rows: [], disabled: !canSpendStanding(game, 2) },
+          { label: "Leave bread to the market", note: "", consequence: "", rows: [],
+            terms: [{ icon: "crown", text: `The ${r} takes this for the law itself`, stone: "bronze",
+              pop: `Read as law. The ${r} takes the ruling as law for the estates: the merchants are eased, and the commoners take it ill.` }] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const commoner = g.people[m.a], merchant = g.people[m.b], r = m.region, key = `${r}|commoners`;
+      if (choice === 0) {
+        g.breadAssize = { region: r, until: g.week + 1 };
+        addGrievance(g, constituencyOf(merchant), 1);
+        return `The court sets an assize of bread in the ${r} for two weeks. ${hallName(merchant)} bakes at the fixed price, and the merchants grumble.`;
+      }
+      if (choice === 1) {
+        trySpendStanding(g, 2);
+        if (g.needBar?.[key] !== undefined) g.needBar = { ...g.needBar, [key]: Math.min(CONFIG.needBarMax, g.needBar[key] + 2) };
+        return `The Crown buys grain for the commoners of the ${r}, and the bread queue shortens.`;
+      }
+      addGrievance(g, constituencyOf(merchant), -1);
+      addGrievance(g, constituencyOf(commoner), 1);
+      return `The court leaves bread to the market. ${hallName(merchant)} keeps the price, and ${hallName(commoner)} goes home with a smaller loaf.`;
+    },
+  },
+  neighboursCompact: {
+    id: "neighboursCompact",
+    channel: "hall",
+    title: () => "The neighbours’ compact",
+    lapseChoice: 1,
+    lapseNote: () => "Left unanswered, each keeps to its own share.",
+    draw(game) {
+      const busy = new Set((game.neighbourCompacts || []).flatMap((nc) => [nc.a, nc.b]));
+      for (const law of epActive(game)) {
+        const on = qRaw(game, law).filter((p) => !p.charge && !busy.has(p.id) && p.region === law.region && p.pressure >= CONFIG.pressing && p.pressure < CONFIG.urgent && paidShare(game, p, law) > 0);
+        for (const A of on) {
+          const B = on.find((x) => x.type !== A.type && x.id > A.id);
+          if (!B) continue;
+          // pressed neighbours on a shared roll are common; the offer to pool is not
+          if (hallHash(game, 2341) >= 0.08) return null;
+          return { matter: "neighboursCompact", ruled: null, week: game.week, a: A.id, b: B.id, region: law.region, from: { kind: "compact", lawId: law.id } };
+        }
+      }
+      return null;
+    },
+    valid(game, h) {
+      const law = lawById(game, h.from?.lawId);
+      return !!(law?.active && game.people[h.a] && game.people[h.b]);
+    },
+    view(game, h) {
+      const A = game.people[h.a], B = game.people[h.b], law = lawById(game, h.from.lawId), duty = dutyNameInSentence(dutyTitleOf(law));
+      const cut = Math.min(CONFIG.stintDividendUnits, law.requirement - 2), halves = (x) => (x % 1 ? `${Math.floor(x) || ""}½` : `${x}`);
+      return {
+        title: "The neighbours’ compact",
+        lede: `${hallName(A)} and ${hallName(B)} have come together, Vicar. Both carry ${duty}, and both are hard pressed.`,
+        a: { name: hallName(A), estate: A.type, region: A.region, id: A.id, plea: `We will carry it between us, ${hallName(B)}’s cart and my sons, if the clerk will count it as one share.` },
+        b: { name: hallName(B), estate: B.type, region: B.region, id: B.id, plea: "Neither of us can carry it alone through the winter. Together we might not notice it." },
+        options: [
+          { label: "Let them share the load", note: "", consequence: "", rows: [],
+            scope: { tile: "compact", tag: "Compact", lead: [{ tag: "3 weeks", icon: "hourglass" }],
+              notes: [`${hallName(A)} and ${hallName(B)} share their load on ${duty}.`, "Neither ends a week urgent."],
+              pop: "At each week’s close the two share their pressure, so both end the week at the same level. If either ends a week urgent, the compact breaks." },
+            branches: [{ tile: "check", tag: "Compact kept",
+              note: cut > 0 ? `${capFirst(duty)} requires ${halves(cut)} unit less.` : null,
+              rows: [personFx(A, 0, 1, "up"), personFx(B, 0, 1, "up")] }] },
+          { label: "Keep each to its own share", note: "", consequence: "", rows: [] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const A = g.people[m.a], B = g.people[m.b], law = lawById(g, m.from.lawId);
+      if (choice === 0) {
+        g.neighbourCompacts = [...(g.neighbourCompacts || []), { a: A.id, b: B.id, lawId: law.id, kept: 0, since: g.week }];
+        return `${hallName(A)} and ${hallName(B)} join their households to ${dutyNameInSentence(dutyTitleOf(law))} for three weeks.`;
+      }
+      addRegard(A, -1);
+      addRegard(B, -1);
+      return `The clerk keeps two shares on the roll. ${hallName(A)} and ${hallName(B)} go home separately.`;
+    },
+  },
+  wordRemembered: {
+    id: "wordRemembered",
+    channel: "hall",
+    title: () => "The word remembered",
+    lapseChoice: 2,
+    lapseNote: () => "Left unanswered, the household goes home with nothing.",
+    draw(game) {
+      const rec = (game.brokenWords || []).find((r) => game.week - r.week >= 2 && game.week - r.week <= 3 && !r.answered
+        && game.people[r.id] && !game.people[r.id].charge && !game.undertakings?.[r.id]);
+      if (!rec || hallHash(game, 2351) >= 0.5) return null;
+      return { matter: "wordRemembered", ruled: null, week: game.week, a: rec.id, b: rec.id, region: game.people[rec.id].region, from: { kind: "word", week: rec.week } };
+    },
+    valid(game, h) {
+      return !!game.people[h.a];
+    },
+    view(game, h) {
+      const p = game.people[h.a], name = hallName(p), busy = Object.keys(game.undertakings || {}).length > 0;
+      const word = undertakingParts(game, p, null, busy);
+      const again = busy ? { terms: word.terms } : {
+        scopes: undertakingScopes(p, 1),
+        branches: [
+          { ...word.branches[0], rows: [...word.branches[0].rows, personFx(p, 0, 2, "up")] },
+          { ...word.branches[1], rows: [word.branches[1].rows[0], estateRow(game, constituencyOf(p), 1)].filter(Boolean) },
+        ],
+      };
+      return {
+        title: "The word remembered",
+        lede: `${name} has come back, Vicar. The court broke its word to ${prn(p).obj} in week ${h.from.week}.`,
+        a: { name, estate: p.type, region: p.region, id: p.id, plea: "You promised me a hearing. I came every week. I am here to ask whether the Crown’s word is worth asking for." },
+        options: [
+          { label: "Make amends · 1 standing", note: "", consequence: "", rows: [], disabled: !canSpendStanding(game, 1) },
+          { label: "Give your word again", note: "", consequence: "", rows: [], disabled: busy, ...again },
+          { label: `Send ${name} away`, note: "", consequence: "", rows: [] },
+        ],
+      };
+    },
+    apply(g, m, choice) {
+      const p = g.people[m.a], name = hallName(p), rec = (g.brokenWords || []).find((r) => r.id === p.id && r.week === m.from.week);
+      if (rec) rec.answered = true;
+      if (choice === 0) {
+        trySpendStanding(g, 1);
+        p.regard = rec?.regard ?? 0;
+        return `The court makes amends to ${name}, and ${prn(p).sub} thinks of it as ${prn(p).sub} did before the broken word.`;
+      }
+      if (choice === 1) {
+        const law = dutiesPaidBy(g, p)[0];
+        g.undertakings ||= {};
+        g.undertakings[p.id] = { by: p.id, week: g.week, due: g.week + 1, dutyId: law?.id, share: law ? paidShare(g, p, law) : 0, again: true };
+        return `The court gives ${name} its word again, for one week this time.`;
+      }
+      addRegard(p, -1);
+      addGrievance(g, constituencyOf(p), 1);
+      return `${name} is sent away, and tells ${prn(p).pos} estate what the Crown’s word is worth.`;
     },
   },
   kingChair: {
