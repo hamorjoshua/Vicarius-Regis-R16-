@@ -38784,8 +38784,8 @@ function hallKindTerms(game, hall, o, A, B, W, L) {
   if (kind === "facts" && o.finds)
     return [];
   if (!W) return [];
-  if (kind === "estates") return [{ tag: "Read as law", icon: "crown", text: `The ${hall.region} takes this for the law itself`, stone: "bronze",
-    pop: `The ${hall.region} reads the ruling as law for the estates: the estates’ grievance moves, not the two houses’ regard.` }];
+  if (kind === "estates") return [{ icon: "crown", text: `The ${hall.region} takes this for the law itself`, stone: "bronze",
+    pop: `Read as law. The ${hall.region} takes the ruling as law for the estates: the estates’ grievance moves, not the two houses’ regard.` }];
   if (kind === "facts") return [];
   if (kind === "needs") {
     const sh = hallNeedShift(game, hall, o.win);
@@ -38822,8 +38822,8 @@ function holdingTerms(game, hall, o, W, L) {
     pop: [HALL_MEANING[hd.side], `The court held the same in ${then}.${HALL_KIND[hall.matter] === "estates" ? "" : ` ${hallName(L)} knew the rule, and takes no grudge.`}`] }];
   if (hd.reverses) return [{ tag: `Breaks your rule of week ${hd.prior.week}`, icon: "gavel", text: rule, stone: true,
     pop: [HALL_MEANING[hd.side], `In ${then} the court held: ${ruleQuote(hd.prior.side)}. This ruling overturns it, and those who relied on the old rule take it ill.`] }];
-  return [{ tag: "Sets a rule", icon: "gavel", text: capFirst(HALL_PRINCIPLE[hd.side]), stone: true,
-    pop: [HALL_MEANING[hd.side], "The court will be held to this in later quarrels on the same question. A house that loses by the rule takes no grudge; overturning it angers those who relied on it."] }];
+  return [{ icon: "gavel", text: capFirst(HALL_PRINCIPLE[hd.side]), stone: true,
+    pop: [HALL_MEANING[hd.side], "This sets a rule. The court will be held to this in later quarrels on the same question. A house that loses by the rule takes no grudge; overturning it angers those who relied on it."] }];
 }
 // Constituencies an option moves, as rows beside the households'.
 function hallEstateRows(game, hall, o, W, L) {
