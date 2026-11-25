@@ -38817,7 +38817,7 @@ function readinessRows(before, after) {
     out.push({
       // the garrison itself wears the gate; the commander's own name keeps his estate's mark
       tone: w1 != null && w1 > w0 ? "up" : "down", icon: "gate", garrison: true,
-      ...(cmd ? { id: cmd.id } : {}), who: cmd ? hallName(cmd) : "The garrison",
+      ...(cmd ? { id: cmd.id } : {}), who: cmd ? `${hallName(cmd)}’s garrison` : "The garrison",
       readiness: { from: w0, to: w1, pop },
     });
   }
