@@ -38903,11 +38903,6 @@ function soloDiffRows(before, after, hall, spills = {}) {
     if (n0 === n1) continue;
     rows.push({ tone: n1 > n0 ? "up" : "down", icon: need === "commoners" ? COMMONER_ICON[region] : NEED_ICON[need] || undefined, work: NEED_ICON[need] ? undefined : key, who: `${capFirst(need)} of the ${region}`, what: `Need bar ${fmtNum(n0)} → ${fmtNum(n1)}` });
   }
-  // a commander whose own pressure or regard also moves is one row: the shields beside the pips
-  for (const rr of rows.filter((x) => x.readiness && x.id != null)) {
-    const own = rows.find((x) => x !== rr && x.id === rr.id && !x.readiness);
-    if (own) { own.readiness = rr.readiness; rows.splice(rows.indexOf(rr), 1); }
-  }
   return rows;
 }
 // Each duty whose roll a ruling changes, drawn as the reckoning draws it: who carries what, before and after.
