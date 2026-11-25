@@ -378,7 +378,7 @@ const ESTATES = ["Noble", "Commoner", "Merchant", "Cleric", "Official", "Soldier
     },
     {
       id: 17,
-      name: "Commander Garran",
+      name: "Captain Garran",
       region: "Capital",
       type: "Soldier",
       disposition: "Practical",
@@ -5798,7 +5798,7 @@ const OPENINGS = [
     duties: [
       ["Riverlands", "works", "Public works: levee repairs", ["Commoner"], "Mara Fen"],
       ["Highlands", "works", "Public works: road repairs", ["Noble"], "Oswin Pike"],
-      ["Capital", "defense", "Defense tax", ["Merchant", "Official"], "Commander Garran"],
+      ["Capital", "defense", "Defense tax", ["Merchant", "Official"], "Captain Garran"],
     ],
     pressures: [
       ["Lord Edric", 3],
@@ -5889,7 +5889,7 @@ function applyOpeningFaith(game, spec) {
       ? game.people.filter((person) => person.region + "|*" === who && person.type !== "Cleric")
       : who.includes("|")
         ? game.people.filter((person) => person.region + "|" + person.type === who)
-      : game.people.filter((person) => person.name === who);
+      : game.people.filter((person) => sameHouse(person.name, who));
   for (const [who, which, value] of temper.set) for (const person of named(who)) person[which] = value;
   for (const who of temper.seen || []) for (const person of named(who)) person.omenWeek = 0;
   game.openingFaith = true;
@@ -5901,7 +5901,7 @@ function applyOpeningFaith(game, spec) {
 function openingHand(game) {
   const spec = OPENINGS.find((o) => o.id === game.openingId);
   if (!spec || game.week !== 1 || !Array.isArray(game.audience)) return;
-  const byName = (name) => game.people.find((person) => person.name === name),
+  const byName = (name) => game.people.find((person) => sameHouse(person.name, name)),
     kept = new Set(),
     reasons = game.audienceSelection?.reasons || {},
     seat = (id, pet) => {
@@ -6017,7 +6017,7 @@ function applyOpening(game, forcedOpeningId = null, lesson = false) {
   const spec = OPENINGS.find((o) => o.id === idx) || OPENINGS[0];
   game.openingId = spec.id;
   game.openingToken = `${game.rng}:${spec.id}`;
-  const findPerson = (name) => game.people.find((person) => person.name === name);
+  const findPerson = (name) => game.people.find((person) => sameHouse(person.name, name));
   const addDuty = (region, kind, title, types, issuerName) => {
     const issuer = findPerson(issuerName);
     const law = {
@@ -8716,6 +8716,7 @@ function advanceWeek(game, n, e, t = !1) {
     else ((game2.week += 1), (game2.audience = e(game2)), afterAudienceDraw(game2));
   }
   delete result.next;
+  syncGarrisons(game2); // a repealed or lost duty takes its garrison, and the title, with it
   delete game2.hallTerms; // Discard unspent hallway benefits from earlier saves.
   if (!game2.gameOver) game2.hall = drawHall(game2, game, result.report);
   if (!game2.gameOver) officeTick(game2, result.report);
@@ -8740,11 +8741,28 @@ function advanceWeek(game, n, e, t = !1) {
 }
 
 const TITLE_RE = /^(Lady|Lord|Sister|Brother|Mother|Captain|Commander) /;
+// A soldier is a Captain, and a Commander while it keeps a garrison. The title lives in the name,
+// so the name itself is rewritten when a garrison is granted or lost; lookups by name ignore it.
+const houseKey = (name) => (typeof name === "string" ? name.replace(/^Commander /, "Captain ") : name);
+const sameHouse = (a, b) => houseKey(a) === houseKey(b);
+function syncGarrisons(game) {
+  if (!game?.people) return game;
+  const held = new Set((game.laws || []).filter((l) => l.active && l.bulwark).map((l) => l.bulwark.soldierId));
+  for (const p of game.people) {
+    if (!p) continue;
+    const keeps = p.type === "Soldier" && held.has(p.id);
+    if (keeps) p.garrison = true;
+    else delete p.garrison;
+    if (p.type === "Soldier" && /^(Captain|Commander) /.test(p.name))
+      p.name = (keeps ? "Commander " : "Captain ") + p.name.replace(/^(Captain|Commander) /, "");
+  }
+  return game;
+}
 
 function householdName(A) {
   const n = (A.name.match(TITLE_RE) || [])[1];
   if (
-    (A.type === "Soldier" && (n === "Captain" || n === "Commander")) ||
+    (A.type === "Soldier" && n === (A.garrison ? "Commander" : "Captain")) ||
     (A.type === "Cleric" && ["Sister", "Brother", "Mother"].includes(n ?? "")) ||
     (A.type === "Noble" && (n === "Lady" || n === "Lord"))
   )
@@ -8756,7 +8774,7 @@ function householdName(A) {
   return (
     ({
       Noble: t ? "Lady " : r ? "Lord " : "",
-      Soldier: "Captain ",
+      Soldier: A.garrison ? "Commander " : "Captain ",
       Official: "",
       Cleric: t ? "Sister " : r ? "Brother " : "",
       Commoner: "",
@@ -9444,6 +9462,7 @@ function epLateFailures(game, R) {
     if (law.bulwark && game.people[law.bulwark.soldierId]?.pressure >= CONFIG.urgent) {
       const soldierId = law.bulwark.soldierId;
       delete law.bulwark;
+      syncGarrisons(game);
       for (const person of qRaw(game, law).filter((p) => p.id !== soldierId))
         addPressure(person, CONFIG.bulwarkMutinyPressure);
       addGrievance(game, "Realm|Soldier", CONFIG.bulwarkMutinyG);
@@ -12922,6 +12941,7 @@ function applyRulingWithEstates(game, personId, pet, R) {
         soldierId: personId,
         weeks: slot === 2 ? CONFIG.bulwarkSlot3Start : 0,
       };
+      syncGarrisons(game);
       if (slot === 0) addPressure(person2, 1);
       break;
     }
@@ -13471,6 +13491,7 @@ function epWeekly(game, R) {
         person = game.people[bulwark.soldierId];
       if (!person || dutyWeight(person, law) <= 0) {
         delete law.bulwark;
+        syncGarrisons(game);
         continue;
       }
       if (person.pressure >= CONFIG.urgent) {
@@ -13478,6 +13499,7 @@ function epWeekly(game, R) {
           addPressure(person2, CONFIG.bulwarkMutinyPressure);
         addGrievance(game, "Realm|Soldier", CONFIG.bulwarkMutinyG);
         delete law.bulwark;
+        syncGarrisons(game);
         epEvent(
           R,
           `${dutyTitleOf(law)}: the garrison mutinies; the others on the roll gain ${CONFIG.bulwarkMutinyPressure} pressure, and the soldiers ${CONFIG.bulwarkMutinyG} grievance.`,
@@ -23336,7 +23358,7 @@ function epColl(key, cap) {
 
 function epBody(person) {
   if (!person) return null;
-  const x = EP_NAMES[person.name];
+  const x = EP_NAMES[houseKey(person.name)];
   if (x && x.e === person.type && x.r === person.region) return x;
   const place = x ? x.short.replace(/ Ward$/, "") : `the ${person.name.split(" ").at(-1)}s`;
   if (x && x.e === person.type)
@@ -24814,7 +24836,7 @@ const IMAGES = {},
       device: "quill",
       sex: "f",
     },
-    "Commander Garran": {
+    "Captain Garran": {
       device: "tower",
       sex: "m",
     },
@@ -24831,7 +24853,7 @@ const IMAGES = {},
       sex: "f",
     },
   },
-  figureUrl = (A) => imageUrl(`figure-${A.type}-${HOUSEHOLD_DEVICES[A.name]?.sex ?? "m"}`),
+  figureUrl = (A) => imageUrl(`figure-${A.type}-${HOUSEHOLD_DEVICES[houseKey(A.name)]?.sex ?? "m"}`),
   noop = (A) => {};
 
 function dutyImageKey(A, n, e = !1) {
@@ -35127,7 +35149,7 @@ function buildOpeningReckoning(game, { live = false } = {}) {
   const spec = OPENINGS.find((o) => o.id === game?.openingId);
   if (!spec) return { spec: null, standing: null, danger: [], changes: [], audience: [], routine: [] };
   const rolls = game.openingRolls || [];
-  const byName = (name) => game.people?.find((p) => p.name === name);
+  const byName = (name) => game.people?.find((p) => sameHouse(p.name, name));
   const rows = [];
   for (const [name, inherited] of spec.pressures || []) {
     const person = byName(name);
@@ -35322,7 +35344,7 @@ function openingMachinery(game, visual) {
   const tempered = [];
   if (game.openingFaith && OPENING_FAITH[spec.id]?.line) {
     const faith = OPENING_FAITH[spec.id],
-      who = game.people?.find((p) => p && p.name === faith.set?.[0]?.[0]),
+      who = game.people?.find((p) => p && sameHouse(p.name, faith.set?.[0]?.[0])),
       line = faith.line.replace(/^The temper:\s*/, "");
     if (who) tempered.push(who);
     flavor.push({
@@ -36812,7 +36834,7 @@ function Court() {
   const sealGuard = useRef(null);
   const A = useMemo(() => loadSaved(SAVE_KEY), []),
     [game2, e] = useState(() => {
-      const g = A?.game?.people ? A.game : newReign();
+      const g = syncGarrisons(A?.game?.people ? A.game : newReign());
       for (const law of g.laws || []) {
         if (law.key === "Capital|calamity-fire" && law.title === "Bucket brigade") law.title = "Market lodging service";
       }
@@ -37963,7 +37985,7 @@ const EP_NAMES = {
     short: "the Remembrancery",
     title: "Remembrancer",
   },
-  "Commander Garran": {
+  "Captain Garran": {
     e: "Soldier",
     r: "Capital",
     body: "the Constabulary of the Barbican",
@@ -39922,6 +39944,7 @@ const SOLO_MATTERS = {
       const duty = law ? dutyNameInSentence(dutyTitleOf(law)) : "the works";
       if (!choice) {
         if (law) delete law.bulwark;
+        syncGarrisons(g);
         return `${hallName(g.people[m.a])} rides back with the recall. The bulwark on ${duty} stands down without incident.`;
       }
       if (keep && law?.bulwark) {
@@ -39932,6 +39955,7 @@ const SOLO_MATTERS = {
         const others = qRaw(g, law).filter((x) => x.id !== p.id);
         for (const other of others) addPressure(other, CONFIG.bulwarkMutinyPressure);
         delete law.bulwark;
+        syncGarrisons(g);
       }
       addGrievance(g, "Realm|Soldier", CONFIG.bulwarkMutinyG);
       return `The west stair gives way at dawn and the garrison mutinies. The bulwark on ${duty} breaks, the other bearers on the roll take ${CONFIG.bulwarkMutinyPressure} pressure, and the soldiers gain ${CONFIG.bulwarkMutinyG} grievance.`;
