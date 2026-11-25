@@ -39268,6 +39268,7 @@ function HallOption({ game, v, o, onRule }) {
         sc.tag && jsx(BranchHead, { br: sc }),
         ...(sc.lead || []).map((t, j) => jsx("p", { class: "hall-wrong-head", children: [hallTile(t.icon), jsx("span", { class: "hall-tag", children: t.tag })] }, `l${j}`)),
         (sc.notes || sc.note) && jsx(HallTerms, { terms: (sc.notes || [sc.note]).map((x) => (typeof x === "string" ? { text: x } : x)) }),
+        sc.rows?.length > 0 && jsx(EffectRows, { rows: shortRows(sc.rows, game) }),
       ] }, `sc${k}`)),
       jsx(HallTerms, { terms: [...(preview?.rows || o.rows || []).filter((r) => r.term), ...terms] }),
       rowsFirst && jsx(EffectRows, { rows: shortRows(withOfficeTags(game, (preview?.rows || o.rows).filter((r) => !r.term)), game) }),
@@ -40282,18 +40283,38 @@ const SOLO_MATTERS = {
         lede: `${hallName(witness)} has come alone, Vicar. The households sharing the common stint in the ${h.region} want one more week of work together before any of them is eased${law ? ` on ${duty}` : ""}.`,
         a: {
           name: hallName(witness), estate: witness.type, region: witness.region, id: witness.id,
-          plea: `One more week together and we’ve earned the lighter roll on ${duty}. But if we share the loads again, look whose load we’ll all be taking—${name} stands at ${fmtNum(mostPressed.pressure)} pressure.`,
+          plea: `One more week together and we’ve earned the lighter roll on ${duty}. But if we share the loads again, look whose load we’ll all be taking. ${name} is ${strainWords(mostPressed)}.`,
         },
-        options: [
-          {
-            label: "End the stint", note: "Stop pooling and forfeit accumulated weeks.",
-            consequence: `Dissolves the common stint in the ${h.region}, stopping pressure pooling and forfeiting the weeks earned toward lightening ${duty}.`, rows: [],
-          },
-          {
-            label: "Finish together", note: "Keep the stint for the coming close.",
-            consequence: `Keeps pooling in force (at current loads, the ${h.region}’s commoners would share ${fmtNum(mean)} pressure each). You still have this week’s docket to ease ${name} or keep duties staffed before the close.`, rows: [],
-          },
-        ],
+        options: (() => {
+          const stint = game.compacts?.[h.region + "|Commoner"]?.stint, earned = stint?.weeks || 0,
+            pooled = Math.round(mean * 100) / 100,
+            // at the close each commoner's pressure is pooled to the mean; three such weeks, none urgent, earn the dividend
+            pool = members.filter((p) => Math.abs((p.pressure || 0) - pooled) > 1e-6).map((p) => personFx(p, pooled - (p.pressure || 0), 0, pooled > (p.pressure || 0) ? "down" : "up")),
+            divd = members.filter(() => pooled > 0).map((p) => ({ ...personFx({ ...p, pressure: pooled }, -CONFIG.stintDividendRelief, 0, "up"), id: p.id })),
+            cut = law ? Math.min(CONFIG.stintDividendUnits, law.requirement - 2) : 0,
+            halves = (x) => (x % 1 ? `${Math.floor(x) || ""}½` : `${x}`);
+          return [
+            {
+              label: "End the stint", note: "Stop pooling and forfeit accumulated weeks.",
+              consequence: "", rows: [],
+              terms: [{ text: `The common stint in the ${h.region} ends.`, icon: "chain",
+                pop: `The commoners of the ${h.region} no longer share their pressure, and the ${earned === 1 ? "week" : `${mmNum(earned)} weeks`} earned toward the stint’s dividend are lost.` }],
+            },
+            {
+              label: "Finish together", note: "Keep the stint for the coming close.",
+              consequence: "", rows: [],
+              scope: { lead: [{ tag: "1 week", icon: "hourglass" }],
+                note: `At the week’s close the commoners of the ${h.region} share their pressure.`,
+                rows: pool },
+              branches: [
+                { lead: [], tile: "check", tag: `No ${h.region} commoner is urgent`,
+                  pop: `The stint’s third week is earned, and its dividend paid: every commoner of the ${h.region} is eased ${CONFIG.stintDividendRelief}${law && cut > 0 ? `, and ${duty} requires ${halves(cut)} unit less` : ""}.`,
+                  note: law && cut > 0 ? `${capFirst(duty)} requires ${halves(cut)} unit less.` : null,
+                  rows: divd },
+              ],
+            },
+          ];
+        })(),
       };
     },
     apply(g, m, choice) {
