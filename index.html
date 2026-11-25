@@ -40555,11 +40555,20 @@ const SOLO_MATTERS = {
           {
             label: "Keep the march abroad", note: "Let the home watch decide at week’s close.",
             consequence: "", rows: [],
-            terms: [{ text: `${name} serves abroad another week, if the ${h.region} watch is kept at home.`, icon: "swords" }],
-            branches: [
-              { tile: "check", tag: "If it is kept", note: "The soldiers win relief.", rows: [] },
-              { tile: "wrong", tag: "If it falls short", note: `A border raid strikes the ${h.region}: its soldiers are left the shorter, and their grievance grows.`, rows: [] },
-            ],
+            // the march stands as it is; what the week's close decides is whether the watch at home holds
+            scope: { lead: [{ tag: "1 week", icon: "hourglass" }], notes: [`The ${h.region} watch is kept at home.`],
+              pop: `While ${name} serves abroad, each week’s close asks whether the soldiers’ need in the ${h.region} is met by those at home.` },
+            branches: (() => {
+              // half a pip does not show on the pips, so the soldiers' ease is told in a line
+              const half = CONFIG.levyMarchRelief % 1 ? `${Math.floor(CONFIG.levyMarchRelief) || ""}½` : `${CONFIG.levyMarchRelief}`;
+              return [
+                { tile: "check", tag: "Watch kept", note: `Every soldier is eased ${half} pressure.`,
+                  rows: [estateRow(game, "Realm|Soldier", -CONFIG.levyMarchGrievance)].filter(Boolean) },
+                { tile: "wrong", tag: "Watch falls short",
+                  note: `A border raid strikes the ${h.region}, and its soldiers’ need falls ${mmNum(CONFIG.levyMarchRaid)} steps.`,
+                  rows: [estateRow(game, "Realm|Soldier", CONFIG.levyMarchRaidG)].filter(Boolean) },
+              ];
+            })(),
           },
         ],
       };
