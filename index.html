@@ -38773,7 +38773,7 @@ function hallKindTerms(game, hall, o, A, B, W, L) {
   if (kind === "facts" && o.finds)
     return [];
   if (!W) return [];
-  if (kind === "estates") return [{ tag: "Read as law", icon: "crown", text: `The ${hall.region} takes this for the law itself`, stone: "bronze", rest: "Neither house’s own regard changes." }];
+  if (kind === "estates") return [{ tag: "Read as law", icon: "crown", text: `The ${hall.region} takes this for the law itself`, stone: "bronze" }];
   if (kind === "facts") return [];
   if (kind === "needs") {
     const sh = hallNeedShift(game, hall, o.win);
