@@ -40504,9 +40504,9 @@ const SOLO_MATTERS = {
                 { tile: "check", tag: "If kept", rows: [
                   ...(official.pressure > 0 ? [personFx(official, -1, 0, "up")] : []),
                   estateRow(game, "Realm|Official", -1),
-                  ...(gain > 0 ? [{ term: true, text: `The registry’s precedent covers ${halves(gain)} more unit of ${duty} (${halves(cover(c0))} now, ${halves(cover(c0 + 2))} after).`, icon: "scroll" }] : []),
+                  ...(gain > 0 ? [{ term: true, text: `The registry’s precedent covers ${halves(gain)} more unit of ${duty} (${halves(cover(c0))} now, ${halves(cover(c0 + 2))} after).` }] : []),
                 ].filter(Boolean) },
-                { tile: "wrong", tag: "If broken", flavor: "Each time it is broken.", rows: [
+                { tile: "wrong", tag: "Each time it is broken", rows: [
                   personFx(official, CONFIG.codifyFriction + 1, 0, "down"),
                   estateRow(game, "Realm|Official", 1),
                 ].filter(Boolean) },
