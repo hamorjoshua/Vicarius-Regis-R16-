@@ -38225,7 +38225,8 @@ const HALL_MATTERS = [
     pa: (A, B) => `My mother has sent the wedding cup. My father says it is to stay in its case until both our names are on that roll. Grant ${hallName(B)} letters of nobility, Vicar, so we may wed.`,
     options: [
       { label: "Grant the title and bless the wedding", ennoble: true, done: (A, B) => `The clerk enters ${hallName(B)} on the noble roll and records the marriage. ${hallName(A)} sends word to have the wedding cup polished for the feast.` },
-      { label: "Refuse the title and call off the wedding", done: (A, B) => `${hallName(A)} returns the cup to its case. The clerk strikes the proposed marriage to ${hallName(B)} from the roll.` },
+      // refused, the match is forbidden as a petition forbids one: both houses think the worse of the court
+      { label: "Refuse the title and call off the wedding", both: -1, done: (A, B) => `${hallName(A)} returns the cup to its case. The clerk strikes the proposed marriage to ${hallName(B)} from the roll.` },
     ],
   },
   {
@@ -44062,7 +44063,7 @@ function hallView(game, hall = game.hall) {
         label: typeof o.label === "function" ? o.label(A, B) : o.label,
         consequence: hall.matter === "marriageRank"
           ? o.ennoble ? ""
-            : "The wedding is called off. Both houses keep their present ranks."
+            : ""
           : "",
         terms: hall.matter === "marriageRank" && o.ennoble ? [
             { marks: [estateIcon(B.type, B.region), "fleur"], text: `${hallName(B)} enters the nobility.`,
@@ -44104,7 +44105,7 @@ function hallView(game, hall = game.hall) {
           ...hallKin(game, L.id).filter((k) => k !== W.id).map((k) => personFx(game.people[k], 0, -CONFIG.hallRegard, "down", { what: `kin by marriage to ${hallName(L)}` })),
           estateRow(game, constituencyOf(L), 1),
         ].filter(Boolean) : null,
-        note: o.ennoble ? "The spouse is raised to noble rank." : o.both ? "Both houses gain one regard." : o.regardA || o.regardB ? `${hallName(o.regardA ? A : B)} gains one regard.` : W && kind === "estates"
+        note: o.ennoble ? "The spouse is raised to noble rank." : o.both ? (o.both > 0 ? "Both houses gain one regard." : "Both houses lose one regard.") : o.regardA || o.regardB ? `${hallName(o.regardA ? A : B)} gains one regard.` : W && kind === "estates"
           ? `A ruling for the ${constituencyLabel(constituencyOf(W))} against the ${constituencyLabel(constituencyOf(L))}.`
           : W
           ? `${hallName(W)} thinks better of the court; ${hallName(L)} thinks worse of it.`
@@ -44154,7 +44155,7 @@ function hallEffects(game, hall, o, A, B, W, L) {
   // the two parties keep their places, the first party first
   at(A), at(B);
   for (const [p, regard] of [[A, o.both || o.regardA], [B, o.both || o.regardB]]) {
-    if (regard) { at(p).dr += regard; at(p).tone = "up"; }
+    if (regard) { at(p).dr += regard; at(p).tone = regard > 0 ? "up" : "down"; }
   }
   if (W && HALL_KIND[hall.matter] !== "estates") {
     const w = at(W), l = at(L);
