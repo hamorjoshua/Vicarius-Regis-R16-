@@ -39727,14 +39727,14 @@ function standingRow(game, d) {
   const net = (c.standing ?? CONFIG.standingMax) + (c.reserve || 0) - st - rv;
   return { plain: true, seals: { value: st, projected: c.standing ?? CONFIG.standingMax, reserve: rv, label: `${net >= 0 ? "+" : "−"}${Math.abs(net)}` } };
 }
-// The court's word as two boxes: what the household does while it waits, for the span; then the
-// court's own word, its span, and what keeping it takes.
+// The court's word as one box: the envelope and its name, its span, then what it means while it
+// stands: the household attends and causes no breaches, and the court must hear it or settle.
 function undertakingScopes(waiting) {
-  const wName = hallName(waiting), span = [{ tag: `${CONFIG.undertakingWeeks} week${CONFIG.undertakingWeeks === 1 ? "" : "s"}`, icon: "hourglass" }];
-  return [
-    { lead: span, notes: [`${wName} attends every audience.`, `${wName} causes no breaches while waiting.`] },
-    { tile: "letter", tag: "The court’s word", lead: span, notes: [`Hear ${wName}, or settle ${prn(waiting).pos} grievance.`] },
-  ];
+  const wName = hallName(waiting), weeks = CONFIG.undertakingWeeks;
+  return [{
+    tile: "letter", tag: "The court’s word", lead: [{ tag: `${weeks} week${weeks === 1 ? "" : "s"}`, icon: "hourglass" }],
+    notes: [`${wName} attends every audience.`, `${wName} causes no breaches while waiting.`, `Hear ${wName}, or settle ${prn(waiting).pos} grievance.`],
+  }];
 }
 // The court's word given to a household, as the game settles it at the deadline: what the household
 // and the court each undertake, and what comes of it kept or broken.
