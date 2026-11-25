@@ -39766,13 +39766,13 @@ function standingRow(game, d) {
   const net = (c.standing ?? CONFIG.standingMax) + (c.reserve || 0) - st - rv;
   return { plain: true, seals: { value: st, projected: c.standing ?? CONFIG.standingMax, reserve: rv, label: `${net >= 0 ? "+" : "−"}${Math.abs(net)}` } };
 }
-// The court's word as two boxes: first what holds while the household waits, for the span (and
-// anything else that holds meanwhile, such as an open charge); then the court's word itself.
-function undertakingScopes(waiting, extra = []) {
+// The court's word as two boxes: first what holds while the household waits, for the span; then
+// the court's word itself.
+function undertakingScopes(waiting) {
   const wName = hallName(waiting), weeks = CONFIG.undertakingWeeks,
     span = [{ tag: `${weeks} week${weeks === 1 ? "" : "s"}`, icon: "hourglass" }];
   return [
-    { lead: span, notes: [`${wName} attends every audience.`, `${wName} causes no breaches while waiting.`, ...extra.map((t) => t.text)] },
+    { lead: span, notes: [`${wName} attends every audience.`, `${wName} causes no breaches while waiting.`] },
     { tile: "letter", tag: "The court’s word", lead: span, notes: [`Hear ${wName}, or settle ${prn(waiting).pos} grievance.`] },
   ];
 }
@@ -39793,7 +39793,7 @@ function undertakingParts(game, waiting, by, busy, extra = []) {
   return {
     consequence: "", rows: [],
     terms: null,
-    scopes: undertakingScopes(waiting, extra),
+    scopes: undertakingScopes(waiting),
     branches: [
       { tile: "check", tag: "Court’s word kept", rows: [...(keptNet ? [seals(kept)] : []), ...(by && by !== waiting && by.pressure > 0 ? [personFx(by, -1, 0, "up")] : [])] },
       { tile: "wrong", tag: "Court’s word broken", rows: [
