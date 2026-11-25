@@ -40303,14 +40303,19 @@ const SOLO_MATTERS = {
             {
               label: "Finish together", note: "Keep the stint for the coming close.",
               consequence: "", rows: [],
-              scope: { lead: [{ tag: "1 week", icon: "hourglass" }],
-                note: `At the week’s close the commoners of the ${h.region} share their pressure.`,
-                rows: pool },
+              // the terms the stint must meet this week; the sharing itself is shown in what comes of it
+              scope: { tile: "handshake", tag: "Compact", lead: [{ tag: "1 week", icon: "hourglass" }],
+                notes: [`No ${h.region} commoner ends the week urgent.`, `Every ${h.region} duty keeps someone other than a commoner on its roll.`],
+                pop: `The commoners of the ${h.region} share their pressure at each week’s close, so all end the week at the same level. A third week kept in a row pays the stint’s dividend.` },
               branches: [
-                { lead: [], tile: "check", tag: `No ${h.region} commoner is urgent`,
-                  pop: `The stint’s third week is earned, and its dividend paid: every commoner of the ${h.region} is eased ${CONFIG.stintDividendRelief}${law && cut > 0 ? `, and ${duty} requires ${halves(cut)} unit less` : ""}.`,
+                { tile: "check", tag: "Compact kept",
                   note: law && cut > 0 ? `${capFirst(duty)} requires ${halves(cut)} unit less.` : null,
-                  rows: divd },
+                  rows: members.map((p) => personFx(p, Math.max(0, pooled - CONFIG.stintDividendRelief) - (p.pressure || 0), 0, "up"))
+                    .filter((r) => r.pressure && Math.abs(r.pressure.to - r.pressure.from) > 1e-6) },
+                // broken, the sharing still happens; shown only when it moves someone
+                ...(pool.length ? [{ tile: "wrong", tag: "Compact broken",
+                  pop: `The pressure is still shared, but the count toward the dividend starts again from nothing.`,
+                  rows: pool }] : []),
               ],
             },
           ];
