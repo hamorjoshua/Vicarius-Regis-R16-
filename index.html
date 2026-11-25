@@ -42775,7 +42775,7 @@ const SOLO_MATTERS = {
           consequence: "", rows: [],
           branches: [
             // the court gains standing only if the host ends the week short of urgent; otherwise nothing more happens
-            { tile: "check", tag: `If ${prn(sponsor).sub} stays short of urgent`, rows: [standingRow(game, 1)],
+            { lead: [{ tag: "1 week", icon: "hourglass" }], tile: "check", tag: `${hallName(sponsor)} stays short of urgent`, rows: [standingRow(game, 1)],
               flavor: "The table holds.",
               pop: `${hallName(sponsor)} must end the week, after the supper and the week’s other burdens, with fewer than ${mmNum(CONFIG.urgent)} pressure. Otherwise the court gains nothing.` },
           ],
