@@ -29516,6 +29516,18 @@ function PetitionCard({
           ),
         ],
       }),
+      // the rings' note hangs from the rings, as a ribbon's hangs from its ribbon
+      v?.key === "wed" && (() => {
+        const wed = hallKin(game2, person.id).map((x) => householdName(game2.people[x]));
+        return wed.length ? jsx("div", {
+          class: "pc-rib-pop pc-wed-pop", role: "note", style: `top:${v.top}px`,
+          onPointerDown: (j) => j.stopPropagation(), onClick: (j) => j.stopPropagation(),
+          children: [
+            jsx("p", { children: `${householdName(person)} is married to ${wed.join(" and ")}.` }),
+            jsx("p", { children: "Whenever the court rules against either house in the hall, the other loses 1 regard too, and the two are never set against each other there." }),
+          ],
+        }) : null;
+      })(),
       (() => {
         const open = v && view.ribbons.find((B) => B.key === v.key);
         return (
@@ -29569,13 +29581,19 @@ function PetitionCard({
                   // a married house wears the rings beside its name
                   (() => {
                     const wed = hallKin(game2, person.id).map((k) => householdName(game2.people[k]));
-                    // tapped, the rings say whom the house is married to, under the meters as the regard note does
+                    // tapped, the rings say whom the house is married to, in a note hung just under them
+                    const toggle = (B) => {
+                      B.stopPropagation(); B.preventDefault();
+                      if (v?.key === "wed") return k(null);
+                      const r = B.currentTarget.getBoundingClientRect(), card = B.currentTarget.closest(".petition-card").getBoundingClientRect();
+                      k({ key: "wed", top: Math.round(r.bottom - card.top + 8) });
+                    };
                     return wed.length ? jsx("span", {
-                      class: `pc-wed${rowNote === "wed" ? " open" : ""}`, role: "button", tabIndex: 0,
-                      "aria-label": `Wed to ${wed.join(" and ")}`, "aria-expanded": rowNote === "wed",
+                      class: `pc-wed${v?.key === "wed" ? " open" : ""}`, role: "button", tabIndex: 0,
+                      "aria-label": `Wed to ${wed.join(" and ")}`, "aria-expanded": v?.key === "wed",
                       onPointerDown: (B) => { B.stopPropagation(); },
-                      onClick: (B) => { B.stopPropagation(); B.preventDefault(); setRowNote(rowNote === "wed" ? null : "wed"); },
-                      onKeyDown: (B) => { if (B.key === "Enter" || B.key === " ") { B.stopPropagation(); B.preventDefault(); setRowNote(rowNote === "wed" ? null : "wed"); } },
+                      onClick: toggle,
+                      onKeyDown: (B) => { if (B.key === "Enter" || B.key === " ") toggle(B); },
                     }) : null;
                   })(),
                 ],
@@ -29715,13 +29733,6 @@ function PetitionCard({
               claim: withSolved("claim", claim && [claim.text]),
               move: withSolved("move", moveText && [moveText]),
               regard: view.regardSpan && regardNote(view, person),
-              wed: (() => {
-                const wed = hallKin(game2, person.id).map((k) => householdName(game2.people[k]));
-                return wed.length ? [
-                  `${householdName(person)} is married to ${wed.join(" and ")}.`,
-                  `Whenever the court rules against either house in the hall, the other loses 1 regard too, and the two are never set against each other there.`,
-                ] : null;
-              })(),
               garrison: (() => {
                 const law = (game2.laws || []).find((l) => l.active && l.bulwark?.soldierId === person.id);
                 if (!law) return null;
