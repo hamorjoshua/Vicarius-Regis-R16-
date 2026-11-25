@@ -38747,10 +38747,10 @@ function soloDiffRows(before, after, hall, spills = {}) {
     return score > 0 ? "up" : score < 0 ? "down" : null;
   };
   const single = (e) => ({
-    what: spills[e.p0.id] ? `already at ${(e.p0.regard ?? 0) > 0 ? "+" : "−"}${Math.abs(e.p0.regard ?? 0)} regard, so ${spills[e.p0.id] > 0 ? "eased" : "pressed"} by ${Math.abs(spills[e.p0.id])} pressure instead` : undefined,
+    what: spills[e.p0.id] ? `regard is already at its ${spills[e.p0.id] > 0 ? "highest" : "lowest"}, so ${Math.abs(spills[e.p0.id])} pressure is ${spills[e.p0.id] > 0 ? "eased" : "added"} instead; the pips show the change in all` : undefined,
     tone: tone(e), icon: estateIcon(e.p0.type, e.p0.region), id: e.p0.id, who: hallName(e.p0),
     pressure: e.dp ? { from: e.p0.pressure || 0, to: e.p1.pressure || 0 } : null,
-    regard: e.dr ? { from: e.p0.regard ?? 0, to: e.p1.regard ?? 0 } : null,
+    regard: e.dr ? { from: e.p0.regard ?? 0, to: e.p1.regard ?? 0 } : spills[e.p0.id] ? { from: e.p0.regard ?? 0, to: e.p1.regard ?? 0, dir: Math.sign(spills[e.p0.id]) } : null,
     faith: e.dd || e.ds ? [
       ...(e.dd ? [{ which: "devotion", from: devotionOf(e.p0), to: devotionOf(e.p1) }] : []),
       ...(e.ds ? [{ which: "superstition", from: superstitionOf(e.p0), to: superstitionOf(e.p1) }] : []),
@@ -44271,8 +44271,8 @@ function EffectRows({ rows }) {
                           children: [
                             jsx("span", { class: "fx-regard-label", children: "Regard" }),
                             jsx(RegardGraph, { value: r.regard.to }),
-                            r.regard.to !== r.regard.from &&
-                              jsx("span", { class: `fx-regard-mark ${r.regard.to > r.regard.from ? "up" : "down"}`, children: r.regard.to > r.regard.from ? "▲" : "▼" }),
+                            (r.regard.to !== r.regard.from || r.regard.dir) &&
+                              jsx("span", { class: `fx-regard-mark ${(r.regard.dir || r.regard.to - r.regard.from) > 0 ? "up" : "down"}`, children: (r.regard.dir || r.regard.to - r.regard.from) > 0 ? "▲" : "▼" }),
                           ],
                         }),
                     ],
