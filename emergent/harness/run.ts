@@ -80,17 +80,19 @@ if (cmd === 'chronicle') {
 if (cmd === 'measures') {
   const years = Number(a1 ?? 30), seeds = (a2 ?? '1,2,3,4').split(',').map(Number);
   const runs = seeds.map(seed => {
+    const land: number[][] = [];
     const yearText: string[] = [], forms = new Map<string, number>(), atEnd = new Map<string, number>();
     let buf: string[] = [];
     const out = watch(years, seed, s => {
       for (const r of s.log) if (r.k !== 'make') buf.push(`${r.k}:${r.kind}:${r.need}:${r.q2 ? 1 : 0}`);
       if (s.t % 52 === 0) {
         yearText.push(buf.join(' ')); buf = [];
+        land.push([...STOCKS.map((_k, i) => s.cells.reduce((x, c) => x + c.stock[i]!, 0)), s.cells.reduce((x, c) => x + c.soil, 0) / s.cells.length]);
         atEnd.clear();
         for (const b of s.bonds) { const f = form(s, b.id); if (!forms.has(f)) forms.set(f, s.t / 52); atEnd.set(f, (atEnd.get(f) ?? 0) + 1); }
       }
     });
-    return { seed, yearText, forms, atEnd, ...out };
+    return { seed, yearText, forms, atEnd, land, ...out };
   });
   console.log(`Measures over ${seeds.length} realms of ${years} years\n`);
   console.log('| Seed | ms a week | Peak | Trough | Fall | Years falling | End |');
@@ -135,6 +137,14 @@ if (cmd === 'measures') {
   console.log('\nBeliefs (year first held in each realm; houses that came to it themselves / were told it; houses holding it at the end):');
   const allB = new Set(runs.flatMap(r => [...r.R.beliefs.keys()]));
   for (const k of [...allB].sort()) console.log(`  ${k === 'house:' ? 'that some named house brings harm' : beliefWords(k)}: first in year ${runs.map(r => (r.R.beliefs.has(k) ? year(r.R.beliefs.get(k)!.first) : '-')).join(', ')}; ${runs.map(r => { const b = r.R.beliefs.get(k); return b ? `${b.own}/${b.told}` : '0/0'; }).join(', ')}; at the end ${runs.map(r => r.s.bodies.filter(b => b.alive && Object.entries(b.lore).some(([sg, v]) => v > 0.5 && (k === 'house:' ? sg.startsWith('house:') : sg === k))).length).join(', ')}`);
+  // The land: what stands on it at each tenth year, mean of the realms, and the floods of each ten years.
+  console.log('\nThe land at the end of each tenth year (sum over all cells, mean of the realms):');
+  const tens = Array.from({ length: Math.floor(years / 10) }, (_x, i) => (i + 1) * 10);
+  const mean = (f: (r: (typeof runs)[number]) => number): number => runs.reduce((x, r) => x + f(r), 0) / runs.length;
+  console.log(`  | | year 1 | ${tens.map(t => 'year ' + t).join(' | ')} |`);
+  [...STOCKS.map(k => k.id), 'soil (mean)'].forEach((name, i) => console.log(`  | ${name} | ${[1, ...tens].map(t => { const v = mean(r => r.land[t - 1]![i]!); return v < 10 ? v.toFixed(2) : Math.round(v); }).join(' | ')} |`));
+  console.log(`  | floods in the ten years to | - | ${tens.map(t => mean(r => r.R.events.filter(e => e.shape === 'flood' && e.t0 >= (t - 10) * 52 && e.t0 < t * 52).length).toFixed(1)).join(' | ')} |`);
+
   // Customs: what half or more of a body's houses hold, at the end.
   console.log('\nCustoms standing at the end (bodies in which half or more of the houses hold it), by realm:');
   const customs = runs.map(r => {

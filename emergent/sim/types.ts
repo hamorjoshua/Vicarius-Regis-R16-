@@ -6,6 +6,8 @@ export interface Cell {
   soil: number; soil0: number;
   wet: number;
   water: number;
+  /** The water that ran through this week, what the channel carries before it floods, and how far over it ran. */
+  flow: number; bank: number; flood: number;
   /** How well this cell can bear each living or lying thing. */
   pot: number[];
   stock: number[];

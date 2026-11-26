@@ -49,6 +49,8 @@ export class Readers {
   private strife = new Map<string, Strife>();
   private moves: { t: number; body: number; to: number }[] = [];
   private stripped = new Map<number, { full: boolean; bare: boolean }>();
+  private floods = new Map<number, { lost: number; cells: Set<number>; first: number }>();
+  eaten: number[] = [];
   private gathered: number[] = [];
   private withered: number[] = [];
   private words = { promise: [] as number[], keep: [] as number[], break: [] as number[] };
@@ -67,7 +69,10 @@ export class Readers {
         if (r.b < 0) return `house ${r.a} gathered ${kind} from ground others hold at ${place(this, r.cell)}`;
         if (r.need >= 0) return `house ${r.a}, in want of ${need}, took ${kind} from house ${r.b}`;
         return `house ${r.a} ${r.q2 ? 'fought house ' + r.b + ' for' : 'seized from house ' + r.b} the ${kind} it was owed`;
-      case 'decay': return `cold withered the ${STOCKS[r.kind2]!.id} at ${place(this, r.cell)}`;
+      case 'decay':
+        if (r.q2 === 1) return r.kind2 >= 0 ? `flood water carried off the ${STOCKS[r.kind2]!.id} at ${place(this, r.cell)}` : `flood water spoiled the stores of house ${r.a}`;
+        if (r.q2 === 2) return `${STOCKS[r.kind2]!.id} ate the ${kind} laid by at ${place(this, r.cell)}`;
+        return `cold withered the ${STOCKS[r.kind2]!.id} at ${place(this, r.cell)}`;
       case 'break':
         if (r.q2) return `house ${r.a} went away still owing work to house ${r.b}`;
         return `house ${r.a} broke its word to repay ${kind} to house ${r.b}`;
@@ -167,6 +172,8 @@ export class Readers {
           this.emit({ t0: t, t1: t, name: 'new arrangement', shape: `way ${r.way}`, size: 1, cell: r.cell, who: [r.a, r.b], chain: [this.chain(r.cause).join(' ← ')].filter(Boolean), text: `Something new in the ${when(t)}: house ${r.a} gave house ${r.b} ${wayWords(r.way)}. Nobody in the realm had dealt so before.` });
         }
       }
+      else if (r.k === 'decay' && r.q2 === 1) { const f = this.floods.get(t) ?? { lost: 0, cells: new Set<number>(), first: r.id }; f.lost += r.q; f.cells.add(r.cell); this.floods.set(t, f); }
+      else if (r.k === 'decay' && r.q2 === 2) add(this.eaten, r.q);
       else if (r.k === 'decay') add(this.withered, r.q);
       else if (r.k === 'promise' || r.k === 'keep' || r.k === 'break') add(this.words[r.k], 1);
       else if (r.k === 'leave' && r.a < 0 && r.kind2 !== -4) this.emit({ t0: t, t1: t, name: 'house died out', shape: 'house died out', size: 1, cell: r.cell, who: [r.b], text: `House ${r.b} at ${place(s, r.cell)} died out in the ${when(t)} with no kin to take what it left.` });
@@ -176,7 +183,7 @@ export class Readers {
     if (t % 4 === 0) {
       for (let i = 0; i < s.cells.length; i++) for (let k = 0; k < St.length; k++) {
         const row = St[k]!;
-        if (row.sown || row.eats.length || (row.r <= 0 && row.self <= 0)) continue;
+        if (row.sown || row.eater || (row.r <= 0 && row.self <= 0)) continue;
         const K = bear(s.cells[i]!, k);
         if (K < 30) continue;
         const key = i * St.length + k, f = s.cells[i]!.stock[k]! / K;
@@ -191,6 +198,10 @@ export class Readers {
         this.stripped.set(key, st);
       }
     }
+
+    const fl = this.floods.get(t);
+    if (fl && fl.lost > 50) this.emit({ t0: t, t1: t, name: fl.cells.size > 4 ? 'great flood' : 'flood', shape: 'flood', size: Math.round(fl.lost), cell: [...fl.cells][0]!, who: [], text: `A flood in the ${when(t)}: water over the banks in ${fl.cells.size} places carried off ${Math.round(fl.lost)} of crop and stores.` });
+    this.floods.delete(t);
 
     // Flight: several houses leaving within a few weeks.
     const lastMove = this.moves[this.moves.length - 1];
@@ -208,6 +219,8 @@ export class Readers {
       else if (usual > 0 && g > 1.4 * usual) this.emit({ t0: t - 51, t1: t, name: 'great crop', shape: 'great crop', size: Math.round(g - usual), cell: -1, who: [], text: `Year ${y + 1} brought a great crop: ${Math.round(g)} gathered against ${Math.round(usual)} before.` });
       const w = this.withered[y] ?? 0;
       if (w > 0.1 * g && w > 100) this.emit({ t0: t - 51, t1: t, name: 'crop lost to cold', shape: 'crop lost to cold', size: Math.round(w), cell: -1, who: [], text: `In year ${y + 1} the cold took ${Math.round(w)} of what stood in the fields, against ${Math.round(g)} brought in.` });
+      const ea = this.eaten[y] ?? 0;
+      if (ea > 0.05 * g && ea > 200) this.emit({ t0: t - 51, t1: t, name: 'year of vermin', shape: 'year of vermin', size: Math.round(ea), cell: -1, who: [], text: `In year ${y + 1} vermin ate ${Math.round(ea)} of what was laid by, against ${Math.round(g)} brought in.` });
       const br = this.words.break[y] ?? 0, kp = this.words.keep[y] ?? 0;
       if (br >= 5 && br > kp) this.emit({ t0: t - 51, t1: t, name: 'year of broken promises', shape: 'year of broken promises', size: br, cell: -1, who: [], text: `Year ${y + 1} was a year of broken promises: ${br} debts broken and ${kp} kept.` });
     }

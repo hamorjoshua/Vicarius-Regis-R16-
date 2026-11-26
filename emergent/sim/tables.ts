@@ -87,6 +87,10 @@ export interface StockRow {
   drain: number;
   /** What it feeds on, units a week for each unit of itself, and how fast it dies unfed. */
   eats?: Record<string, number>;
+  /** What it feeds on in people's stores. */
+  eatsStore?: Record<string, number>;
+  /** How much of the rain it holds back when it stands full; the share of it a flood carries off; what it adds to the soil; the share that wanders off each week toward better feeding. */
+  holds?: number; drowns?: number; dung?: number; roams?: number;
   starve?: number;
   /** The level at which a day's taking yields half its full rate. */
   thin: number;
@@ -97,12 +101,15 @@ export interface StockRow {
 }
 
 export const STOCKS: StockRow[] = [
-  { id: 'sward', cap: 320, r: 0.25, lo: 5, kill: 1, frost: 0.03, self: 2, soil: 0.5, wet: true, drain: 0, thin: 60, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0.6 },
-  { id: 'grove', cap: 1600, r: 0.02, lo: 5, kill: -99, frost: 0, self: 0.6, soil: 0.3, drain: 0, thin: 300, lies: { base: 0.1, low: 0, high: 1.1, water: 0 }, start: 0.7 },
-  { id: 'corn', cap: 1000, r: 0.2, lo: 6, kill: 1.5, frost: 0.3, self: 0, soil: 1.5, wet: true, drain: 0.00012, thin: 250, lies: { base: 0.15, low: 1, high: 0, water: 0 }, start: 0 },
-  { id: 'herd', cap: 0, r: 0.012, lo: -99, kill: -99, frost: 0, self: 0.05, soil: 0, drain: 0, eats: { sward: 0.5 }, starve: 0.06, thin: 6, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 12 },
+  { id: 'sward', holds: 0.35, drowns: 0.1, cap: 320, r: 0.25, lo: 5, kill: 1, frost: 0.03, self: 2, soil: 0.5, wet: true, drain: 0, thin: 60, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0.6 },
+  { id: 'grove', holds: 0.8, cap: 1600, r: 0.02, lo: 5, kill: -99, frost: 0, self: 0.6, soil: 0.3, drain: 0, thin: 300, lies: { base: 0.1, low: 0, high: 1.1, water: 0 }, start: 0.7 },
+  { id: 'corn', holds: 0.2, drowns: 0.5, cap: 1000, r: 0.2, lo: 6, kill: 1.5, frost: 0.3, self: 0, soil: 1.5, wet: true, drain: 0.00012, thin: 250, lies: { base: 0.15, low: 1, high: 0, water: 0 }, start: 0 },
+  { id: 'herd', dung: 0.0002, cap: 0, r: 0.012, lo: -99, kill: -99, frost: 0, self: 0.05, soil: 0, drain: 0, eats: { sward: 0.5 }, starve: 0.06, thin: 6, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 12 },
   { id: 'shoal', cap: 260, r: 0.08, lo: -99, kill: -99, frost: 0, self: 1, soil: 0, drain: 0, thin: 70, lies: { base: 0, low: 0, high: 0, water: 1 }, start: 0.7 },
   { id: 'vein', cap: 4000, r: 0, lo: -99, kill: -99, frost: 0, self: 0, soil: 0, drain: 0, thin: 200, lies: { base: 0, low: 0, high: 1, water: 0, rare: 3 }, start: 1 },
+  { id: 'pack', cap: 0, r: 0.01, lo: -99, kill: -99, frost: 0, self: 0.02, soil: 0, drain: 0, eats: { herd: 0.05 }, starve: 0.03, roams: 0.3, thin: 1, lies: { base: 0, low: 0, high: 1, water: 0 }, start: 0.5 },
+  { id: 'vermin', cap: 0, r: 0.08, lo: -99, kill: 0, frost: 0.15, self: 0.05, soil: 0, drain: 0, eatsStore: { grain: 0.2 }, starve: 0.1, roams: 0.2, thin: 1, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0.5 },
+  { id: 'blight', cap: 0, r: 0.25, lo: -99, kill: 2, frost: 0.5, self: 0.3, soil: 0, wet: true, drain: 0, eats: { corn: 0.3 }, starve: 0.4, roams: 0.3, thin: 1, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0 },
   { id: 'seep', cap: 40, r: 0, lo: -99, kill: -99, frost: 0, self: 2, soil: 0, drain: 0, thin: 10, lies: { base: 1, low: 0, high: 0, water: 0, rare: 2 }, start: 1 },
 ];
 
@@ -153,6 +160,8 @@ export const P = {
   rainMean: 14, rainSeason: 0.2, wetWeek: 46,
   skyPersist: 0.8, skyRealm: 0.6, skyQuarter: 0.4, skyCell: 0.2, sigmaT: 2, sigmaR: 0.42,
   wetKeep: 0.8, downhill: 0.15, soilMend: 0.012,
+  /** Soil a week's run of water carries off a bare slope; how many times its usual flow a channel carries before it floods. */
+  wash: 0.02, bankfull: 2.5,
 
   // A body's week
   days: 6, block: 2, reach: 2, travel: 0.15, dealReach: 4, carry: 0.004,
@@ -205,7 +214,7 @@ export const P = {
 // --- The tables compiled to indices, so that processes can loop without knowing a name ---
 
 export interface Kind { id: string; serves: number[]; use: number; keep: number; weight: number; fixed: boolean; aids: Record<string, number> }
-export interface Stock extends Omit<StockRow, 'eats'> { eats: [number, number][]; sown: boolean; reap: number; needs: number[] }
+export interface Stock extends Omit<StockRow, 'eats' | 'eatsStore'> { eats: [number, number][]; eatsStore: [number, number][]; eater: boolean; sown: boolean; reap: number; needs: number[] }
 export interface Recipe { id: string; from: [number, number][]; inp: [number, number][]; out: [number, number][]; to: [number, number][]; aid: string | null }
 
 const index = (rows: { id: string }[], what: string) => (id: string): number => {
@@ -229,7 +238,7 @@ export const Rc: Recipe[] = RECIPES.map(r => ({ id: r.id, from: pairs(r.from, st
 export const St: Stock[] = STOCKS.map((s, i) => {
   const reap = Rc.findIndex(r => r.from.some(([k]) => k === i));
   const needs = NEEDS.map((_, n) => n).filter(n => reap >= 0 && Rc[reap]!.out.some(([k]) => Kn[k]!.serves[n]! > 0));
-  return { ...s, eats: pairs(s.eats, stock), sown: Rc.some(r => r.to.some(([k]) => k === i)), reap, needs };
+  return { ...s, eats: pairs(s.eats, stock), eatsStore: pairs(s.eatsStore, kind), eater: !!s.eats || !!s.eatsStore, sown: Rc.some(r => r.to.some(([k]) => k === i)), reap, needs };
 });
 /** The kinds that give each help. */
 export const AIDERS: Record<string, number[]> = {};

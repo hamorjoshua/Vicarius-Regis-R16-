@@ -5,8 +5,8 @@ import { clamp, pow } from '../math.ts';
 import { draw, normal } from '../rng.ts';
 import { BY_HARM, NN, NS, P, St } from '../tables.ts';
 import { askAhead, cover } from '../value.ts';
-import { bond, holdsByCell, rec } from '../util.ts';
-import type { Cell, Person, State } from '../types.ts';
+import { bond, holdsByCell, near, rec } from '../util.ts';
+import type { Body, Cell, Person, State } from '../types.ts';
 
 /** What a cell can bear of one living or lying thing. */
 export function bear(c: Cell, k: number): number {
@@ -40,11 +40,13 @@ export function person(s: State, mother: Person | null, father: Person | null, b
 
 export function grow(s: State): void {
   const holds = holdsByCell(s);
+  const homes = new Map<number, Body[]>();
+  for (const b of s.bodies) if (b.alive && !b.parts.length) { const l = homes.get(b.home); if (l) l.push(b); else homes.set(b.home, [b]); }
   for (let i = 0; i < s.cells.length; i++) {
     const c = s.cells[i]!, temp = s.sky.temp[i]!;
     for (let k = 0; k < NS; k++) {
       const r = St[k]!;
-      if (r.eats.length) continue;
+      if (r.eater) continue;
       const x = c.stock[k]!, K = bear(c, k);
       if (K <= 0) { if (x > 0) c.stock[k] = x * 0.5; continue; }
       if (temp >= r.lo) {
@@ -62,18 +64,53 @@ export function grow(s: State): void {
     }
     for (let k = 0; k < NS; k++) {
       const r = St[k]!, x = c.stock[k]!;
-      if (!r.eats.length) continue;
-      if (x <= 0) { c.stock[k] = r.self * c.pot[k]!; continue; }
+      if (!r.eater) continue;
+      const thrives = r.wet ? Math.max(0, c.wet - 1.1) * 5 : 1;
+      if (x <= 0) { c.stock[k] = r.self * c.pot[k]! * Math.min(1, thrives); continue; }
+      if (temp < r.kill && r.frost > 0) { c.stock[k] = x * (1 - r.frost) < 0.05 ? 0 : x * (1 - r.frost); continue; }
       let fed = 1;
       for (const [prey, each] of r.eats) {
         const want = each * x, got = Math.min(want, c.stock[prey]! * 0.5);
         c.stock[prey] = c.stock[prey]! - got;
         fed = Math.min(fed, got / want);
       }
-      c.stock[k] = x * (1 + r.r * fed - (r.starve ?? 0) * (1 - fed)) + r.self * c.pot[k]! * fed;
+      // Some feed on what people have laid by.
+      for (const [kind, each] of r.eatsStore) {
+        const here = homes.get(i) ?? [];
+        let have = 0;
+        for (const b of here) have += b.store[kind]!;
+        const want = each * x, got = Math.min(want, have * 0.05);
+        if (have > 0) for (const b of here) b.store[kind] = b.store[kind]! * (1 - got / have);
+        fed = Math.min(fed, got / want);
+        if (got > 5) rec(s, 'decay', { cell: i, kind, q: got, kind2: k, q2: 2 });
+      }
+      c.stock[k] = x * (1 + r.r * fed * Math.max(thrives, 0.2) - (r.starve ?? 0) * (1 - fed)) + r.self * c.pot[k]! * fed * Math.min(1, thrives);
       if (c.stock[k]! < 0.05) c.stock[k] = 0;
+      if (r.dung) c.soil = Math.min(c.soil0 + 0.25, c.soil + r.dung * c.stock[k]!);
     }
     c.soil += (c.soil0 - c.soil) * P.soilMend;
+  }
+
+  // What feeds on other things wanders toward where there is more to feed on.
+  for (let k = 0; k < NS; k++) {
+    const r = St[k]!;
+    if (!r.roams) continue;
+    const fare = s.cells.map((c, i) => {
+      let f = 0;
+      for (const [prey] of r.eats) f += c.stock[prey]!;
+      for (const [kind] of r.eatsStore) for (const b of homes.get(i) ?? []) f += b.store[kind]!;
+      return f;
+    });
+    const was = s.cells.map(c => c.stock[k]!);
+    for (let i = 0; i < s.cells.length; i++) {
+      const x = was[i]!;
+      if (x < 0.5) continue;
+      let best = -1, bestF = (1.5 * fare[i]!) / (x + 1);
+      for (const j of near(s.side, i, 1)) { const f = fare[j]! / (was[j]! + 1); if (j !== i && s.cells[j]!.pot[k]! >= 0 && f > bestF) { bestF = f; best = j; } }
+      if (best < 0) continue;
+      s.cells[i]!.stock[k] = s.cells[i]!.stock[k]! - r.roams * x;
+      s.cells[best]!.stock[k] = s.cells[best]!.stock[k]! + r.roams * x;
+    }
   }
 
   // People: a child comes to a wedded pair when the house is fed and the mother is well.

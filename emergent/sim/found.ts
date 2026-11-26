@@ -6,6 +6,7 @@ import { draw } from './rng.ts';
 import { Kn, NK, NS, P, Rc, SERVING, St, BY_HARM, NEEDS } from './tables.ts';
 import { bear, person } from './processes/grow.ts';
 import { body } from './processes/gather.ts';
+import { route } from './processes/move.ts';
 import { bond, dist, near } from './util.ts';
 import { step } from './step.ts';
 import type { Cell, Person, State } from './types.ts';
@@ -42,7 +43,7 @@ export function found(seed: number, t0 = 0): State {
   for (let i = 0; i < n; i++) {
     const h = high[i]!, water = h <= wetLine ? clamp(0.5 + (wetLine - h) / wetLine, 0.5, 1) : 0;
     const soil0 = clamp(0.35 + 0.7 * (1 - h) + 0.12 * (u() - 0.5), 0.15, 1.1);
-    s.cells.push({ high: h, soil: soil0, soil0, wet: 1, water, pot: new Array<number>(NS).fill(0), stock: new Array<number>(NS).fill(0) });
+    s.cells.push({ high: h, soil: soil0, soil0, wet: 1, water, flow: 0, bank: 1, flood: 0, pot: new Array<number>(NS).fill(0), stock: new Array<number>(NS).fill(0) });
   }
   for (let k = 0; k < NS; k++) {
     const L = St[k]!.lies;
@@ -58,7 +59,11 @@ export function found(seed: number, t0 = 0): State {
     }
     for (let i = 0; i < n; i++) s.cells[i]!.pot[k] = pots[i]!;
   }
-  for (const c of s.cells) for (let k = 0; k < NS; k++) c.stock[k] = St[k]!.eats.length ? St[k]!.start * c.pot[k]! : St[k]!.start * bear(c, k);
+  for (const c of s.cells) for (let k = 0; k < NS; k++) c.stock[k] = St[k]!.eater ? St[k]!.start * c.pot[k]! : St[k]!.start * bear(c, k);
+
+  // Each channel is as wide as the water it usually carries.
+  const usual = route(s, () => 1).flow;
+  s.cells.forEach((c, i) => { c.bank = Math.max(0.3, usual[i]! * P.bankfull); });
 
   // Hamlets on the best dry ground, a few hearths in each.
   const sownBear = (c: Cell): number => { let b = 0; for (let k = 0; k < NS; k++) if (St[k]!.sown) b += bear(c, k); return b; };

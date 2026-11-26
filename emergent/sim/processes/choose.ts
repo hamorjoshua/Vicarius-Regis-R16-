@@ -57,7 +57,7 @@ function outlook(s: State, cell: number, i: number): number {
 function growth(s: State, L: Land, cell: number, st: number): number {
   const r = St[st]!, x0 = s.cells[cell]!.stock[st]!;
   if (x0 <= 0) return 1;
-  if (r.eats.length) {
+  if (r.eater) {
     let fed = 1;
     for (const [prey, each] of r.eats) fed = Math.min(fed, (s.cells[cell]!.stock[prey]! * 0.5) / (each * x0));
     return 1 + 4 * (r.r * fed - (r.starve ?? 0) * (1 - fed));
