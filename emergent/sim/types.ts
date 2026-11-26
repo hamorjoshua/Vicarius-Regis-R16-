@@ -97,6 +97,8 @@ export interface Bond {
   rec: number;
   /** The way of dealing it came from. */
   way: string;
+  /** For a debt that came of a taking: the body that truly did it, whoever it was laid to. */
+  doer: number;
 }
 
 /** One elementary happening. `k` is always the name of an act or a process, never of a situation. */
@@ -113,7 +115,13 @@ export interface Rec {
   way?: string;
 }
 
-export interface Wrong { by: number; to: number; kind: number; q: number; rec: number }
+export interface Wrong { by: number; to: number; kind: number; q: number; rec: number; doer: number }
+
+/** A matter before the court: who brings it, against whom, about which bond or want, and why it climbed this far. */
+export interface Petition { id: number; t: number; by: number; against: number; bond: number; need: number; rec: number; shape: string; reason: 'none' | 'clash' | 'challenge'; speaksFor: number; waited: number; urgency: number }
+/** A rule: a bond that binds every member of a body, or the whole realm (scope -1). */
+export interface Rule { id: number; scope: number; shape: string; cut: string; since: number; uses: number }
+export interface Court { standing: number; docket: Petition[]; rules: Rule[]; grief: Record<number, number>; seen: Record<string, number>; next: number; quiet: number }
 export interface Use { body: number; cell: number; days: number }
 
 export interface State {
@@ -128,6 +136,8 @@ export interface State {
   ties: Record<number, Record<number, number>>;
   sky: { aT: number[]; aR: number[]; temp: number[]; rain: number[] };
   wrongs: Wrong[];
+  /** The court, when there is one. */
+  court?: Court;
   uses: Use[];
   /** This week's records only. */
   log: Rec[];

@@ -15,9 +15,10 @@ import { kinOf } from './util.ts';
 import type { State } from './types.ts';
 
 /** One week, lived in place. The state given is changed and returned. */
-export function advance(s: State): State {
+export function advance(s: State, keepLog = false): State {
   const kinBefore = kinOf(s);
-  s.log = [];
+  // With a court, the week's record already holds the hearings.
+  if (!keepLog) s.log = [];
   sky(s, s);        // the forcing
   grow(s);
   make(s);

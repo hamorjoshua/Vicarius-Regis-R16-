@@ -188,7 +188,7 @@ export const P = {
   /** Growing weeks at the end of the season that nobody counts on. */
   prudence: 4,
   /** How strongly a holder waits for what is still growing. */
-  wait: 20,
+  waitFor: 20,
   /** A day's work must be worth at least this, or the day is rested. */
   rest: 0.002,
   /** Weeks of cover under which a body asks, and under which it will take. */
@@ -214,6 +214,10 @@ export const P = {
   /** Skill: what a day of a kind of work adds, the most it reaches, what it slips back to unused, and what a child starts with. */
   practise: 0.004, mastery: 1.6, rust: 0.002, green: 0.6,
   blame: 0.5, forget: 0.995, tell: 0.2, heed: 0.5, mind: 12,
+  /** The court: hearings a week, seats at the audience, weeks a matter waits before it is dropped, weeks a reign lasts. */
+  hearings: 3, seats: 6, wait: 13, reign: 156,
+  /** Harm laid at the court's door: by kind; the grievance at which a house has had enough; the share of houses that must have had enough for confidence to be withdrawn; how fast grievance fades. */
+  harmLost: 30, harmPaid: 12, harmUnheard: 5, harmReversed: 15, aggrieved: 40, faction: 0.12, griefFade: 0.98,
   /** Weeks a plan is held before it is given up as hopeless. */
   resolve: 26,
   patience: 0.9, margin: 1.05, concede: 0.33, stuck: 4,

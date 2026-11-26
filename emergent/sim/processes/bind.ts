@@ -45,7 +45,7 @@ export function bind(s: State): void {
   for (const w of s.wrongs) {
     if (w.q <= 0 || w.by === w.to) continue;
     const old = s.bonds.find(b => b.about === 'act' && b.basis === 'wrong' && b.a === w.by && b.b === w.to && b.kind === w.kind);
-    if (old) { old.q += w.q; old.strength = 1; } else bond(s, { about: 'act', a: w.by, b: w.to, kind: w.kind, q: w.q, due: s.t, basis: 'wrong', rec: w.rec });
+    if (old) { old.q += w.q; old.strength = 1; } else bond(s, { about: 'act', a: w.by, b: w.to, kind: w.kind, q: w.q, due: s.t, basis: 'wrong', rec: w.rec, doer: w.doer });
     warm(s, w.to, w.by, -0.4);
     for (const k of kin.get(w.to) ?? []) warm(s, k, w.by, -0.15);
     for (const n of served(w.kind)) s.bodies[w.to]!.why[n] = w.rec;

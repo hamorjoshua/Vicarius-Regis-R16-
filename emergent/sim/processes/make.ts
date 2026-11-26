@@ -89,7 +89,7 @@ export function make(s: State): void {
         }
         rec(s, 'blame', { a: hb.id, b: by, cell: j.w.cell, kind: first[0], q2: by === b.id ? 0 : 1, kind2: b.id, cause: e.id });
       }
-      s.wrongs.push({ by, to: h.a, kind: first[0], q: (first[1] * m * h.strength) / sum, rec: e.id });
+      s.wrongs.push({ by, to: h.a, kind: first[0], q: (first[1] * m * h.strength) / sum, rec: e.id, doer: b.id });
     }
   }
 }

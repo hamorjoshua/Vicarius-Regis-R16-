@@ -492,7 +492,7 @@ function deal(s: State, L: Land, cs: Map<number, Ctx>, kin: Map<number, Set<numb
     const q = amount(victim, vk) * struggle(s, kin, a, victim.b, e.id);
     e.q = q;
     victim.b.store[vk] = victim.b.store[vk]! - q; a.store[vk] = a.store[vk]! + q;
-    s.wrongs.push({ by: a.id, to: victim.b.id, kind: vk, q, rec: e.id });
+    s.wrongs.push({ by: a.id, to: victim.b.id, kind: vk, q, rec: e.id, doer: a.id });
   }
 }
 
@@ -522,7 +522,7 @@ function work(s: State, L: Land, c: Ctx): void {
         if (q * m > x * P.glean) m = (x * P.glean) / q;
         // What is still growing on one's own ground is worth leaving, unless the need is dire.
         const dire = r.out.some(([k]) => Kn[k]!.serves.some((sv, n) => sv > 0 && c.cov[n]! < P.dire && NEEDS[n]!.harm >= 0.5));
-        if (!dire && o.mine > 0 && !c.rush[st]) waitFor = Math.max(0, 1 - P.wait * (growth(s, L, o.cell, st) - 1) * o.mine);
+        if (!dire && o.mine > 0 && !c.rush[st]) waitFor = Math.max(0, 1 - P.waitFor * (growth(s, L, o.cell, st) - 1) * o.mine);
       }
       for (const [k, q] of r.inp) if (q * m > proj[k]!) m = proj[k]! / q;
       if (m <= 1e-6) continue;

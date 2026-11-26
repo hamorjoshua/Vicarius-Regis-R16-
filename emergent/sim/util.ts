@@ -89,7 +89,7 @@ export function holdsByCell(s: State): Map<number, Bond[]> {
 }
 
 export function bond(s: State, f: Partial<Bond> & Pick<Bond, 'about' | 'a' | 'basis'>): Bond {
-  const b: Bond = { id: s.nbond++, b: -1, cell: -1, kind: -1, q: 0, due: -1, labour: false, on: -1, share: 0, secures: -1, used: s.t - 999, strength: 1, since: s.t, broken: false, rec: -1, way: '', ...f };
+  const b: Bond = { id: s.nbond++, b: -1, cell: -1, kind: -1, q: 0, due: -1, labour: false, on: -1, share: 0, secures: -1, used: s.t - 999, strength: 1, since: s.t, broken: false, rec: -1, way: '', doer: -1, ...f };
   s.bonds.push(b);
   return b;
 }
