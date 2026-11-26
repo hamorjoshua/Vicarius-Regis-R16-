@@ -145,6 +145,8 @@ export const RECIPES: RecipeRow[] = [
 export const P = {
   side: 10,
   souls: 200,
+  /** Years lived through before the run begins, so that its people inherit a past. */
+  past: 30,
 
   // The sky
   tMean: 9.5, tAmp: 8, hotWeek: 28, upland: 3,

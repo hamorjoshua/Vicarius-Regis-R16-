@@ -32,7 +32,7 @@ export function person(s: State, mother: Person | null, father: Person | null, b
     temper: clamp(mid(x => x.temper, 0.5) + 0.25 * z(3), 0.05, 1.5),
     spacing: Math.round(clamp(mid(x => x.spacing, P.spacing) + 25 * z(4), 70, 260)),
     credulous: clamp(mid(x => x.credulous, 0.5) + 0.2 * u(5) - 0.1 + 0.15 * z(6), 0.1, 0.9), omen: -1,
-    bore: -999, blow: -1, blowAt: -999, fed: new Array<number>(NN).fill(1),
+    bore: s.t - 999, blow: -1, blowAt: s.t - 999, fed: new Array<number>(NN).fill(1),
   };
   s.people.push(p);
   return p;

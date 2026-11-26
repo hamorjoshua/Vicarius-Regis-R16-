@@ -115,6 +115,7 @@ export function gather(prev: State, s: State): void {
     nb.why = b.why.slice();
     nb.ways = structuredClone(b.ways);
     nb.lore = { ...b.lore };
+    nb.since = b.since;
     rec(s, 'leave', { a: pair.id, b: b.id, kind2: nb.id, q: going.length, cell: b.home });
   }
 

@@ -1,7 +1,7 @@
 // Watch the realm. Commands: years, chronicle, measures, hearth, cell (see the README).
 // Each runs a realm with no court. This file is a reader: it may name things; the rules may not.
 
-import { found } from '../sim/found.ts';
+import { inherit } from '../sim/found.ts';
 import { step } from '../sim/step.ts';
 import { KINDS, NEEDS, RECIPES, STOCKS } from '../sim/tables.ts';
 import { deflateSync } from 'node:zlib';
@@ -29,7 +29,7 @@ function tally(s: State, c: Record<string, number>): void {
 
 if (cmd === 'years') {
   const years = Number(a1 ?? 30), seed = Number(a2 ?? 1);
-  let s = found(seed);
+  let s = inherit(seed);
   const t0 = Date.now();
   console.log(`seed ${seed}: ${s.people.length} people in ${s.bodies.length} hearths`);
   for (let y = 0; y < years; y++) {
@@ -50,7 +50,7 @@ if (cmd === 'years') {
 }
 
 function watch(years: number, seed: number, each?: (s: State, R: Readers) => void): { s: State; R: Readers; ms: number } {
-  let s = found(seed);
+  let s = inherit(seed);
   const R = new Readers(), t0 = Date.now();
   for (let w = 0; w < years * 52; w++) { s = step(s); R.read(s); each?.(s, R); }
   R.close();

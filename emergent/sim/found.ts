@@ -7,14 +7,22 @@ import { Kn, NK, NS, P, Rc, SERVING, St, BY_HARM, NEEDS } from './tables.ts';
 import { bear, person } from './processes/grow.ts';
 import { body } from './processes/gather.ts';
 import { bond, dist, near } from './util.ts';
+import { step } from './step.ts';
 import type { Cell, Person, State } from './types.ts';
 
-export function found(seed: number): State {
+/** A realm with a past: founded a generation back and lived through to week 0. */
+export function inherit(seed: number, years = P.past): State {
+  let s = found(seed, -years * 52);
+  while (s.t < 0) s = step(s);
+  return s;
+}
+
+export function found(seed: number, t0 = 0): State {
   const side = P.side, n = side * side;
   let nth = 0;
   const u = (): number => draw(seed, 'founding', 0, 0, nth++);
   const s: State = {
-    seed, t: 0, side, cells: [], people: [], bodies: [], bonds: [], ties: {},
+    seed, t: t0, side, cells: [], people: [], bodies: [], bonds: [], ties: {},
     sky: { aT: [0, 0, 0, 0], aR: [0, 0, 0, 0], temp: new Array<number>(n).fill(P.tMean), rain: new Array<number>(n).fill(P.rainMean) },
     wrongs: [], uses: [], log: [], nrec: 0, nbond: 0,
   };
@@ -57,7 +65,7 @@ export function found(seed: number): State {
   const sites = s.cells.map((c, i) => ({ i, v: c.water ? -1 : sownBear(c) * (0.6 + 0.8 * u()) })).sort((a, b) => b.v - a.v).slice(0, 14).map(x => x.i);
   const granted = new Set<number>();
   const first = BY_HARM[0]!;
-  const year = (y: number): number => -Math.round(y * 52);
+  const year = (y: number): number => t0 - Math.round(y * 52);
   while (s.people.filter(p => p.alive).length < P.souls) {
     const b = body(s, sites[Math.floor(u() * sites.length)]!);
     // Each grown person is founded alone; hearths are left to form.
@@ -83,7 +91,7 @@ export function found(seed: number): State {
     // A store to see the winter out and sow in the warm weeks, a roof, and now and then a help.
     for (const x of s.bodies.slice(b.id)) {
       let h = 0;
-      for (const p of x.members) h += clamp((0 - s.people[p]!.born) / 52 / P.eatFull, P.eatLeast, 1);
+      for (const p of x.members) h += clamp((t0 - s.people[p]!.born) / 52 / P.eatFull, P.eatLeast, 1);
       for (let need = 0; need < NEEDS.length; need++) {
         const N = NEEDS[need]!, k = SERVING[need]![SERVING[need]!.length - 1];
         if (k === undefined) continue;
@@ -97,6 +105,8 @@ export function found(seed: number): State {
     const plot = near(side, b.home, 3).filter(i => !granted.has(i) && !s.cells[i]!.water).sort((x, y) => sownBear(s.cells[y]!) * (1 - 0.2 * dist(side, b.home, y)) - sownBear(s.cells[x]!) * (1 - 0.2 * dist(side, b.home, x)))[0];
     if (plot !== undefined) { granted.add(plot); bond(s, { about: 'land', a: b.id, cell: plot, basis: 'grant', strength: 3 }); }
   }
+  // Those here at the founding have always been here.
+  for (const b of s.bodies) b.since = -1e6;
   void Rc;
   return s;
 }

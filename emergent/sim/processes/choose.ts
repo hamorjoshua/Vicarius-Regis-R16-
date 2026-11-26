@@ -232,7 +232,7 @@ function idleRights(s: State, L: Land, id: number): { rb: Bond; cell: number }[]
 }
 
 /** One who believes newcomers bring harm will not deal with a house that settled within the year. */
-const shuns = (s: State, x: Body, y: Body): boolean => (x.lore.new ?? 0) > P.heed && y.since > 0 && s.t - y.since < 52;
+const shuns = (s: State, x: Body, y: Body): boolean => (x.lore.new ?? 0) > P.heed && y.since > -1e5 && s.t - y.since < 52;
 
 function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number): boolean {
   const a = A.b;
