@@ -304,7 +304,9 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
           for (let j = 0; j < NK; j++) {
             if (Kn[j]!.fixed || a.store[j]! < 0.05 || B.v[j]! <= 1e-6 || j === get.kind) continue;
             const q = target / B.v[j]!, rate = B.v[j]! / Math.max(A.v[j]!, 1e-6);
-            if (q <= a.store[j]! * 0.5 && rate > bestRate) { bestRate = rate; give = { t: 'G', kind: j, q, rb: null, cell: -1 }; costA = A.v[j]! * q; }
+            // What was made for this very purpose may all be given; of anything else, half at most.
+            const planned = a.aim !== null && a.aim.kind === j && a.aim.for === B.b.id;
+            if (q <= a.store[j]! * (planned ? 1 : 0.5) && (planned || rate > bestRate)) { bestRate = planned ? Infinity : rate; give = { t: 'G', kind: j, q, rb: null, cell: -1 }; costA = A.v[j]! * q; }
           }
         } else if (have === 'L' || have === 'LS') {
           if (want === 'U') { give = { t: 'Y', kind: -1, q: share, rb: null, cell: get.cell }; costA = share * recvA; }
