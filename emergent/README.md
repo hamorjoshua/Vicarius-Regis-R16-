@@ -472,6 +472,25 @@ The same five courts on eight full-size realms, with going to court as a choice 
 - **Expectations follow the court at full size too:** under a court that grants everything, those bound by a debt expect relief 0.71 to 0.80; under one that hears nobody, those in bare want fall to 0.26 to 0.44.
 - **Making rules is what keeps a reign, not judging well.** The court that rules at random, but makes rules two times in three, keeps every reign and ends with as much standing as the careful one. What each ruling says matters too little yet. Still missing: a body's own custom as a step between a house's own way and the regent, the two sides' pleas, the regent's word, the Crown's store, and the screen.
 
+## Rules that change what people agree to
+
+People know the rules they live under. Where a rule says bonds of some form are struck or stayed, the one who would be owed on such a bond counts on less, and asks more or refuses; where there is no rule, they go by what they expect of the court. One who finds nobody to deal with because of the rules holds it against the court. An inquest is no longer counted as a hearing of its own.
+
+Five courts on eight full-size realms, a three-year reign each (means):
+
+| Court | Reigns kept | Standing at end | Heard | Settled below | Repeating a recent shape | Five commonest shapes | Shapes heard |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Hears nobody | 5 of 8 | 1.6 | 0 | 0 | | | |
+| Grants everything | 5 of 8 | 2.0 | 195 | 0 | 71% | 58% | 37 |
+| Rules at random | 8 of 8 | 4.5 | 99 | 175 | 35% | 32% | 51 |
+| This case only | 5 of 8 | 3.0 | 265 | 0 | 78% | 56% | 36 |
+| A rule for the realm each time | 8 of 8 | 4.8 | 65 | 421 | 9% | 25% | 48 |
+
+- **Repetition for the regent who makes rules is 9%** (2%, 10%, 16% and 6% in the four pairs of realms), against the design's target of under 20% and the 80 to 93% of the first court.
+- **The careful court has the most standing of any,** but the random one is close behind and also keeps every reign. What a ruling says still matters much less than whether it makes a rule.
+- **Rules rarely stand in the way of a dealing:** 2 to 57 times a reign. Their effect on what people agree to is real but small.
+- **Still short:** the five commonest shapes are 25% of what the rule-making court hears, against a target of under 15%.
+
 ## Known gaps
 
 1. **The fall was largely a matter of size.** On 100 cells it took 64 to 87% where it happened and nothing cured it. On 400 cells it is 18 to 54% in seven realms of eight. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
