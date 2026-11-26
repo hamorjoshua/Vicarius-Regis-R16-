@@ -2,9 +2,9 @@
 
 The build of [The Emergent Realm](../docs/living-realm-design.md), stage by stage. The current game (`../index.html`) and the first build (`../realm/`) are untouched; `realm/` stays as a reference until stage 2 replaces its harness.
 
-**Stages 1 to 6 of 9 are here.** Stage 5 leaves out forged records and beliefs about who holds what. Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. Stage 5 so far is ways of dealing that people find for themselves, and beliefs about what brings harm. Stage 6 is the living land. The prediction log is not built. Stages 7 to 9 are not started.
+**Stages 1 to 6 of 9 are here, with stage 7 settled at a smaller size and the first part of stage 8, the court.** Stage 5 leaves out forged records and beliefs about who holds what. Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. Stage 5 so far is ways of dealing that people find for themselves, and beliefs about what brings harm. Stage 6 is the living land. The prediction log is not built. Stages 7 to 9 are not started.
 
-**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3", "After stage 4" and "Stage 5 so far" have the later figures; the last of them, "With fallible blame", is current.
+**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3", "After stage 4" and "Stage 5 so far" have the later figures; the last of them, "At the size a run is played on", is current.
 
 ## Run it
 
@@ -369,9 +369,41 @@ The founding now takes a size (`found(seed, t0, side, souls)`), and three things
 
 Cost now grows roughly in step with the number of people. At that rate 14,000 people would take between one and two seconds a week, against the design's budget of a tenth of a second. A realm of 400 cells and about 870 people fits the budget today. These timings are from the first year of a realm; later years, with more bonds and beliefs, were not timed at the larger sizes.
 
+## At the size a run is played on
+
+A run is now played on 400 cells and about 900 people at the founding (`P.realmSide`, `P.realmSouls`), with thirty years of past. The toy of 100 cells remains for the tests. Eight realms, thirty years of run (`measures 30`):
+
+| Seed | ms a week | Peak | Trough | Deepest fall | End |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 64 | 510 | 322 | 37% | 427 |
+| 2 | 54 | 536 | 247 | 54% | 282 |
+| 3 | 82 | 510 | 400 | 22% | 400 |
+| 4 | 76 | 629 | 346 | 45% | 577 |
+| 5 | 243 | 2,016 | 469 | 77% | 491 |
+| 6 | 82 | 479 | 393 | 18% | 452 |
+| 7 | 110 | 839 | 580 | 31% | 622 |
+| 8 | 62 | 432 | 339 | 22% | 567 |
+
+- **The fall is far milder on a larger map.** Seven of eight realms lose between 18% and 54% at worst; on 100 cells a third to a half of realms lost 75% or more. Want in one part of a larger realm no longer takes the whole of it down.
+- **One realm still falls hard:** seed 5 grows to 2,016 and loses 77% over 24 years.
+- **Realms hold 35 to 38 shapes of event each.**
+- **Time is over budget in later years:** 54 to 110 ms a week where the budget is 100, and 243 ms for the realm that reached 2,000 people.
+
+## The court (first part of stage 8)
+
+In `sim/court/court.ts`, with five scripted courts in `harness/courts.ts` (`node harness/courts.ts 1,2,3`).
+
+- **A matter** is a bond that cannot be met (owed and broken, or owed for a taking), or a dire want with whatever lies behind it. Its shape is read off the bond or the want.
+- **It reaches the regent** only when no rule covers its shape, when two bodies' rules answer it differently, or when a rule is challenged by a house it has hurt.
+- **A ruling** holds a debtor to what is owed, parts it, releases it, orders an inquest into who truly did a taking, or lays a want on the neighbours with most in store. It is made for this case, for the petitioner's body, or for the realm.
+- **A rule settles like cases below,** and the regent never sees them.
+- **Harm is laid at the court's door by one table.** When enough houses have had enough, they withdraw their confidence and the court loses standing.
+
+Not yet built: the screen, the regent's own word, giving from the Crown's store, appointments, and the two sides' pleas.
+
 ## Known gaps
 
-1. **The fall is still too deep** (64 to 87% where it happens), and it recurs about once a generation. Foresight, a past, customs and defended fields have each been tried; the last helped most and none cured it. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
+1. **The fall was largely a matter of size.** On 100 cells it took 64 to 87% where it happened and nothing cured it. On 400 cells it is 18 to 54% in seven realms of eight. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
 2. **Blame of particular houses is too catching**, and has brought feuds back up.
 3. **Realms are alike.** They differ in when and where, not in what kinds of thing happen. Bonds on bonds, bodies and minds are meant to change that.
 4. **The prediction log is not built**, and no predictions were written before these runs.
