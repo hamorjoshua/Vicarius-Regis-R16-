@@ -7,6 +7,7 @@ import { askAhead, cover, welfare, welfareLater, zeros } from '../value.ts';
 import { around, bond, dist, grown, head, holdsByCell, kinOf, muster, near, rec, struggle, tenancies, tie, warm, type Tenancy } from '../util.ts';
 import { bear } from './grow.ts';
 import { tBar } from './sky.ts';
+import { chilled, upheld } from '../court/court.ts';
 import { weekOf, type Body, type Bond, type Person, type State } from '../types.ts';
 
 interface Opt { r: number; cell: number; mine: number; take: boolean; score: number; rent: number }
@@ -272,6 +273,7 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
   if (a.aim && (s.t - a.aim.since > P.resolve || !s.bodies[a.aim.for]!.alive)) { rec(s, 'plan', { a: a.id, b: a.aim.for, kind: a.aim.kind, q2: -1 }); a.aim = null; }
   let best: { B: Ctx; way: string; get: Item; give: Item; gainA: number; share: number } | null = null;
   let far: { B: Ctx; recvA: number; costB: number; want: Side } | null = null;
+  let rulesStood = false;
   for (const B of around(L.at, s.side, a.home, P.dealReach)) {
     if (B === A || dist(s.side, a.home, B.b.home) > P.dealReach || tie(s, a.id, B.b.id) < P.barAt || tie(s, B.b.id, a.id) < P.barAt) continue;
     if (shuns(s, a, B.b) || shuns(s, B.b, a)) continue;
@@ -310,7 +312,9 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
         const share = known ? known.p : Math.max(0.1, Math.min(0.6, (P.concede * 2 * B.h.temper) / (A.h.temper + B.h.temper)));
         const target = Math.max(P.margin * costB, share * recvA);
         let give: Item | null = null, costA = 0;
-        const secured = have === 'LS' || have === 'DS', t = secured ? 1 : tB;
+        // What is promised is worth to the other only what the rules they live under would let them count on.
+        const sure = have === 'G' || have === 'U' ? 1 : upheld(s, want === 'U' && have === 'L' ? 'Y' : have, way, a.id, B.b.id) * (have === 'LS' || have === 'DS' ? upheld(s, 'S', way, a.id, B.b.id) : 1);
+        const secured = have === 'LS' || have === 'DS', t = (secured ? 1 : tB) * sure;
         if (have === 'G') {
           let bestRate = 0;
           for (let j = 0; j < NK; j++) {
@@ -321,19 +325,19 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
             if (q <= a.store[j]! * (planned ? 1 : 0.5) && (planned || rate > bestRate)) { bestRate = planned ? Infinity : rate; give = { t: 'G', kind: j, q, rb: null, cell: -1 }; costA = A.v[j]! * q; }
           }
         } else if (have === 'L' || have === 'LS') {
-          if (want === 'U') { give = { t: 'Y', kind: -1, q: share, rb: null, cell: get.cell }; costA = share * recvA; }
+          if (want === 'U') { if (sure < 0.5) { rulesStood = true; continue; } give = { t: 'Y', kind: -1, q: share, rb: null, cell: get.cell }; costA = share * recvA; }
           else {
             let k = get.kind >= 0 ? get.kind : 0;
             if (get.kind < 0) for (let j = 0; j < NK; j++) if (A.pend[j]! * B.v[j]! > A.pend[k]! * B.v[k]!) k = j;
             if (B.v[k]! <= 1e-6) continue;
             const q = target / (P.patience * t * B.v[k]!);
-            if (get.kind >= 0 && q > 2 * get.q) continue;
+            if (get.kind >= 0 && q > 2 * get.q) { if (q * sure <= 2 * get.q) rulesStood = true; continue; }
             give = { t: have, kind: k, q, rb: null, cell: -1 }; costA = 0.6 * A.v[k]! * q;
           }
         } else if (have === 'D' || have === 'DS') {
           if (anyRush(A) || B.dayWorth <= 1e-6) continue;
           const D = target / (B.dayWorth * t);
-          if (D > 40) continue;
+          if (D > 40) { if (D * sure <= 40) rulesStood = true; continue; }
           give = { t: have, kind: -1, q: D, rb: null, cell: -1 }; costA = A.dayWorth * D;
         } else if (have === 'U') {
           for (const r of myIdle) { const w = cellWorth(s, L, B, r.cell); if (w >= target && rights(L, B.b.id, r.cell).mine <= 0 && (!give || w < cellWorth(s, L, B, give.cell))) { give = { t: 'U', kind: -1, q: 1, rb: r.rb, cell: r.cell }; costA = 0.02 * cellWorth(s, L, A, r.cell); } }
@@ -347,6 +351,7 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
   }
   if (!best) {
     a.stuck++;
+    if (rulesStood) chilled(s, a.id);
     // Nothing it can offer today will do. It looks a step further: what does the one who has what it lacks
     // most want, that it could make? It sets itself to make that, and holds to it.
     if (far && !a.aim && a.stuck >= P.stuck) {

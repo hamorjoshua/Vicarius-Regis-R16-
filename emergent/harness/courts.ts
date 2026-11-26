@@ -33,7 +33,7 @@ const COURTS: Record<string, () => Script> = {
 };
 
 const seeds = (process.argv[2] ?? '1,2,3').split(',').map(Number), weeks = Number(process.argv[3] ?? P.reign);
-const rows: Record<string, { kept: number; standing: number; heard: number; arose: number; below: number; repeats: number; top5: number; shapes: number; rules: number; souls: number; sore: number; declined: number; plea: number[] }> = {};
+const rows: Record<string, { kept: number; standing: number; heard: number; arose: number; below: number; repeats: number; top5: number; shapes: number; rules: number; souls: number; sore: number; declined: number; chilled: number; plea: number[] }> = {};
 for (const seed of seeds) {
   const past = process.argv[4] === 'toy' ? inherit(seed, 6, 10, 200) : inherit(seed);
   const t0 = Date.now();
@@ -49,7 +49,8 @@ for (const seed of seeds) {
       const rulings = script(s, seated);
       for (const r of rulings) {
         const p = seated.find(x => x.id === r.petition);
-        if (!p) continue;
+        // An inquest is a step in a hearing, not a hearing of its own.
+        if (!p || r.cut === 'inquire') continue;
         heard++;
         if (heardShapes.some(h => h.shape === p.shape && s.t - h.t <= 26)) repeats++;
         heardShapes.push({ t: s.t, shape: p.shape });
@@ -60,13 +61,14 @@ for (const seed of seeds) {
       advance(s, true);
     }
     const top5 = [...count.values()].sort((a, b) => b - a).slice(0, 5).reduce((a, b) => a + b, 0);
-    const row = (rows[name] ??= { kept: 0, standing: 0, heard: 0, arose: 0, below: 0, repeats: 0, top5: 0, shapes: 0, rules: 0, souls: 0, sore: 0, declined: 0, plea: [0, 0, 0, 0] });
+    const row = (rows[name] ??= { kept: 0, standing: 0, heard: 0, arose: 0, below: 0, repeats: 0, top5: 0, shapes: 0, rules: 0, souls: 0, sore: 0, declined: 0, chilled: 0, plea: [0, 0, 0, 0] });
     const c = s.court!;
     row.kept += c.standing > 0 ? 1 : 0; row.standing += Math.max(0, c.standing); row.heard += heard; row.arose += arose; row.below += below;
     row.repeats += repeats; row.top5 += top5; row.shapes += count.size; row.rules += c.rules.length;
     row.souls += s.people.filter(p => p.alive).length / past.people.filter(p => p.alive).length;
     row.sore += Object.values(c.grief).filter(g => g >= P.aggrieved).length;
     row.declined += c.declined;
+    row.chilled += c.chilled;
     const hs = s.bodies.filter(b => b.alive && !b.parts.length && b.plea.length);
     SIDES.forEach((_x, k) => { row.plea[k] = row.plea[k]! + hs.reduce((x, b) => x + b.plea[k]!, 0) / Math.max(1, hs.length); });
   }
@@ -79,6 +81,6 @@ console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 for (const [name, r] of Object.entries(rows)) console.log(`| ${name} | ${r.kept} of ${n} | ${(r.standing / n).toFixed(1)} | ${Math.round(r.arose / n)} | ${Math.round(r.heard / n)} | ${Math.round(r.below / n)} | ${(r.rules / n).toFixed(1)} | ${r.heard ? Math.round((100 * r.repeats) / r.heard) + '%' : '-'} | ${r.heard ? Math.round((100 * r.top5) / r.heard) + '%' : '-'} | ${(r.shapes / n).toFixed(1)} | ${Math.round((100 * r.souls) / n)}% |`);
 
 console.log('\nWho came, and what houses had come to expect of the court by the end (how likely it is to find for the one who asks):\n');
-console.log(`| Court | Kept their own counsel | ${SIDES.map(x => ({ owed: 'Owed on a bond', owes: 'Bound by a bond', outside: 'Shut out by a bond', bare: 'In bare want' })[x]).join(' | ')} |`);
-console.log('| --- | --- | --- | --- | --- | --- |');
-for (const [name, r] of Object.entries(rows)) console.log(`| ${name} | ${Math.round(r.declined / n)} | ${r.plea.map(v => (v / n).toFixed(2)).join(' | ')} |`);
+console.log(`| Court | Dealings the law stood in the way of | Kept their own counsel | ${SIDES.map(x => ({ owed: 'Owed on a bond', owes: 'Bound by a bond', outside: 'Shut out by a bond', bare: 'In bare want' })[x]).join(' | ')} |`);
+console.log('| --- | --- | --- | --- | --- | --- | --- |');
+for (const [name, r] of Object.entries(rows)) console.log(`| ${name} | ${Math.round(r.chilled / n)} | ${Math.round(r.declined / n)} | ${r.plea.map(v => (v / n).toFixed(2)).join(' | ')} |`);

@@ -14,7 +14,7 @@ import type { Body, Bond, Court, Petition, Rule, State } from '../types.ts';
 export type Width = 'case' | 'body' | 'realm';
 export interface Ruling { petition: number; cut: string; width: Width }
 
-export const openCourt = (s: State): Court => (s.court = { standing: 5, docket: [], rules: [], grief: {}, seen: {}, next: 0, quiet: 0, declined: 0 });
+export const openCourt = (s: State): Court => (s.court = { standing: 5, docket: [], rules: [], grief: {}, seen: {}, next: 0, quiet: 0, declined: 0, chilled: 0 });
 
 const grieve = (c: Court, id: number, by: number): void => { if (id >= 0) c.grief[id] = Math.max(0, (c.grief[id] ?? 0) + by); };
 const scopeOf = (s: State, id: number): number => { const t = top(s, s.bodies[id]!); return t.id === id ? -2 : t.id; };
@@ -45,6 +45,33 @@ function teach(s: State, idx: Body[][], by: number, side: string, found: number,
     const w = b.id === by ? own : P.pleaSeen;
     for (const p of grown(s, b)) p.plea[k] = p.plea[k]! + w * (found - p.plea[k]!);
   }
+}
+
+/**
+ * How far a bond of some form, were it made today between two bodies, could be counted on by the one it
+ * would favour. People know the rules they live under: where a rule says such bonds are struck or stayed,
+ * the one who would be owed counts on less. Where there is no rule, they go by what they expect of the court.
+ */
+export function upheld(s: State, side: string, way: string, bearer: number, gainer: number): number {
+  const c = s.court;
+  if (!c) return 1;
+  const part = side === 'L' || side === 'LS' ? `goods owed by word (${way})` : side === 'D' || side === 'DS' ? `work owed by word (${way})` : side === 'Y' ? 'lease for a share of' : side === 'U' ? 'lease of' : 'pledge of';
+  const A = s.bodies[bearer]!, B = s.bodies[gainer]!, same = A.of >= 0 && top(s, A).id === top(s, B).id ? top(s, A).id : -9;
+  let sum = 0, n = 0;
+  for (const r of c.rules) {
+    if ((r.scope !== -1 && r.scope !== same) || !r.shape.includes(part)) continue;
+    if (r.shape.startsWith('owed on')) { sum += FAVOUR.owed![r.cut] ?? 0.5; n++; }
+    else if (r.shape.startsWith('bound by')) { sum += 1 - (FAVOUR.owes![r.cut] ?? 0.5); n++; }
+  }
+  if (n) return 0.2 + sum / n;
+  return Math.max(0.7, Math.min(1.2, 0.5 + (B.plea[0] ?? 0.5)));
+}
+
+/** One who found nobody to deal with because of what the law now says holds it against the court. */
+export function chilled(s: State, id: number): void {
+  if (!s.court) return;
+  s.court.chilled++;
+  grieve(s.court, id, P.harmChilled);
 }
 
 /** Who answers for a bond on the other side from a body. */
