@@ -13,6 +13,8 @@ interface Opt { r: number; cell: number; mine: number; take: boolean; score: num
 interface Ctx {
   b: Body; h: Person; days: number; grown: number;
   ahead: number[]; cov: number[]; W: number;
+  /** What a day of its best work is worth to it. */
+  dayWorth: number;
   /** Worth of one more unit of each kind; `extra` is the part that comes from what it can be made into or help make. */
   v: number[]; extra: number[];
   scarce: number; press: number; pressNeed: number;
@@ -188,7 +190,9 @@ function context(s: State, L: Land, b: Body): Ctx | null {
   const v = direct.map((d, k) => d + extra[k]!);
   const days = muster(s, b);
   const rush = St.map((row, st) => row.reap >= 0 && standing[st]! > 0 && standing[st]! / Math.max(1, 0.5 * Rc[row.reap]!.from[0]![1] * days) >= soon[st]! - 1);
-  return { b, h, days, rush, grown: nGrown, ahead, cov, W, v, extra, scarce, press, pressNeed, opts, pend };
+  let dayWorth = 0;
+  for (const o of opts) if (!o.take) dayWorth = Math.max(dayWorth, outWorth(o) * (Rc[o.r]!.from.length ? o.score : 1));
+  return { b, h, days, rush, dayWorth, grown: nGrown, ahead, cov, W, v, extra, scarce, press, pressNeed, opts, pend };
 }
 
 /** The good to a body of a change to a store. */
@@ -201,7 +205,148 @@ function gain(c: Ctx, store: number[], W0: number, delta: [number, number][]): n
 
 // --- Dealings: trade, give, promise, take ---
 
-function deal(s: State, cs: Map<number, Ctx>, kin: Map<number, Set<number>>, A: Ctx): void {
+// --- Arranging: whatever one has, for whatever one lacks ---
+// A side of a dealing is one of: G goods in hand, L goods later, D days of work, U the use of ground,
+// Y a share of what that ground yields; S after L or D means ground stands surety. A way of dealing is
+// what is given and what is got. Nobody is told which ways exist: a hearth uses the ways it knows, and
+// when it has gone without long enough it tries giving something it has for the thing it lacks.
+
+type Side = 'G' | 'L' | 'D' | 'U' | 'Y' | 'LS' | 'DS';
+interface Item { t: Side; kind: number; q: number; rb: Bond | null; cell: number }
+
+function cellWorth(s: State, L: Land, X: Ctx, cell: number): number {
+  const d = dist(s.side, X.b.home, cell);
+  if (d > P.reach) return 0;
+  let w = 0;
+  for (let st = 0; st < NS; st++) if (St[st]!.sown) for (const [k, per] of gathered(st)) w += L.bears[cell]![st]! * per * X.v[k]!;
+  return w * 0.5 * (1 - P.travel * d);
+}
+
+/** The rights to ground a body has and is not using: its own holdings, and ground it has the use of. */
+function idleRights(s: State, L: Land, id: number): { rb: Bond; cell: number }[] {
+  const out: { rb: Bond; cell: number }[] = [], letAlready = new Set(L.lets.map(x => x.lease.on));
+  const idle = (b: Bond): boolean => !letAlready.has(b.id) && s.t - b.used >= P.idle && s.t - b.since >= P.idle;
+  for (const b of s.bonds) if (b.about === 'land' && b.a === id && b.strength >= 0.5 && idle(b)) out.push({ rb: b, cell: b.cell });
+  for (const x of L.lets) if (x.lease.a === id && idle(x.lease)) out.push({ rb: x.lease, cell: x.cell });
+  return out;
+}
+
+function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number): boolean {
+  const a = A.b;
+  const trust = (X: Ctx, Y: Ctx): number => Math.max(0.05, Math.min(1, P.trust + 0.6 * tie(s, X.b.id, Y.b.id)));
+  const rightsOf = (id: number): number => { let n = 0; for (const b of s.bonds) if (b.about === 'land' && b.a === id && b.strength >= P.held) n++; for (const x of L.lets) if (x.lease.a === id) n++; return n; };
+  const myIdle = idleRights(s, L, a.id);
+  const surety = s.bonds.find(x => x.about === 'land' && x.a === a.id && x.strength >= 0.5 && !s.bonds.some(y => y.about === 'bond' && y.secures >= 0 && y.on === x.id));
+  const anyRush = (X: Ctx): boolean => X.rush.some(Boolean);
+
+  // What it lacks.
+  const wants: Side[] = [];
+  if (need >= 0) wants.push('G');
+  else {
+    if (anyRush(A)) wants.push('D');
+    if (A.grown > 0 && rightsOf(a.id) < A.grown) wants.push('U');
+  }
+  if (!wants.length) return false;
+  // What it has to give.
+  const haves: Side[] = ['L', 'D', 'G'];
+  if (surety) haves.push('LS', 'DS');
+  if (myIdle.length) haves.push('U');
+
+  let best: { B: Ctx; way: string; get: Item; give: Item; gainA: number; share: number } | null = null;
+  for (const B of cs.values()) {
+    if (B === A || dist(s.side, a.home, B.b.home) > P.dealReach || tie(s, a.id, B.b.id) < P.barAt || tie(s, B.b.id, a.id) < P.barAt) continue;
+    const tB = trust(B, A);
+    for (const want of wants) {
+      // What A would get from B, what it is worth to A, and what it costs B.
+      let get: Item | null = null, recvA = 0, costB = 0;
+      if (want === 'G') {
+        for (let k = 0; k < NK; k++) {
+          if (Kn[k]!.fixed || Kn[k]!.serves[need]! <= 0 || B.cov[need]! <= 2 * P.short) continue;
+          const q = Math.min(B.b.store[k]! * P.part, (3 * A.ahead[need]! * Kn[k]!.use) / Kn[k]!.serves[need]!);
+          if (q > 0.05 && A.v[k]! * q > recvA) { get = { t: 'G', kind: k, q, rb: null, cell: -1 }; recvA = A.v[k]! * q; costB = B.v[k]! * q; }
+        }
+      } else if (want === 'D') {
+        if (anyRush(B) || B.days < 4) continue;
+        const D = Math.min(20, B.days * 2);
+        get = { t: 'D', kind: -1, q: D, rb: null, cell: -1 }; recvA = A.dayWorth * D * 2 * trust(A, B); costB = B.dayWorth * D;
+      } else {
+        for (const r of idleRights(s, L, B.b.id)) {
+          const w = cellWorth(s, L, A, r.cell);
+          if (w > recvA && rights(L, a.id, r.cell).mine <= 0) { get = { t: 'U', kind: -1, q: 1, rb: r.rb, cell: r.cell }; recvA = w; costB = 0.02 * cellWorth(s, L, B, r.cell); }
+        }
+      }
+      if (!get || recvA <= 0) continue;
+      for (const have of haves) {
+        if (have === want && have !== 'G') continue;
+        if (have === 'G' && want === 'G') continue;
+        if (want === 'U' && have === 'LS') continue;
+        const way = `${want === 'U' && have === 'L' ? 'Y' : have}>${want}`;
+        const known = a.ways[way];
+        if (!known && a.stuck < P.stuck) continue;
+        // The other is left a margin over what it gives up, or the share of the gain it is customary to concede.
+        const share = known ? known.p : Math.max(0.1, Math.min(0.6, (P.concede * 2 * B.h.temper) / (A.h.temper + B.h.temper)));
+        const target = Math.max(P.margin * costB, share * recvA);
+        let give: Item | null = null, costA = 0;
+        const secured = have === 'LS' || have === 'DS', t = secured ? 1 : tB;
+        if (have === 'G') {
+          let bestRate = 0;
+          for (let j = 0; j < NK; j++) {
+            if (Kn[j]!.fixed || a.store[j]! < 0.05 || B.v[j]! <= 1e-6 || j === get.kind) continue;
+            const q = target / B.v[j]!, rate = B.v[j]! / Math.max(A.v[j]!, 1e-6);
+            if (q <= a.store[j]! * 0.5 && rate > bestRate) { bestRate = rate; give = { t: 'G', kind: j, q, rb: null, cell: -1 }; costA = A.v[j]! * q; }
+          }
+        } else if (have === 'L' || have === 'LS') {
+          if (want === 'U') { give = { t: 'Y', kind: -1, q: share, rb: null, cell: get.cell }; costA = share * recvA; }
+          else {
+            let k = get.kind >= 0 ? get.kind : 0;
+            if (get.kind < 0) for (let j = 0; j < NK; j++) if (A.pend[j]! * B.v[j]! > A.pend[k]! * B.v[k]!) k = j;
+            if (B.v[k]! <= 1e-6) continue;
+            const q = target / (P.patience * t * B.v[k]!);
+            if (get.kind >= 0 && q > 2 * get.q) continue;
+            give = { t: have, kind: k, q, rb: null, cell: -1 }; costA = 0.6 * A.v[k]! * q;
+          }
+        } else if (have === 'D' || have === 'DS') {
+          if (anyRush(A) || B.dayWorth <= 1e-6) continue;
+          const D = target / (B.dayWorth * t);
+          if (D > 40) continue;
+          give = { t: have, kind: -1, q: D, rb: null, cell: -1 }; costA = A.dayWorth * D;
+        } else if (have === 'U') {
+          for (const r of myIdle) { const w = cellWorth(s, L, B, r.cell); if (w >= target && rights(L, B.b.id, r.cell).mine <= 0 && (!give || w < cellWorth(s, L, B, give.cell))) { give = { t: 'U', kind: -1, q: 1, rb: r.rb, cell: r.cell }; costA = 0.02 * cellWorth(s, L, A, r.cell); } }
+        }
+        if (!give) continue;
+        if (secured && surety) costA += 0.1 * cellWorth(s, L, A, surety.cell);
+        const gainA = (recvA - costA) * (known ? 1 + 0.2 * Math.min(known.w, 3) : 1);
+        if (gainA > 0 && (!best || gainA > best.gainA)) best = { B, way, get, give, gainA, share };
+      }
+    }
+  }
+  if (!best) { a.stuck++; return false; }
+  a.stuck = 0;
+  const { B, way, get, give, share } = best, b = B.b;
+  const e = rec(s, 'promise', { a: a.id, b: b.id, kind: get.kind >= 0 ? get.kind : give.kind, q: get.t === 'G' ? get.q : give.q, q2: give.t === 'Y' ? share : give.q, need, cell: get.cell >= 0 ? get.cell : give.cell, cause: need >= 0 ? a.why[need]! : -1, way });
+  // Both now know this way of dealing; the share conceded settles toward what was agreed.
+  for (const x of [a, b]) {
+    const w = x.ways[way];
+    if (w) w.p = 0.5 * (w.p + share);
+    else { x.ways[way] = { w: 1, p: share }; rec(s, 'learn', { a: x.id, b: x === a ? b.id : a.id, cause: e.id, way }); }
+  }
+  warm(s, a.id, b.id, P.warm); warm(s, b.id, a.id, P.warm);
+  // Each side is done or bound.
+  const carry = (it: Item, from: Body, to: Body): void => {
+    if (it.t === 'G') { from.store[it.kind] = from.store[it.kind]! - it.q; to.store[it.kind] = to.store[it.kind]! + it.q; }
+    else if (it.t === 'L' || it.t === 'LS' || it.t === 'D' || it.t === 'DS') {
+      const labour = it.t === 'D' || it.t === 'DS';
+      const debt = bond(s, { about: 'act', a: from.id, b: to.id, kind: labour ? -1 : it.kind, q: it.q, due: labour ? s.t : s.t + P.term, labour, basis: 'word', rec: e.id, way });
+      if ((it.t === 'LS' || it.t === 'DS') && surety) bond(s, { about: 'bond', a: to.id, b: from.id, on: surety.id, secures: debt.id, basis: 'word', rec: e.id, way });
+    } else if (it.t === 'U' && it.rb) bond(s, { about: 'bond', a: to.id, b: from.id, on: it.rb.id, share: 0, due: s.t + P.lease, used: s.t, basis: 'word', rec: e.id, way });
+  };
+  if (give.t === 'Y' && get.rb) bond(s, { about: 'bond', a: a.id, b: b.id, on: get.rb.id, share, due: s.t + P.lease, used: s.t, basis: 'word', rec: e.id, way });
+  else { carry(get, b, a); carry(give, a, b); }
+  L.lets = tenancies(s);
+  return true;
+}
+
+function deal(s: State, L: Land, cs: Map<number, Ctx>, kin: Map<number, Set<number>>, A: Ctx): void {
   const a = A.b;
   const partners: Ctx[] = [];
   for (const B of cs.values()) if (B !== A && dist(s.side, a.home, B.b.home) <= P.dealReach) partners.push(B);
@@ -246,6 +391,7 @@ function deal(s: State, cs: Map<number, Ctx>, kin: Map<number, Set<number>>, A: 
   const n = A.pressNeed >= 0 ? A.pressNeed : A.scarce;
   const corp = a.of >= 0 && s.bodies[a.of]!.alive ? s.bodies[a.of]! : null;
   if (A.cov[n]! >= P.short) {
+    a.stuck = 0;
     // In plenty, a part of what it values least goes into the store its body holds in common.
     if (!corp || (s.t + a.id) % 4 !== 0) return;
     const k = offers[0];
@@ -283,43 +429,7 @@ function deal(s: State, cs: Map<number, Ctx>, kin: Map<number, Set<number>>, A: 
     rec(s, 'give', { a: giver.b.id, b: a.id, kind: gk, q, need: n, cause: a.why[n]! });
     return;
   }
-  // Work for it: goods now, against days owed to whoever has goods to spare.
-  let master: Ctx | null = null, mk = -1, mBest = 0;
-  for (const B of partners) {
-    if (tie(s, B.b.id, a.id) < P.barAt) continue;
-    for (const k of serving) {
-      const q = Math.min(amount(B, k), (2 * A.days) / (TOIL[k]! * P.hire));
-      if (q > 0.05 && B.v[k]! < 0.6 * A.v[k]! && B.cov[n]! > 2 * P.short && q > mBest) { mBest = q; master = B; mk = k; }
-    }
-  }
-  if (master && A.pend[mk]! < mBest * (1 + P.premium)) {
-    const q = mBest, owed = q * TOIL[mk]! * P.hire;
-    master.b.store[mk] = master.b.store[mk]! - q; a.store[mk] = a.store[mk]! + q;
-    const e = rec(s, 'promise', { a: a.id, b: master.b.id, kind: mk, q, q2: owed, kind2: 1, need: n, cause: a.why[n]! });
-    bond(s, { about: 'act', a: a.id, b: master.b.id, kind: mk, q: owed, due: s.t, labour: true, basis: 'word', rec: e.id });
-    warm(s, a.id, master.b.id, P.warm);
-    return;
-  }
-  let lender: Ctx | null = null, lk = -1, lBest = 0, lPledge = false;
-  const myGround = s.bonds.find(x => x.about === 'land' && x.a === a.id && x.strength >= 0.5 && !s.bonds.some(y => y.about === 'bond' && y.secures >= 0 && y.on === x.id));
-  for (const B of partners) {
-    const trust = Math.min(1, P.trust + 0.6 * tie(s, B.b.id, a.id));
-    // One who is not trusted may still borrow against ground they hold.
-    const pledged = trust * (1 + P.premium) <= 1;
-    if (pledged && (!myGround || tie(s, B.b.id, a.id) < P.barAt)) continue;
-    for (const k of serving) {
-      const q = amount(B, k);
-      if (q > 0.05 && B.v[k]! < 0.6 * A.v[k]! && B.cov[n]! > 2 * P.short && q * Math.max(trust, 0.3) > lBest) { lBest = q * Math.max(trust, 0.3); lender = B; lk = k; lPledge = pledged; }
-    }
-  }
-  if (lender) {
-    const q = amount(lender, lk);
-    lender.b.store[lk] = lender.b.store[lk]! - q; a.store[lk] = a.store[lk]! + q;
-    const e = rec(s, 'promise', { a: a.id, b: lender.b.id, kind: lk, q, q2: q * (1 + P.premium), need: n, cause: a.why[n]! });
-    const debt = bond(s, { about: 'act', a: a.id, b: lender.b.id, kind: lk, q: q * (1 + P.premium), due: s.t + P.term, basis: 'word', rec: e.id });
-    if (lPledge && myGround) { bond(s, { about: 'bond', a: lender.b.id, b: a.id, on: myGround.id, secures: debt.id, basis: 'word', rec: e.id }); e.kind2 = 2; e.cell = myGround.cell; }
-    return;
-  }
+  if (arrange(s, L, cs, A, n)) return;
   if (A.cov[n]! >= P.dire) return;
   let victim: Ctx | null = null, vk = -1, vBest = 0;
   for (const B of partners) {
@@ -438,36 +548,6 @@ function roam(s: State, L: Land, c: Ctx): void {
   b.plan = [];
 }
 
-// --- Letting: a right to ground that lies unused is let to one who has less, for a share of what it yields ---
-
-function letOut(s: State, L: Land, cs: Map<number, Ctx>): void {
-  const count = new Map<number, number>();
-  const bump = (b: number, d: number): void => { count.set(b, (count.get(b) ?? 0) + d); };
-  for (const b of s.bonds) if (b.about === 'land' && b.strength >= P.held) bump(b.a, 1);
-  for (const x of L.lets) { bump(x.lease.a, 1); const over = s.bonds.find(b => b.id === x.lease.on); if (over) bump(over.a, -1); }
-  const letAlready = new Set(L.lets.map(x => x.lease.on));
-  const rightsBonds: { bond: Bond; cell: number }[] = [];
-  for (const b of s.bonds) if (b.about === 'land' && b.strength >= 0.5) rightsBonds.push({ bond: b, cell: b.cell });
-  for (const x of L.lets) rightsBonds.push({ bond: x.lease, cell: x.cell });
-  for (const { bond: rb, cell } of rightsBonds) {
-    const O = cs.get(rb.a);
-    if (!O || letAlready.has(rb.id) || s.t - rb.used < P.idle || s.t - rb.since < P.idle) continue;
-    if (!St.some((row, st) => row.sown && L.bears[cell]![st]! > 20)) continue;
-    let best: Ctx | null = null, bestN = count.get(rb.a) ?? 0;
-    for (const T of cs.values()) {
-      if (T === O || dist(s.side, T.b.home, cell) > P.reach || tie(s, O.b.id, T.b.id) < P.barAt || tie(s, T.b.id, O.b.id) < P.barAt) continue;
-      const n = count.get(T.b.id) ?? 0;
-      if (n >= P.plots * Math.max(1, T.grown) || n >= bestN || rights(L, T.b.id, cell).mine > 0) continue;
-      best = T; bestN = n;
-    }
-    if (!best) continue;
-    const depth = rb.about === 'bond' ? (L.lets.find(x => x.lease === rb)?.depth ?? 1) + 1 : 1;
-    const e = rec(s, 'promise', { a: best.b.id, b: O.b.id, cell, q2: P.rent, kind2: 2 + depth });
-    bond(s, { about: 'bond', a: best.b.id, b: O.b.id, on: rb.id, share: P.rent, due: s.t + P.lease, used: s.t, basis: 'word', rec: e.id });
-    bump(best.b.id, 1); bump(rb.a, -1); letAlready.add(rb.id);
-  }
-}
-
 export function choose(s: State): void {
   const L: Land = { lets: tenancies(s), holds: holdsByCell(s), bears: s.cells.map(c => St.map((_r, k) => bear(c, k))), left: new Map(), homes: new Array<number>(s.cells.length).fill(0) };
   for (const b of s.bodies) if (b.alive) for (const cell of near(s.side, b.home, P.reach)) L.homes[cell] = L.homes[cell]! + 1;
@@ -475,11 +555,10 @@ export function choose(s: State): void {
   for (const b of s.bodies) {
     if (!b.alive) continue;
     const c = context(s, L, b);
-    if (c) cs.set(b.id, c);
+    if (c) { cs.set(b.id, c); b.pressed = c.rush.some(Boolean); }
   }
   const kin = kinOf(s);
-  for (const c of cs.values()) deal(s, cs, kin, c);
-  letOut(s, L, cs);
-  L.lets = tenancies(s);
+  for (const c of cs.values()) deal(s, L, cs, kin, c);
+  for (const c of cs.values()) arrange(s, L, cs, c, -1);
   for (const c of cs.values()) { work(s, L, c); roam(s, L, c); }
 }

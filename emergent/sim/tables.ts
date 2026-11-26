@@ -190,9 +190,11 @@ export const P = {
   /** The regard at which those who deal together become a body, how many it takes, and the share of plenty each puts in common. */
   band: 0.15, bandOf: 3, common: 0.03,
   /** A lease: the share of what is gathered that goes to whoever let the ground, how long it runs, and how long ground lies unused before it is let. */
-  rent: 0.33, lease: 104, idle: 40, plots: 2,
+  rent: 0.33, lease: 104, idle: 60, plots: 2,
   /** Days owed for goods, as a multiple of the days it takes to make them. */
   hire: 1.5,
+  /** Dealing: how much a thing promised is worth beside a thing in hand, the margin the other must be left, the share of the gain usually conceded, and the weeks of going without before something new is tried. */
+  patience: 0.9, margin: 1.05, concede: 0.33, stuck: 4,
   stay: 1.6, scout: 4,
 };
 

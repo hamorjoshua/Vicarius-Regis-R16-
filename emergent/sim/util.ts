@@ -88,7 +88,7 @@ export function holdsByCell(s: State): Map<number, Bond[]> {
 }
 
 export function bond(s: State, f: Partial<Bond> & Pick<Bond, 'about' | 'a' | 'basis'>): Bond {
-  const b: Bond = { id: s.nbond++, b: -1, cell: -1, kind: -1, q: 0, due: -1, labour: false, on: -1, share: 0, secures: -1, used: -999, strength: 1, since: s.t, broken: false, rec: -1, ...f };
+  const b: Bond = { id: s.nbond++, b: -1, cell: -1, kind: -1, q: 0, due: -1, labour: false, on: -1, share: 0, secures: -1, used: -999, strength: 1, since: s.t, broken: false, rec: -1, way: '', ...f };
   s.bonds.push(b);
   return b;
 }
@@ -177,4 +177,15 @@ export function regard(s: State, a: Body, b: Body): number {
   let sum = 0;
   for (const x of la) for (const y of lb) sum += tie(s, x, y);
   return sum / (la.length * lb.length);
+}
+
+/** A way of dealing served well or ill: both parties remember. A way that has only failed is forgotten. */
+export function served(s: State, bd: Bond, good: boolean): void {
+  if (!bd.way) return;
+  for (const id of [bd.a, bd.b]) {
+    const w = s.bodies[id]?.ways[bd.way];
+    if (!w) continue;
+    w.w += good ? 0.2 : -0.5;
+    if (w.w <= 0) delete s.bodies[id]!.ways[bd.way];
+  }
 }

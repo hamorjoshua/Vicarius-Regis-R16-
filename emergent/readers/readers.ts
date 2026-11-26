@@ -20,6 +20,10 @@ export interface Event {
   chain: string[];
 }
 
+const SIDE: Record<string, string> = { G: 'goods', L: 'goods later', D: 'days of work', U: 'the use of ground', Y: 'a share of what the ground yields', LS: 'goods later, with its ground as surety', DS: 'days of work, with its ground as surety' };
+/** A way of dealing, in words: what was given for what. */
+export const wayWords = (way: string): string => { const [give, get] = way.split('>'); return `${SIDE[give!] ?? give} for ${SIDE[get!] ?? get}`; };
+
 interface Cluster { need: number; t0: number; last: number; deaths: number; pop: number; cells: Map<number, number>; causes: number[] }
 interface Strife { a: number; b: number; t0: number; last: number; fights: number; takings: number; deaths: number; first: number }
 
@@ -41,6 +45,8 @@ export class Readers {
   private withered: number[] = [];
   private words = { promise: [] as number[], keep: [] as number[], break: [] as number[] };
   side = 10;
+  /** Each way of dealing: when it was first used, and how often. */
+  ways = new Map<string, { first: number; uses: number }>();
 
   /** One link of a chain, in words. */
   describe(r: Rec): string {
@@ -56,6 +62,7 @@ export class Readers {
         if (r.q2) return `house ${r.a} went away still owing work to house ${r.b}`;
         return `house ${r.a} broke its word to repay ${kind} to house ${r.b}`;
       case 'promise':
+        if (r.way) return `house ${r.a}${r.need >= 0 ? ', in want of ' + need + ',' : ''} gave house ${r.b} ${wayWords(r.way)}`;
         if (r.kind2 === 1) return r.need >= 0 ? `house ${r.a}, in want of ${need}, promised ${Math.round(r.q2)} days of work to house ${r.b} for ${kind}` : `house ${r.a} agreed to work off what it owed house ${r.b}`;
         if (r.kind2 >= 3) return `house ${r.a} took ground at ${place(this, r.cell)} from house ${r.b} for a share of its yield${r.kind2 > 3 ? ', ground that house ' + r.b + ' itself holds of another' : ''}`;
         if (r.kind2 === 2) return `house ${r.a}, in want of ${need}, borrowed ${kind} from house ${r.b} against its ground at ${place(this, r.cell)}`;
@@ -63,6 +70,7 @@ export class Readers {
       case 'give':
         if (r.kind2 === 1) return r.need >= 0 ? `house ${r.b} drew ${kind} from the store its body holds in common` : `house ${r.a} put ${kind} into the common store`;
         return `house ${r.a} gave ${kind} to its kin, house ${r.b}`;
+      case 'learn': return `house ${r.a} came to know a way of dealing from house ${r.b}: ${wayWords(r.way ?? '')}`;
       case 'bar': return `house ${r.a} shut its door to house ${r.b}`;
       case 'move': return `house ${r.a} left for ${place(this, r.cell)}`;
       default: return `${r.k} (${r.a}, ${r.b})`;
@@ -133,6 +141,14 @@ export class Readers {
       } else if (r.k === 'move') this.moves.push({ t, body: r.a, to: r.cell });
       else if (r.k === 'gather') this.emit({ t0: t, t1: t, name: r.q2 > 1 ? 'league of bands' : 'band', shape: `body of depth ${r.q2}`, size: r.q, cell: r.cell, who: [r.a], text: r.q2 > 1 ? `Bands around ${place(s, r.cell)} joined into one body of ${r.q} houses, ${r.q2} deep, in the ${when(t)}.` : `${r.q} houses around ${place(s, r.cell)} that had long dealt well together became one body in the ${when(t)}.` });
       else if (r.k === 'leave' && r.kind2 === -4) this.emit({ t0: t, t1: t, name: 'band broken', shape: 'band broken', size: 1, cell: r.cell, who: [r.b], text: `The body at ${place(s, r.cell)} came apart in the ${when(t)}.` });
+      else if (r.k === 'promise' && r.way) {
+        const w = this.ways.get(r.way);
+        if (w) w.uses++;
+        else {
+          this.ways.set(r.way, { first: t, uses: 1 });
+          this.emit({ t0: t, t1: t, name: 'new arrangement', shape: `way ${r.way}`, size: 1, cell: r.cell, who: [r.a, r.b], chain: [this.chain(r.cause).join(' ← ')].filter(Boolean), text: `Something new in the ${when(t)}: house ${r.a} gave house ${r.b} ${wayWords(r.way)}. Nobody in the realm had dealt so before.` });
+        }
+      }
       else if (r.k === 'decay') add(this.withered, r.q);
       else if (r.k === 'promise' || r.k === 'keep' || r.k === 'break') add(this.words[r.k], 1);
       else if (r.k === 'leave' && r.a < 0 && r.kind2 !== -4) this.emit({ t0: t, t1: t, name: 'house died out', shape: 'house died out', size: 1, cell: r.cell, who: [r.b], text: `House ${r.b} at ${place(s, r.cell)} died out in the ${when(t)} with no kin to take what it left.` });

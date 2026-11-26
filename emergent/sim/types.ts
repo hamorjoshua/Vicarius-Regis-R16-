@@ -46,6 +46,12 @@ export interface Body {
   goto: number;
   /** For each need, the record that last cut its cover. */
   why: number[];
+  /** The ways of dealing it knows: for each, how well it has served and the share it is used to conceding. */
+  ways: Record<string, { w: number; p: number }>;
+  /** Weeks it has wanted something and found no way to get it. */
+  stuck: number;
+  /** It has more to gather than hands to gather it: work owed to it is called in. */
+  pressed: boolean;
 }
 
 export type Basis = 'birth' | 'word' | 'use' | 'grant' | 'wrong';
@@ -70,6 +76,8 @@ export interface Bond {
   broken: boolean;
   /** The record that made or last touched it. */
   rec: number;
+  /** The way of dealing it came from. */
+  way: string;
 }
 
 /** One elementary happening. `k` is always the name of an act or a process, never of a situation. */
@@ -82,6 +90,8 @@ export interface Rec {
   need: number;
   /** The record that led to this one, or -1. */
   cause: number;
+  /** For a dealing: what was given for what. */
+  way?: string;
 }
 
 export interface Wrong { by: number; to: number; kind: number; q: number; rec: number }

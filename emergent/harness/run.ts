@@ -5,7 +5,7 @@ import { found } from '../sim/found.ts';
 import { step } from '../sim/step.ts';
 import { KINDS, NEEDS, RECIPES, STOCKS } from '../sim/tables.ts';
 import { deflateSync } from 'node:zlib';
-import { Readers, form, year } from '../readers/readers.ts';
+import { Readers, form, wayWords, year } from '../readers/readers.ts';
 import { askAhead, cover } from '../sim/value.ts';
 import type { State } from '../sim/types.ts';
 
@@ -20,6 +20,7 @@ function tally(s: State, c: Record<string, number>): void {
     else if (r.k === 'trade') { add('trade'); add(`  got ${KINDS[r.kind]!.id} for ${KINDS[r.kind2]!.id}`); }
     else if (r.k === 'give') add(r.kind2 === 1 ? (r.need >= 0 ? 'drew from the common store' : 'gave to the common store') : 'give');
     else if (r.k === 'leave') add(r.kind2 === -3 ? 'left a band' : r.kind2 === -4 ? 'band came apart' : 'leave');
+    else if (r.k === 'promise' && r.way) add(`dealt ${r.way}`);
     else if (r.k === 'promise') add(r.kind2 === 1 ? 'promise of work' : r.kind2 === 2 ? 'loan against ground' : r.kind2 >= 3 ? (r.kind2 > 3 ? 'lease of a lease' : 'lease') : 'promise');
     else add(r.k);
   }
@@ -127,6 +128,9 @@ if (cmd === 'measures') {
   const allForms = new Set(runs.flatMap(r => [...r.forms.keys()]));
   for (const f of [...allForms].sort((x, y2) => x.length - y2.length)) console.log(`  ${f}: first in year ${runs.map(r => r.forms.get(f) ?? '-').join(', ')}; at the end ${runs.map(r => r.atEnd.get(f) ?? 0).join(', ')}`);
 
+  console.log('\nWays of dealing (year first used in each realm; times used; hearths that know it at the end):');
+  const allWays = new Set(runs.flatMap(r => [...r.R.ways.keys()]));
+  for (const w of [...allWays].sort()) console.log(`  ${wayWords(w)}: first in year ${runs.map(r => (r.R.ways.has(w) ? year(r.R.ways.get(w)!.first) : '-')).join(', ')}; used ${runs.map(r => r.R.ways.get(w)?.uses ?? 0).join(', ')}; known to ${runs.map(r => r.s.bodies.filter(b => b.alive && b.ways[w]).length).join(', ')}`);
   console.log(`\nBodies made of bodies standing at the end, by realm: ${runs.map(r => { const c = r.s.bodies.filter(b => b.alive && b.parts.length); return `${c.length} (deepest ${Math.max(0, ...c.map(b => { let d = 0, cur = [b]; while (cur.length) { d++; cur = cur.flatMap(x => x.parts.map(p => r.s.bodies[p]!)).filter(x => x.parts.length); } return d; }))})`; }).join(', ')}`);
 
   // What carried each fall.

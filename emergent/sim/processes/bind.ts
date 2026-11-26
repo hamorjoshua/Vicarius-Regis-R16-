@@ -3,7 +3,7 @@
 
 import { Kn, NEEDS, NK, NN, P, TOIL } from '../tables.ts';
 import { askAhead, cover } from '../value.ts';
-import { bond, dist, head, holdsByCell, kinOf, might, muster, rec, struggle, tie, warm } from '../util.ts';
+import { bond, dist, head, holdsByCell, kinOf, might, muster, rec, served as remember, struggle, tie, warm } from '../util.ts';
 import type { Body, Bond, State } from '../types.ts';
 
 /** The needs a kind serves, for saying why someone's cover fell. */
@@ -57,6 +57,7 @@ export function bind(s: State): void {
     D.store[bd.kind] = D.store[bd.kind]! - bd.q;
     C.store[bd.kind] = C.store[bd.kind]! + bd.q;
     rec(s, 'keep', { a: D.id, b: C.id, kind: bd.kind, q: bd.q, cause: bd.rec });
+    remember(s, bd, true);
     warm(s, C.id, D.id, 0.3); warm(s, D.id, C.id, 0.1);
     bd.q = 0;
   };
@@ -67,9 +68,11 @@ export function bind(s: State): void {
     if (bd.labour) {
       // Work owed is done a part of each week, for as long as the two live within reach.
       if (dist(s.side, D.home, C.home) > P.dealReach) { rec(s, 'break', { a: D.id, b: C.id, q: bd.q, q2: 1, cause: bd.rec }); warm(s, C.id, D.id, -0.3); bd.q = 0; continue; }
+      // Work owed is called for when the one owed has need of hands, or when it has been owed a year.
+      if (!C.pressed && s.t - bd.since < 52) continue;
       const d = Math.min(bd.q, 0.5 * muster(s, D));
       D.spent += d; C.spent -= d; bd.q -= d;
-      if (bd.q <= 0.05) { rec(s, 'keep', { a: D.id, b: C.id, q2: 1, cause: bd.rec }); warm(s, C.id, D.id, 0.2); bd.q = 0; }
+      if (bd.q <= 0.05) { remember(s, bd, true); rec(s, 'keep', { a: D.id, b: C.id, q2: 1, cause: bd.rec }); warm(s, C.id, D.id, 0.2); bd.q = 0; }
       continue;
     }
     const hD = head(s, D), hC = head(s, C);
@@ -102,10 +105,12 @@ export function bind(s: State): void {
         held.a = C.id; held.basis = 'word';
         rec(s, 'take', { a: C.id, b: D.id, cell: held.cell, kind2: -2, cause: bd.rec });
         warm(s, D.id, C.id, -0.2);
+        remember(s, bd, false);
         bd.q = 0; pledge.secures = -2;
         continue;
       }
       bd.broken = true;
+      remember(s, bd, false);
       bd.due = s.t + 2;
       if (bd.basis !== 'wrong') {
         bd.rec = rec(s, 'break', { a: D.id, b: C.id, kind: bd.kind, q: bd.q, cause: bd.rec }).id;
