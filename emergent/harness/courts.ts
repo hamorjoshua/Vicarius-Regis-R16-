@@ -10,32 +10,26 @@ import type { Petition, State } from '../sim/types.ts';
 
 type Script = (s: State, seated: Petition[]) => Ruling[];
 
-/** What a careful court would cut, case by case. */
+/** What a careful court would cut, case by case: it looks at who is in want. */
 function judge(s: State, p: Petition): string {
   const c = cuts(s, p);
   if (p.reason === 'challenge') { const r = s.court!.rules.find(x => x.id === p.bond); return r && r.uses > 5 ? 'uphold' : 'strike'; }
   if (c.includes('inquire')) return 'inquire';
   if (c.includes('levy')) return 'levy';
-  const bd = s.bonds.find(b => b.id === p.bond);
-  if (!bd) return c[0]!;
-  const D = s.bodies[bd.a]!, cov = cover(D.store, askAhead(s, D));
-  return cov.some((x, n) => NEEDS[n]!.harm >= 0.5 && x < P.short) ? 'part' : 'hold';
+  const pressed = (id: number): boolean => { const b = s.bodies[id]; if (!b || !b.alive) return false; const cov = cover(b.store, askAhead(s, b)); return cov.some((x, n) => NEEDS[n]!.harm >= 0.5 && x < P.short); };
+  if (p.side === 'owed') return pressed(p.against) ? 'part' : 'enforce';
+  if (p.side === 'owes') return pressed(p.against) ? 'part' : 'stay';
+  return 'part';
 }
+/** What favours whoever asks. */
+const grant = (s: State, p: Petition): string => (p.reason === 'challenge' ? 'strike' : p.bond < 0 ? 'levy' : p.side === 'owed' ? 'enforce' : p.side === 'owes' ? 'strike' : 'turn');
 
 const COURTS: Record<string, () => Script> = {
   'hears nobody': () => () => [],
-  'grants everything': () => (s, seated) => seated.slice(0, P.hearings).map(p => ({ petition: p.id, cut: cuts(s, p)[p.reason === 'challenge' ? 1 : 0]!, width: 'case' as Width })),
+  'grants everything': () => (s, seated) => seated.slice(0, P.hearings).map(p => ({ petition: p.id, cut: grant(s, p), width: 'case' as Width })),
   'rules at random': () => (s, seated) => seated.slice(0, P.hearings).map(p => { const c = cuts(s, p); return { petition: p.id, cut: c[(p.id * 7 + s.t) % c.length]!, width: (['case', 'body', 'realm'] as Width[])[(p.id + s.t) % 3]! }; }),
   'this case only': () => (s, seated) => seated.slice(0, P.hearings).map(p => ({ petition: p.id, cut: judge(s, p), width: 'case' as Width })),
-  'rules widely': () => {
-    const met = new Map<string, number>();
-    return (s, seated) => seated.slice(0, P.hearings).map(p => {
-      const n = (met.get(p.shape) ?? 0) + 1;
-      met.set(p.shape, n);
-      const cut = judge(s, p);
-      return { petition: p.id, cut, width: (cut === 'inquire' ? 'case' : n >= 2 ? 'realm' : 'case') as Width };
-    });
-  },
+  'a rule for the realm each time': () => (s, seated) => seated.slice(0, P.hearings).map(p => { const cut = judge(s, p); return { petition: p.id, cut, width: (cut === 'inquire' ? 'case' : 'realm') as Width }; }),
 };
 
 const seeds = (process.argv[2] ?? '1,2,3').split(',').map(Number), weeks = Number(process.argv[3] ?? P.reign);

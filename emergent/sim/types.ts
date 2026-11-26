@@ -118,7 +118,7 @@ export interface Rec {
 export interface Wrong { by: number; to: number; kind: number; q: number; rec: number; doer: number }
 
 /** A matter before the court: who brings it, against whom, about which bond or want, and why it climbed this far. */
-export interface Petition { id: number; t: number; by: number; against: number; bond: number; need: number; rec: number; shape: string; reason: 'none' | 'clash' | 'challenge'; speaksFor: number; waited: number; urgency: number }
+export interface Petition { id: number; t: number; by: number; against: number; bond: number; need: number; rec: number; shape: string; side: 'owed' | 'owes' | 'outside' | 'bare'; reason: 'none' | 'clash' | 'challenge'; speaksFor: number; waited: number; urgency: number }
 /** A rule: a bond that binds every member of a body, or the whole realm (scope -1). */
 export interface Rule { id: number; scope: number; shape: string; cut: string; since: number; uses: number }
 export interface Court { standing: number; docket: Petition[]; rules: Rule[]; grief: Record<number, number>; seen: Record<string, number>; next: number; quiet: number }
