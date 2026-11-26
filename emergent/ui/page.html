@@ -1,0 +1,60 @@
+<title>Vicarius Regis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: a sticky tally bar over one column: the audience first, then the week's record and the rolls. */
+:root {
+  --cloth: #e7ebe4; --panel: #f6f8f3; --ink: #1b2927; --soft: #55655f; --rule: #c3ccc2;
+  --woad: #2b5f80; --woad-ink: #ffffff; --seal: #9a2d27; --gilt: #8a6a17; --good: #2f6b43;
+  --display: "IM Fell English", "Iowan Old Style", Georgia, serif;
+  --body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --cloth: #111a18; --panel: #18231f; --ink: #dfe6dc; --soft: #9aa9a1; --rule: #2e3d37;
+  --woad: #7fb3d6; --woad-ink: #0c1620; --seal: #e07a70; --gilt: #d9b659; --good: #7fc394; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --cloth: #111a18; --panel: #18231f; --ink: #dfe6dc; --soft: #9aa9a1; --rule: #2e3d37;
+  --woad: #7fb3d6; --woad-ink: #0c1620; --seal: #e07a70; --gilt: #d9b659; --good: #7fc394; color-scheme: dark }
+body { background: var(--cloth); color: var(--ink); font: 16px/1.5 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+.wrap { max-width: 60rem; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 1rem 3rem; display: flex; flex-direction: column; gap: 1.25rem; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; }
+h1 { font-size: 2.2rem; line-height: 1.1; } h2 { font-size: 1.5rem; } h3 { font-size: 1.15rem; }
+p { margin: 0; max-width: 65ch; }
+.soft { color: var(--soft); } .small { font-size: 0.875rem; }
+.label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); }
+.tally { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--rule); }
+.tally .in { max-width: 60rem; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0.6rem; display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem; align-items: center; }
+.tally .when { font-family: var(--display); font-size: 1.15rem; margin-right: auto; }
+.stat { display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+.seals { display: flex; gap: 4px; align-items: center; }
+.seal { width: 16px; height: 16px; border-radius: 50%; background: var(--seal); border: 1px solid var(--seal); }
+.seal.half { background: linear-gradient(90deg, var(--seal) 50%, transparent 50%); } .seal.gone { background: transparent; border-color: var(--rule); }
+button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--rule); border-radius: 3px; padding: 0.45rem 0.8rem; cursor: pointer; text-align: left; }
+button:hover { border-color: var(--woad); } button:focus-visible { outline: 2px solid var(--woad); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--woad); color: var(--woad-ink); border-color: var(--woad); }
+button.go { background: var(--woad); color: var(--woad-ink); border-color: var(--woad); font-weight: 600; text-align: center; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.matters { display: grid; gap: 1rem; }
+.matter { background: var(--panel); border: 1px solid var(--rule); padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+.matter.chosen { border-color: var(--woad); box-shadow: inset 3px 0 0 var(--woad); }
+.matter header { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; align-items: baseline; justify-content: space-between; }
+.chain { margin: 0; padding-left: 1.1rem; color: var(--soft); font-size: 0.9rem; }
+.cuts, .widths { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.cuts button { flex: 1 1 14rem; min-width: 0; } .cuts button span { display: block; font-size: 0.85rem; opacity: 0.8; }
+.shape { font-size: 0.85rem; color: var(--soft); font-style: italic; }
+.bar { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: center; justify-content: space-between; }
+.list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.list li { border-top: 1px solid var(--rule); padding-top: 0.5rem; max-width: 70ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem 1.5rem; }
+.num { font-family: var(--display); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.bad { color: var(--seal); } .ok { color: var(--good); } .gilt { color: var(--gilt); }
+.tbl { overflow-x: auto; } table { border-collapse: collapse; width: 100%; font-size: 0.92rem; } th, td { text-align: left; padding: 0.4rem 0.75rem 0.4rem 0; border-top: 1px solid var(--rule); vertical-align: top; } th { font-weight: 600; }
+progress { width: 100%; max-width: 30rem; accent-color: var(--woad); }
+input[type="number"] { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--rule); padding: 0.4rem 0.5rem; width: 7rem; }
+.start { display: flex; flex-direction: column; gap: 1rem; padding-block: 2rem; }
+.choices { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+@media (prefers-reduced-motion: no-preference) { .matter { transition: border-color 0.15s; } }
+</style>
+<div id="app"></div>

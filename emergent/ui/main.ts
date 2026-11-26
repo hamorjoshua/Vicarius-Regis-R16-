@@ -1,0 +1,234 @@
+// The screen. A reader and a player's hands: it shows what the court knows and passes rulings to it.
+// It changes the realm only through `hear` and `advance`.
+
+import { found } from '../sim/found.ts';
+import { advance } from '../sim/step.ts';
+import { audience, cuts, hear, openCourt, type Ruling, type Width } from '../sim/court/court.ts';
+import { askAhead, cover } from '../sim/value.ts';
+import { KINDS, NEEDS, P } from '../sim/tables.ts';
+import { top } from '../sim/util.ts';
+import { Readers, wayWords } from '../readers/readers.ts';
+import type { Bond, Petition, State } from '../sim/types.ts';
+
+const app = document.getElementById('app')!;
+const esc = (x: string): string => x.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+/** A shape or rule in plain words: the short codes for ways of dealing are spelled out. */
+const plain = (x: string): string => x.replace(/\(([A-Z]+>[A-Z]+)\)/g, (_m, w: string) => `(${wayWords(w)})`);
+const cap = (x: string): string => x.charAt(0).toUpperCase() + x.slice(1);
+const SEASONS = ['Winter', 'Spring', 'Summer', 'Autumn'];
+const seasonOf = (t: number): string => SEASONS[Math.floor((((t % 52) + 52 + 4) % 52) / 13)]!;
+
+let s: State, R: Readers;
+let seated: Petition[] = [];
+const chosen = new Map<number, { cut: string; width: Width }>();
+let tab: 'week' | 'rolls' | 'realm' | 'record' = 'week';
+let lastWeek: string[] = [];
+let over = '';
+
+// --- Words ---
+
+const house = (id: number): string => (id < 0 ? 'nobody' : `house ${id}`);
+const owedWords = (bd: Bond): string => (bd.labour ? `${Math.round(bd.q)} days of work` : `${bd.q < 10 ? bd.q.toFixed(1) : Math.round(bd.q)} of ${KINDS[bd.kind]?.id ?? 'goods'}`);
+const cellWords = (c: number): string => `(${c % s.side}, ${Math.floor(c / s.side)})`;
+
+function matterWords(p: Petition): string {
+  const A = house(p.by), B = house(p.against);
+  if (p.reason === 'challenge') { const r = s.court!.rules.find(x => x.id === p.bond); return `H${A.slice(1)} has been hurt by a rule of yours and asks that it be struck. The rule: ${r ? esc(plain(r.cut + ' when ' + r.shape)) : 'one now gone'}.`; }
+  const bd = s.bonds.find(b => b.id === p.bond);
+  if (!bd) return `H${A.slice(1)} is in dire want of ${NEEDS[p.need]!.id}. Nothing the court can cut stands behind it.`;
+  if (bd.about === 'act') {
+    const how = bd.basis === 'wrong' ? 'for a taking' : bd.basis === 'grant' ? 'by an order of this court' : bd.way ? `by an agreement to give ${wayWords(bd.way)}` : 'by its word';
+    return p.side === 'owed' ? `H${A.slice(1)} says ${B} owes it ${owedWords(bd)}, ${how}, and it cannot get it.` : `H${A.slice(1)} owes ${B} ${owedWords(bd)}, ${how}, and says it cannot bear it.`;
+  }
+  if (bd.about === 'land') return `H${A.slice(1)} has too little ground. ${B[0]!.toUpperCase() + B.slice(1)} holds ground at ${cellWords(bd.cell)} and has left it idle for more than a year.`;
+  if (bd.secures >= 0) return `H${A.slice(1)} pledged ground to ${B} against a debt, and in its want fears to lose it.`;
+  return p.side === 'owed' ? `H${A.slice(1)} let ground to ${B}, is now short of ground itself, and asks for it back.` : `H${A.slice(1)} has the use of ground from ${B} for ${Math.round(bd.share * 100)}% of what it yields, and says the share is more than it can bear.`;
+}
+
+function cutWords(p: Petition, cut: string): [string, string] {
+  const bd = s.bonds.find(b => b.id === p.bond), B = house(p.against), A = house(p.by);
+  const storeOf = (k: number): number => Math.round(s.court!.store[k] ?? 0);
+  if (p.reason === 'challenge') return cut === 'uphold' ? ['Uphold the rule', 'It stands, and cannot be challenged again.'] : ['Strike the rule', 'Like cases will come to you again.'];
+  if (!bd) return ({
+    give: ['Relief from the Crown’s store', `Three weeks of ${NEEDS[p.need]!.id}, now.`],
+    levy: ['Lay it on the neighbours', 'Whoever nearby has most must give, and is owed it back.'],
+    promise: ['Give your word', `Relief within ${P.wordWeeks} weeks. A broken word is the worst harm there is.`],
+    dismiss: ['Send them away', 'They will hold it against the court.'],
+  } as Record<string, [string, string]>)[cut]!;
+  const debtor = house(bd.a);
+  if (bd.about === 'act') return ({
+    enforce: [`Hold ${debtor} to it`, 'Paid now as far as it can be; the rest is worked off. The court keeps a tenth.'],
+    part: ['Part it', 'Half is paid, half is let go.'],
+    strike: ['Let the debt go', `${house(bd.b)} loses what it was owed.`],
+    stay: ['Stay it a year', 'Nothing is due until then.'],
+    redeem: ['The Crown pays it', `Out of the store, which holds ${storeOf(bd.kind)} of ${KINDS[bd.kind]?.id ?? 'it'}.`],
+    inquire: ['Hold an inquest', 'Find who truly did it. The matter stays before you.'],
+  } as Record<string, [string, string]>)[cut]!;
+  if (bd.about === 'land') return ({
+    enforce: [`Confirm ${B} in its ground`, `${A} gets nothing.`],
+    part: ['Share the ground', 'Each holds half.'],
+    strike: [`Take the ground from ${B}`, 'It lies open to whoever works it.'],
+    turn: [`Give the ground to ${A}`, `${B} loses it.`],
+  } as Record<string, [string, string]>)[cut]!;
+  const pledge = bd.secures >= 0;
+  return ({
+    enforce: pledge ? ['Let the ground pass', 'The creditor takes it now and the debt is done.'] : ['Hold them to the letting', 'It runs its full term again.'],
+    part: pledge ? ['Shorten it', 'Half a year more, no longer.'] : ['Halve it', 'The share is halved, or the term cut to half a year.'],
+    strike: pledge ? ['Free the ground', 'The surety is void; the debt stands bare.'] : ['End the letting', 'The ground goes back.'],
+    stay: ['Stay it a year', 'Nothing changes until then.'],
+  } as Record<string, [string, string]>)[cut]!;
+}
+
+// --- The pieces of the page ---
+
+function tally(): string {
+  const c = s.court!, seals = [0, 1, 2, 3, 4].map(i => `<span class="seal${c.standing >= i + 1 ? '' : c.standing >= i + 0.5 ? ' half' : ' gone'}"></span>`).join('');
+  const alive = s.people.filter(p => p.alive).length, store = c.store.map((q, k) => [q, k] as const).filter(([q]) => q >= 1).sort((a, b) => b[0] - a[0]).slice(0, 3).map(([q, k]) => `${Math.round(q)} ${KINDS[k]!.id}`).join(', ') || 'empty';
+  return `<div class="tally"><div class="in">
+    <span class="when">${seasonOf(s.t)}, year ${Math.floor(s.t / 52) + 1}, week ${(s.t % 52) + 1}</span>
+    <span class="stat"><span class="label">Standing</span><span class="seals" title="${c.standing.toFixed(1)} of 5">${seals}</span></span>
+    <span class="stat"><span class="label">Crown’s store</span><span class="gilt">${store}</span></span>
+    <span class="stat"><span class="label">Souls</span><span>${alive}</span></span>
+    <span class="stat"><span class="label">Weeks left</span><span>${Math.max(0, P.reign - s.t)}</span></span>
+  </div></div>`;
+}
+
+function matterCard(p: Petition): string {
+  const b = s.bodies[p.by]!, cov = cover(b.store, askAhead(s, b)), pick = chosen.get(p.id);
+  const want = p.need >= 0 ? `It has ${cov[p.need]! < 10 ? cov[p.need]!.toFixed(1) : Math.round(cov[p.need]!)} weeks of ${NEEDS[p.need]!.id} laid by.` : 'It is not in want.';
+  const chain = p.rec >= 0 ? R.chain(p.rec, 4) : [];
+  const inBody = top(s, b).id !== b.id;
+  const widths: [Width, string][] = [['case', 'This case only'], ...(inBody && p.reason !== 'challenge' ? [['body', 'A rule for their body'] as [Width, string]] : []), ...(p.reason !== 'challenge' ? [['realm', 'A rule for the realm'] as [Width, string]] : [])];
+  return `<article class="matter${pick ? ' chosen' : ''}">
+    <header><h3>${esc(cap(house(p.by)))}${p.reason === 'challenge' ? ' against a rule' : p.against >= 0 ? ' against ' + esc(house(p.against)) : ''}</h3>
+      <span class="small soft">${p.speaksFor > 1 ? `one of a body of ${p.speaksFor} houses · ` : ''}${p.waited ? `waited ${p.waited} week${p.waited > 1 ? 's' : ''}` : 'new this week'}${p.reason === 'clash' ? ' · two bodies’ rules disagree' : ''}</span></header>
+    <p>${matterWords(p)} ${want}</p>
+    ${chain.length ? `<div><span class="label">How it came about</span><ol class="chain">${chain.map(c => `<li>${esc(c)}</li>`).join('')}</ol></div>` : ''}
+    <div class="cuts">${cuts(s, p).map(c => { const [t, d] = cutWords(p, c); return `<button data-cut="${p.id}:${c}" aria-pressed="${pick?.cut === c}">${esc(t)}<span>${esc(d)}</span></button>`; }).join('')}</div>
+    ${pick && pick.cut !== 'inquire' && widths.length > 1 ? `<div><span class="label">How far it reaches</span><div class="widths">${widths.map(([w, t]) => `<button data-width="${p.id}:${w}" aria-pressed="${pick.width === w}">${t}</button>`).join('')}</div></div>` : ''}
+    ${p.reason === 'challenge' ? '' : `<p class="shape">A rule here would cover: ${esc(plain(p.shape))}</p>`}
+  </article>`;
+}
+
+function weekPanel(): string {
+  const n = chosen.size, c = s.court!;
+  const waiting = c.docket.length - seated.length;
+  return `<section><div class="bar"><div><h2>The audience</h2><p class="soft small">${seated.length ? `${seated.length} seated${waiting > 0 ? `, ${waiting} more waiting` : ''}. You may hear ${P.hearings}; a fourth costs half a seal.` : 'Nobody waits on you this week.'}</p></div>
+    <button class="go" id="pass">${n ? `Give ${n} ruling${n > 1 ? 's' : ''} and let the week pass` : 'Let the week pass'}</button></div>
+    <div class="matters">${seated.map(matterCard).join('')}</div></section>
+    ${lastWeek.length ? `<section><h2>Last week</h2><ul class="list">${lastWeek.map(x => `<li>${x}</li>`).join('')}</ul></section>` : ''}`;
+}
+
+function rollsPanel(): string {
+  const c = s.court!;
+  if (!c.rules.length) return '<section><h2>The rolls</h2><p class="soft">You have made no rule yet. Until you do, every like case comes back to you.</p></section>';
+  return `<section><h2>The rolls</h2><div class="tbl"><table><thead><tr><th>Rule</th><th>Binds</th><th>Made</th><th>Settled below</th></tr></thead><tbody>${c.rules.slice().sort((a, b) => b.uses - a.uses).map(r => `<tr><td><strong>${esc(cap(r.cut))}</strong> when ${esc(plain(r.shape))}</td><td>${r.scope === -1 ? 'the realm' : 'body ' + r.scope}</td><td>week ${r.since + 1}</td><td>${r.uses}</td></tr>`).join('')}</tbody></table></div></section>`;
+}
+
+function realmPanel(): string {
+  const c = s.court!, hs = s.bodies.filter(b => b.alive && !b.parts.length && b.members.length), bodies = s.bodies.filter(b => b.alive && b.parts.length).length;
+  const sum = (k: number): number => Math.round(hs.reduce((x, b) => x + b.store[k]!, 0));
+  const sore = Object.values(c.grief).filter(g => g >= P.aggrieved).length;
+  const ways = new Set(hs.flatMap(b => Object.keys(b.ways)));
+  const expect = ['Owed on a bond', 'Bound by a bond', 'Shut out by a bond', 'In bare want'].map((t, k) => `<tr><td>${t}</td><td>${Math.round((100 * hs.reduce((x, b) => x + (b.plea[k] ?? 0.5), 0)) / Math.max(1, hs.length))} in 100</td></tr>`).join('');
+  const cell = (t: string, v: string, cls = ''): string => `<div><div class="label">${t}</div><div class="num ${cls}">${v}</div></div>`;
+  return `<section><h2>The realm</h2><div class="grid">
+    ${cell('Souls', String(s.people.filter(p => p.alive).length))}${cell('Houses', String(hs.length))}${cell('Bodies of houses', String(bodies))}
+    ${cell('Aggrieved houses', String(sore), sore >= P.faction * hs.length * 0.7 ? 'bad' : '')}${cell('Needed to withdraw confidence', String(Math.ceil(P.faction * hs.length)))}
+    ${cell('Grain laid by', String(sum(0)))}${cell('Word given, not yet made good', String(c.words.length))}${cell('Word kept / broken', `${c.wordsKept} / ${c.wordsBroken}`, c.wordsBroken ? 'bad' : '')}
+  </div></section>
+  <section><h3>What houses expect of your court</h3><p class="soft small">How likely they think you are to find for the one who asks. It decides who comes.</p><div class="tbl"><table><tbody>${expect}</tbody></table></div></section>
+  <section><h3>Ways of dealing known in the realm</h3><ul class="list">${[...ways].sort().map(w => `<li>${esc(wayWords(w))}</li>`).join('') || '<li class="soft">Only goods for goods.</li>'}</ul></section>`;
+}
+
+function recordPanel(): string {
+  const ev = R.events.slice(-40).reverse();
+  return `<section><h2>The record</h2><ul class="list">${ev.map(e => `<li>${esc(e.text)}${e.chain[0] ? `<div class="small soft">because ${esc(e.chain[0])}</div>` : ''}</li>`).join('') || '<li class="soft">Nothing the chroniclers thought worth writing yet.</li>'}</ul></section>`;
+}
+
+function render(): void {
+  if (over) { app.innerHTML = `${tally()}<div class="wrap"><section class="start"><h1>${over}</h1><p>${s.court!.standing > 0 ? `You kept the realm for ${Math.floor(s.t / 52)} years, with ${s.court!.standing.toFixed(1)} of 5 in standing. You made ${s.court!.rules.length} rules, and they settled ${s.court!.rules.reduce((x, r) => x + r.uses, 0)} matters without you.` : `Too many houses had had enough. It took ${s.t} weeks.`}</p><div class="choices"><button class="go" id="again">Begin another reign</button></div></section>${rollsPanel()}${recordPanel()}</div>`; return; }
+  const tabs: [typeof tab, string][] = [['week', 'The audience'], ['rolls', `The rolls (${s.court!.rules.length})`], ['realm', 'The realm'], ['record', 'The record']];
+  app.innerHTML = `${tally()}<div class="wrap"><nav class="tabs">${tabs.map(([k, t]) => `<button data-tab="${k}" aria-pressed="${tab === k}">${t}</button>`).join('')}</nav>${tab === 'week' ? weekPanel() : tab === 'rolls' ? rollsPanel() : tab === 'realm' ? realmPanel() : recordPanel()}</div>`;
+}
+
+// --- The week ---
+
+function openWeek(): void {
+  s.log = [];
+  seated = audience(s);
+  chosen.clear();
+}
+
+function passWeek(): void {
+  const c = s.court!, before = c.standing;
+  const rulings: Ruling[] = [...chosen].map(([petition, v]) => ({ petition, cut: v.cut, width: v.width }));
+  const said = rulings.map(r => { const p = seated.find(x => x.id === r.petition)!; return `You ruled: <strong>${esc(cutWords(p, r.cut)[0])}</strong>, ${esc(house(p.by))}${p.against >= 0 ? ' against ' + esc(house(p.against)) : ''}${r.width !== 'case' && r.cut !== 'inquire' ? `, as a rule for ${r.width === 'realm' ? 'the realm' : 'their body'}` : ''}.`; });
+  hear(s, rulings);
+  const below = s.log.filter(r => r.k === 'rule' && r.kind2 === 1).length, withdrew = s.log.some(r => r.k === 'withdraw');
+  const words = s.log.filter(r => r.q2 === 9 && (r.k === 'keep' || r.k === 'break')).map(r => (r.k === 'keep' ? `Your word to house ${r.b} was kept out of the store.` : `<span class="bad">Your word to house ${r.b} was broken: the store had nothing to give.</span>`));
+  const seen = R.events.length;
+  advance(s, true);
+  R.read(s);
+  lastWeek = [...said, ...words];
+  if (below) lastWeek.push(`${below} matter${below > 1 ? 's were' : ' was'} settled below by your rules.`);
+  if (withdrew) lastWeek.push(`<span class="bad">Enough houses had had enough: they withdrew their confidence. Standing fell from ${before.toFixed(1)} to ${c.standing.toFixed(1)}.</span>`);
+  else if (c.standing < before) lastWeek.push(`A fourth hearing cost you half a seal.`);
+  for (const e of R.events.slice(seen)) lastWeek.push(esc(e.text));
+  if (c.standing <= 0) over = 'The regency has fallen';
+  else if (s.t >= P.reign) over = 'The king returns';
+  else openWeek();
+}
+
+// --- Beginning ---
+
+function start(seed: number, side: number, souls: number, years: number): void {
+  s = found(seed, -years * 52, side, souls);
+  R = new Readers();
+  over = ''; lastWeek = []; tab = 'week';
+  const total = years * 52;
+  const tick = (): void => {
+    const t0 = performance.now();
+    while (s.t < 0 && performance.now() - t0 < 60) { advance(s); for (const r of s.log) if (r.k !== 'make') R.index.set(r.id, r); }
+    if (s.t < 0) {
+      app.innerHTML = `<div class="wrap"><section class="start"><h1>The realm before you</h1><p>The realm is living through the ${years} years before your coming: ${s.people.filter(p => p.alive).length} souls, year ${Math.floor((total + s.t) / 52) + 1} of ${years}.</p><progress id="past" max="${total}" value="${total + s.t}"></progress></section></div>`;
+      setTimeout(tick, 0);
+      return;
+    }
+    openCourt(s);
+    openWeek();
+    render();
+  };
+  tick();
+}
+
+function welcome(): void {
+  app.innerHTML = `<div class="wrap"><section class="start">
+    <h1>Vicarius Regis</h1>
+    <p>The king is away for three years and you hold his court. Each week those whom nothing below could settle come before you. Rule on up to three. A ruling for one case settles one case, and the question will come back. A rule for the realm settles every like case without you, and every arrangement built on the old understanding is disturbed.</p>
+    <p class="soft">Nothing in this realm is scripted. Its people farm, deal, quarrel and believe by their own lights, and they will learn what to expect of you.</p>
+    <div><label class="label" for="seed">Seed of the realm</label><br><input id="seed" type="number" min="1" value="${1 + Math.floor(Math.random() * 999)}"></div>
+    <div class="choices"><button class="go" id="small">A small realm: about 200 souls, ready in seconds</button><button id="full">The realm: about 900 souls, takes a minute to found</button></div>
+  </section></div>`;
+}
+
+app.addEventListener('click', ev => {
+  const b = (ev.target as HTMLElement).closest('button');
+  if (!b) return;
+  const seedOf = (): number => Math.max(1, Number((document.getElementById('seed') as HTMLInputElement | null)?.value) || 1);
+  if (b.id === 'small') return start(seedOf(), P.side, P.souls, 12);
+  if (b.id === 'full') return start(seedOf(), P.realmSide, P.realmSouls, 10);
+  if (b.id === 'again') return welcome();
+  if (b.id === 'pass') { passWeek(); render(); window.scrollTo(0, 0); return; }
+  if (b.dataset.tab) { tab = b.dataset.tab as typeof tab; render(); return; }
+  if (b.dataset.cut) {
+    const [id, cut] = b.dataset.cut.split(':'), pid = Number(id), had = chosen.get(pid);
+    if (had?.cut === cut) chosen.delete(pid);
+    else if (had || chosen.size <= P.hearings) chosen.set(pid, { cut: cut!, width: had?.width ?? 'case' });
+    render();
+    return;
+  }
+  if (b.dataset.width) { const [id, w] = b.dataset.width.split(':'), had = chosen.get(Number(id)); if (had) { had.width = w as Width; render(); } }
+});
+
+welcome();

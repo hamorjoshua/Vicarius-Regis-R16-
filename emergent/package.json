@@ -8,10 +8,13 @@
     "test": "node --test test/invariants.test.ts",
     "chronicle": "node harness/run.ts chronicle",
     "measures": "node harness/run.ts measures",
-    "years": "node harness/run.ts years"
+    "years": "node harness/run.ts years",
+    "build": "node build.mjs",
+    "courts": "node harness/courts.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "esbuild": "^0.25.0",
     "typescript": "^5.8.0"
   }
 }
