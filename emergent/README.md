@@ -2,9 +2,9 @@
 
 The build of [The Emergent Realm](../docs/living-realm-design.md), stage by stage. The current game (`../index.html`) and the first build (`../realm/`) are untouched; `realm/` stays as a reference until stage 2 replaces its harness.
 
-**Stages 1 to 4 and 6 of 9 are here, and about half of stage 5.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. Stage 5 so far is ways of dealing that people find for themselves, and beliefs about what brings harm. Stage 6 is the living land. The prediction log is not built. Stages 7 to 9 are not started.
+**Stages 1 to 4 and 6 of 9 are here, and most of stage 5.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. Stage 5 so far is ways of dealing that people find for themselves, and beliefs about what brings harm. Stage 6 is the living land. The prediction log is not built. Stages 7 to 9 are not started.
 
-**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3", "After stage 4" and "Stage 5 so far" have the later figures; the last of them, "With the living land", is current.
+**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3", "After stage 4" and "Stage 5 so far" have the later figures; the last of them, "With minds and plans", is current.
 
 ## Run it
 
@@ -279,6 +279,27 @@ Three realms, forty years of run after the past (`measures 40 1,2,3`):
 - **The creatures that feed on herds died out** in every realm, because people had already hunted the herds down. The blight never took hold.
 - **Realms are poorer and the fall is no better:** peaks of 250 to 320, from 330 to 430, and falls of 78 to 94%. Vermin and floods take a steady share.
 - **The first version of this stage killed every realm** within five years. Four faults were corrected; see the commit "the living land made liveable".
+
+## With minds and plans
+
+**A mind for each person.** Beliefs, ways of dealing and skill at each kind of work belong to people. A hearth acts on what the eldest of its grown members knows. Members teach one another as far as each is ready to believe. What a person knows goes with them when they marry out, and is lost to the hearth when they die. Skill grows with doing and slips without it, and children start unskilled.
+
+**Plans held over weeks.** A hearth that can offer nothing today for what it lacks asks what the one who has it most wants that this hearth could make. It sets itself to make that, keeps it back from other dealings, and gives up after half a year if nothing comes of it. This is one kind of plan only; schemes of several dealings are not built.
+
+Three realms, forty years of run after the past, measured three times as these were added:
+
+| | Seed 1: peak, deepest fall, end | Seed 2 | Seed 3 |
+| --- | --- | --- | --- |
+| Minds only | 146, 10%, 188 | 291, 89%, 47 | 65, 17%, 215 |
+| Minds and plans, first version | 73, 7%, 75 | 156, 32%, 158 | 42, 5%, 166 |
+| Minds and plans, corrected | 371, 88%, 56 | 146, 12%, 149 | 316, 75%, 81 |
+
+- **Hearths specialise.** The best hearth at netting reaches a skill of about 1.5 where the average is 0.95; at panning 1.2 to 1.4 against 0.8.
+- **Plans mostly fail.** Of 340 to 890 made in a realm, 8 to 18% are fulfilled. In the first version it was 5 to 12%, because a hearth would give no more than half of what it had made for the purpose.
+- **Three realms cannot tell these versions apart.** The same seed gives a peak of 73 under one version and 371 under the next. A small change to the rules sends a realm down a different road, which is what the design wants of the realm but means a batch of three measures nothing about a change. Batches need to be larger.
+- **One oddity:** rest is a kind of work in the tables, so people grow skilled at resting.
+
+Not yet built of stage 5: beliefs about facts (who holds what, who did what), and foresight about crops that is learned and not given.
 
 ## Known gaps
 
