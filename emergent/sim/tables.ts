@@ -152,8 +152,11 @@ export const RECIPES: RecipeRow[] = [
 // --- Constants ---
 
 export const P = {
+  /** The toy, which the tests use. */
   side: 10,
   souls: 200,
+  /** The realm a run is played on: as large as fits a tenth of a second a week. */
+  realmSide: 20, realmSouls: 900,
   /** Years lived through before the run begins, so that its people inherit a past. */
   past: 30,
 

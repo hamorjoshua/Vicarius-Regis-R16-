@@ -12,8 +12,8 @@ import { advance } from './step.ts';
 import type { Cell, Person, State } from './types.ts';
 
 /** A realm with a past: founded a generation back and lived through to week 0. */
-export function inherit(seed: number, years = P.past): State {
-  let s = found(seed, -years * 52);
+export function inherit(seed: number, years = P.past, side = P.realmSide, souls = P.realmSouls): State {
+  let s = found(seed, -years * 52, side, souls);
   while (s.t < 0) s = advance(s);
   return s;
 }
