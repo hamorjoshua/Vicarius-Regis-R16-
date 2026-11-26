@@ -1,0 +1,163 @@
+— week 1, spring · Rook, merchant of the Capital
+  ROOK ASKS THAT VOSS CARRY PART OF CHARITY
+  “The stalls are bare, before the fields are sown, and we are hard pressed. Voss has room to spare. Let them carry a unit of charity. Think of our credit.”
+   → Rook carries less of Charity · Voss takes up more of Charity · Rook owes Voss
+   or word until week 3, kept if Rook heard
+
+— week 1, spring · Sabine, merchant of the Riverlands
+  SABINE ASKS THAT ANOTHER ESTATE CARRY REPAIRS
+  “The eel traps come up empty, with the planting not yet done, and we are stretched thin. Why should my house carry repairs while the nobles of the Riverlands carry nothing? Think of our good name at market.”
+   → Sabine carries less of Repairs · Carrow takes up more of Repairs · Merchants and Nobles sour toward each other · law
+   or word until week 3, kept if Sabine heard
+
+— week 1, spring · Ashby, official of the Riverlands
+  EDRIC WOULD ANSWER FOR ASHBY
+  “The water is over the second step, before the fields are sown, and we are stretched thin. I have asked the saints, and now I ask you. Edric, one of our own, will stand for my office until the third week, if the court will accept it. Think of good order.”
+   → Ashby eased 1 · Edric pressed 0.5 · pledge until week 3, kept if Ashby not urgent
+   or Ashby eased 2 · standing -1
+
+— week 1, spring · Anwen, commoner of the Capital
+  ANWEN ASKS THAT CAEL BE BROUGHT TO CHARITY
+  “Cael, one of our own, keeps away from charity while the faithful carry it. Bring them to it, and to God.”
+   → Cael takes up more of Charity · Cael more devout
+   or Anwen takes up more of Charity · pledge until week 4, kept if Anwen not urgent
+
+— week 1, spring · Stone, soldier of the Capital
+  STONE CALLS IN A DEBT
+  “Oswin owes my company, and I need it paid.”
+   → Oswin pressed 1 · Stone eased 1 · an old tie ends
+   or bond until week 4, kept if Oswin not urgent
+
+— week 2, spring · Quill, noble of the Highlands
+  QUILL ASKS FOR THE COURT’S WORD
+  “The snow is in the pass, before the fields are sown, and it is more than we can carry for long. Only say you will hear us until the fourth week, and we will wait without complaint. Think of the land.”
+   → word until week 4, kept if Quill heard
+   or Quill carries less of Charity · Holt takes up more of Charity · Quill owes Holt
+
+— week 3, spring · Rook, merchant of the Capital
+  ROOK ASKS PIKE FOR TIME
+  “The stalls are bare, before the fields are sown, and we are hard pressed. Pike, who holds our note, has been patient. Give my house until the sixth week, and the debt will be paid in full. Think of our credit.”
+   → Rook eased 1 · bond until week 6, kept if Rook not urgent
+   or Rook carries less of Repairs · Voss takes up more of Repairs · Merchants and Nobles sour toward each other · law
+
+— week 4, spring · Quill, noble of the Highlands
+  QUILL ASKS LEAVE TO MARRY INTO BELL
+  “I know the court will hear me fairly. Bell and my house would be joined. We ask the court’s blessing.”
+   → Quill and Bell marry · Quill regard +1 · Bell regard +1 · nobles of the highlands grievance +0.5 · Nobles and Commoners warm toward each other
+   or Quill regard +1 · Quill esteem with own estate +0.5 · Holt regard -1
+
+— week 4, spring · Holt, noble of the Highlands
+  HOLT BRINGS A CHARGE AGAINST QUILL
+  “You will forgive me if I speak plainly. I accuse Quill, who owes us. Let the court hear it.”
+   → Holt charges Quill · Quill pressed 1 · Quill esteem with own estate -0.5
+
+— week 7, spring · Pike, cleric of the Capital
+  PIKE WOULD MAKE PEACE WITH ROOK
+  “I had not thought to come back here. Since the court ruled for the merchants, we have had no rest. Rook is in trouble now. Whatever lies between us, we would help, and let it rest.”
+   → an old tie ends · Rook eased 1 · Pike pressed 0.5 · Rook regard +1 · Pike regard +1 · Clerics and Merchants warm toward each other
+   or Pike charges Rook · Rook pressed 1 · Rook esteem with own estate -0.5
+
+— week 10, spring · Sabine, merchant of the Riverlands
+  SABINE ASKS RELIEF OF THE CROWN
+  “I come to you as a friend of the court. The eel traps come up empty, with the planting not yet done, and it is more than we can carry for long. Ease my house, on the Crown’s account. Think of the ledger.”
+   → Sabine eased 2 · standing -1
+   or Sabine carries less of Repairs · Weaver takes up more of Repairs · Sabine owes Weaver
+
+— week 11, spring · Garran, cleric of the Riverlands
+  GARRAN ASKS FOR A PLACE AT COURT
+  “I know the court will hear me fairly. The house of God here would serve the court more nearly.”
+   → Garran regard +1 · Garran esteem with own estate +0.5
+
+— week 11, spring · Voss, noble of the Capital
+  VOSS ASKS THAT A LAW BE REPEALED
+  “The court has been good to us. Since the court ruled for the merchants, we have had no rest. The law laid on the nobles of the Capital is unjust. Lift it.”
+   → Voss carries less of Repairs · Rook takes up more of Repairs · a law is lifted · merchants of the capital grievance +0.5
+   or Voss charges Rook · Rook pressed 1 · Rook esteem with own estate -0.5
+
+— week 19, summer · Weaver, commoner of the Riverlands
+  WEAVER ASKS FOR A PLACE AT COURT
+  “I know the court will hear me fairly. We would serve the court more nearly.”
+   → Weaver regard +1 · Weaver esteem with own estate +0.5 · Reed regard -1
+
+— week 1, spring · Garran, cleric of the Riverlands
+  SABINE WOULD ANSWER FOR GARRAN
+  “The water is over the second step, before the fields are sown, and we are stretched thin. Sabine, my daughter’s husband’s house, will stand for the house of God here until the third week, if the court will accept it. Think of the poor.”
+   → Garran eased 1 · Sabine pressed 0.5 · pledge until week 3, kept if Garran not urgent
+   or Garran carries less of Charity · Brack takes up more of Charity · Clerics and Officials sour toward each other · law
+
+— week 1, spring · Cael, merchant of the Capital
+  CAEL ASKS THAT ELSWYTH BE BROUGHT TO CHARITY
+  “We have prayed on it. Elswyth keeps away from charity while the faithful carry it. Bring them to it, and to God.”
+   → Elswyth takes up more of Charity · Cael carries less of Charity · Elswyth more devout
+   or Cael takes up more of Charity · pledge until week 4, kept if Cael not urgent
+
+— week 1, spring · Carrow, commoner of the Riverlands
+  CARROW CALLS IN A DEBT
+  “Dunn owes us, and I need it paid.”
+   → Dunn pressed 1 · Carrow eased 1 · an old tie ends
+   or bond until week 4, kept if Dunn not urgent
+
+— week 3, spring · Ysra, noble of the Highlands
+  YSRA ASKS THAT ANWEN CARRY PART OF BILLETING
+  “The snow is in the pass, before the fields are sown, and it is more than we can carry for long. Anwen has room to spare. Let them carry a unit of billeting. Think of our honour.”
+   → Ysra carries less of Billeting · Anwen takes up more of Billeting · Ysra owes Anwen
+   or word until week 5, kept if Ysra heard
+
+— week 3, spring · Reed, commoner of the Capital
+  REED ASKS LEAVE TO MARRY INTO MARR
+  “The court has been good to us. Marr and we would be joined. We ask the court’s blessing.”
+   → Reed and Marr marry · Reed regard +1 · Marr regard +1 · Commoners and Soldiers warm toward each other
+   or Reed regard +1 · Reed esteem with own estate +0.5 · Elswyth regard -1
+
+— week 3, spring · Garran, cleric of the Riverlands
+  GARRAN ASKS FOR A PLACE AT COURT
+  “I know the court will hear me fairly. The house of God here would serve the court more nearly.”
+   → Garran regard +1 · Garran esteem with own estate +0.5
+
+— week 4, spring · Ysra, noble of the Highlands
+  YSRA ASKS ANWEN FOR TIME
+  “I know the court will hear me fairly. The flock is thin, with the planting not yet done, and we are hard pressed. Anwen, who holds our note, has been patient. Give my house until the seventh week, and the debt will be paid in full. Think of the land.”
+   → Ysra eased 1 · bond until week 7, kept if Ysra not urgent
+   or Ysra carries less of Charity · Oswin takes up more of Charity · Ysra owes Oswin
+
+— week 4, spring · Pike, soldier of the Riverlands
+  PIKE ASKS FOR A PLACE AT COURT
+  “I come to you as a friend of the court. My company would serve the court more nearly.”
+   → Pike regard +1 · Pike esteem with own estate +0.5 · Stone regard -1
+
+— week 5, spring · Carrow, commoner of the Riverlands
+  CARROW WOULD MAKE PEACE WITH DUNN
+  “I come to you as a friend of the court. Dunn is in trouble now. Whatever lies between us, we would help, and let it rest.”
+   → an old tie ends · Dunn eased 1 · Carrow pressed 0.5 · Dunn regard +1 · Carrow regard +1 · Commoners and Commoners warm toward each other
+   or Carrow charges Dunn · Dunn pressed 1 · Dunn esteem with own estate -0.5
+
+— week 5, spring · Pike, soldier of the Riverlands
+  PIKE ASKS THAT A LAW BE REPEALED
+  “Since the court ruled for the commoners, we have had no rest. The law laid on the soldiers of the Riverlands is unjust. Lift it.”
+   → Stone carries less of Billeting · Pike carries less of Billeting · Dunn takes up more of Billeting · a law is lifted · commoners of the riverlands grievance +0.5
+   or an old tie ends · Dunn eased 1 · Pike pressed 0.5 · Dunn regard +1 · Pike regard +1 · Soldiers and Commoners warm toward each other
+
+— week 6, spring · Dunn, commoner of the Riverlands
+  DUNN ASKS THAT ANOTHER ESTATE CARRY BILLETING
+  “The eel traps come up empty, with the planting not yet done, and we are at the end of what we can bear. The heron came twice to our roof. We have not forgotten how the soldiers were favoured over us. Why should we carry billeting while the soldiers of the Riverlands carry nothing? Think of the roof.”
+   → Dunn carries less of Billeting · Stone takes up more of Billeting · Pike takes up more of Billeting · Commoners and Soldiers sour toward each other · law
+   or word until week 8, kept if Dunn heard
+
+— week 6, spring · Sabine, merchant of the Riverlands
+  SABINE BRINGS WORD OF A SIGN
+  “I know the court will hear me fairly. The river ran backward an hour. The river ran backward an hour. Proclaim it, and let the Riverlands take heart.”
+   → Sabine eased 2 · the Riverlands more superstitious
+   or Sabine less superstitious · Sabine regard -1 · the Riverlands less superstitious
+
+— week 8, spring · Holt, merchant of the Highlands
+  HOLT ASKS FOR THE COURT’S WORD
+  “The snow is in the pass, before the fields are sown, and we are stretched thin. I have asked the saints, and now I ask you. Only say you will hear us until the tenth week, and we will wait without complaint. Think of our good name at market.”
+   → word until week 10, kept if Holt heard
+   or Holt carries less of Charity · Oswin takes up more of Charity · Holt owes Oswin
+
+— week 9, spring · Garran, cleric of the Riverlands
+  GARRAN OFFERS TO JOIN BILLETING
+  “I come to you as a friend of the court. The water is over the second step, before the fields are sown, and we are not yet in trouble. The house of God here will put a hand to billeting, if it will help.”
+   → Garran takes up more of Billeting · Garran esteem with own estate +0.5
+   or Dunn takes up more of Billeting · Carrow takes up more of Billeting · Stone takes up more of Billeting · Sabine takes up more of Billeting · Weaver takes up more of Billeting · Garran takes up more of Billeting · Brack takes up more of Billeting · compact until week 10, kept if Billeting kept
+
