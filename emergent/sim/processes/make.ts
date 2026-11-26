@@ -2,7 +2,7 @@
 // Last week's choices are carried out against what is there now.
 
 import { AIDERS, Kn, NS, P, Rc, St } from '../tables.ts';
-import { dist, holdsByCell, payRent, rec, tenancies } from '../util.ts';
+import { dist, holdsByCell, kinOf, payRent, rec, struggle, tenancies } from '../util.ts';
 import { bear } from './grow.ts';
 import type { Body, State, Work } from '../types.ts';
 
@@ -30,6 +30,7 @@ export function make(s: State): void {
   for (const [key] of want) avail.set(key, s.cells[Math.floor(key / NS)]!.stock[key % NS]! * P.glean);
   const holds = holdsByCell(s);
   const lets = tenancies(s);
+  const kin = kinOf(s);
   for (const j of jobs) {
     const r = Rc[j.w.r]!, c = s.cells[j.w.cell]!, b = j.b;
     let m = j.m;
@@ -37,6 +38,19 @@ export function make(s: State): void {
     for (const [k, q] of r.inp) if (q * m > b.store[k]!) m = b.store[k]! / q;
     for (const [st, q] of r.to) { const room = bear(c, st) - c.stock[st]!; if (q * m > room) m = Math.max(0, room / q); }
     if (m <= 1e-9) continue;
+    // A taking from ground whose holder lives within reach is opposed, as a taking from a store is:
+    // the taker carries off only what their might wins, and what is not won stays standing.
+    if (r.from.length && r.out.length && !lets.some(x => x.cell === j.w.cell && x.lease.a === b.id)) {
+      const over = holds.get(j.w.cell) ?? [];
+      let sum = 0, guard: Body | undefined, most = 0;
+      for (const h of over) {
+        sum += h.strength;
+        const hb = s.bodies[h.a]!;
+        if (hb.alive && h.strength > most && dist(s.side, hb.home, j.w.cell) <= P.reach) { most = h.strength; guard = hb; }
+      }
+      if (sum >= P.held && guard && !over.some(h => h.a === b.id)) m *= struggle(s, kin, b, guard, s.nrec);
+      if (m <= 1e-9) continue;
+    }
     for (const [st, q] of r.from) c.stock[st] = Math.max(0, c.stock[st]! - q * m);
     for (const [k, q] of r.inp) b.store[k] = Math.max(0, b.store[k]! - q * m);
     for (const [k, q] of r.out) b.store[k] = b.store[k]! + q * m;
