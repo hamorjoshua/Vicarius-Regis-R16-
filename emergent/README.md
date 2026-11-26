@@ -2,9 +2,9 @@
 
 The build of [The Emergent Realm](../docs/living-realm-design.md), stage by stage. The current game (`../index.html`) and the first build (`../realm/`) are untouched; `realm/` stays as a reference until stage 2 replaces its harness.
 
-**Stages 1 to 4 and 6 of 9 are here, and most of stage 5.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. Stage 5 so far is ways of dealing that people find for themselves, and beliefs about what brings harm. Stage 6 is the living land. The prediction log is not built. Stages 7 to 9 are not started.
+**Stages 1 to 6 of 9 are here.** Stage 5 leaves out forged records and beliefs about who holds what. Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. Stage 5 so far is ways of dealing that people find for themselves, and beliefs about what brings harm. Stage 6 is the living land. The prediction log is not built. Stages 7 to 9 are not started.
 
-**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3", "After stage 4" and "Stage 5 so far" have the later figures; the last of them, "With minds and plans", is current.
+**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3", "After stage 4" and "Stage 5 so far" have the later figures; the last of them, "With fallible blame", is current.
 
 ## Run it
 
@@ -338,6 +338,21 @@ Each person holds a belief about how much a unit of seed returns, drawn at birth
 - **Realms end larger on average,** and falls are more often partial. With twelve realms this is a tendency, not a proof.
 - Still given, not learned: when the season for sowing is open, and how a standing crop is expected to ripen.
 
+## With fallible blame
+
+A holder who lives near their ground knows who stripped it. One who lives further off must guess, and lays it to whichever house within reach they already think worst of. The debt, and any fight, fall on that house. The same twelve realms:
+
+| | Baseline | Learned foresight | And fallible blame |
+| --- | --- | --- | --- |
+| Realms that fall by 75% or more | 4 of 12 | 3 of 12 | 6 of 12 |
+| Realms that fall by 40 to 75% | 0 | 4 | 2 |
+| Mean number at the end | 126 | 171 | 99 |
+
+- **Nearly three in four unseen takings are laid to the wrong house:** 1,117 wrong against 421 right across the twelve realms.
+- **Realms are worse off for it.** Twice as many fall hard, and they end smaller. An innocent house made to pay for another's taking is pushed toward want itself, and the guilty one is never checked.
+- **More kinds of thing happen:** 39 to 42 shapes of event in each batch of three.
+- Not built: beliefs about who holds what, and records that can be forged.
+
 ## Known gaps
 
 1. **The fall is still too deep** (64 to 87% where it happens), and it recurs about once a generation. Foresight, a past, customs and defended fields have each been tried; the last helped most and none cured it. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
@@ -357,4 +372,4 @@ Each person holds a belief about how much a unit of seed returns, drawn at birth
 
 ## Next
 
-The rest of stage 5: a mind for each person, plans of several steps, practices of work that are copied imperfectly and recombined, beliefs about facts, and foresight that is learned and not given.
+Stage 7, the realm: 2,000 cells, 14,000 people and the full tables, inside the time budget. A week now takes 15 to 55 ms for a few hundred people, so the first work of stage 7 is speed.
