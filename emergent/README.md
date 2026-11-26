@@ -2,9 +2,9 @@
 
 The build of [The Emergent Realm](../docs/living-realm-design.md), stage by stage. The current game (`../index.html`) and the first build (`../realm/`) are untouched; `realm/` stays as a reference until stage 2 replaces its harness.
 
-**Stages 1 to 4 of 9 are here, and about half of stage 5.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. Stage 5 so far is ways of dealing that people find for themselves, and beliefs about what brings harm. The prediction log is not built. Stages 6 to 9 are not started.
+**Stages 1 to 4 and 6 of 9 are here, and about half of stage 5.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. Stage 5 so far is ways of dealing that people find for themselves, and beliefs about what brings harm. Stage 6 is the living land. The prediction log is not built. Stages 7 to 9 are not started.
 
-**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3", "After stage 4" and "Stage 5 so far" have the later figures; the last is current.
+**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3", "After stage 4" and "Stage 5 so far" have the later figures; the last of them, "With the living land", is current.
 
 ## Run it
 
@@ -248,6 +248,38 @@ A taking from ground whose holder lives within reach is now a struggle, by the r
 - **A custom about children stands for the first time.** In seed 3, six bodies hold at the end that a child born to a house with under half a year of bread comes to harm.
 - Three realms are too few to be sure of any of this.
 
+## With the living land
+
+Stage 6 added:
+
+- **Water has a path.** Rain soaks in or runs off according to what covers the ground, and what runs off is sent downhill cell by cell. Where a channel carries more than four times its usual flow it floods, and the flood carries off standing crop and a share of the stores of those who live there.
+- **Soil moves.** Water takes soil off bare slopes and lays it on the cell below. Cropping tires soil and dung restores it.
+- **Three creatures, as table rows only:** one that feeds on herds, one on grain laid by, one on the standing crop. Each wanders toward where there is more to feed on, and the cold kills two of them.
+
+Three realms, forty years of run after the past (`measures 40 1,2,3`):
+
+| Seed | Peak | Trough | Deepest fall | End |
+| --- | --- | --- | --- | --- |
+| 1 | 318 | 47 | 85% | 159 |
+| 2 | 322 | 20 | 94% | 48 |
+| 3 | 249 | 55 | 78% | 167 |
+
+| The land, mean of the realms | Year 1 | Year 10 | Year 20 | Year 30 | Year 40 |
+| --- | --- | --- | --- | --- | --- |
+| Woods | 73,606 | 71,819 | 72,897 | 80,042 | 77,052 |
+| Fish | 138 | 907 | 1,336 | 2,081 | 1,328 |
+| Ore left | 6,633 | 5,832 | 5,243 | 4,839 | 4,019 |
+| Vermin | 464 | 414 | 530 | 320 | 944 |
+| Mean soil | 0.61 | 0.59 | 0.58 | 0.59 | 0.58 |
+| Floods in the ten years | | 3.7 | 3.7 | 1.3 | 1.3 |
+
+- **New kinds of event:** 30 floods, 20 of them great (the largest carried off 592 of crop and stores), and 63 years of vermin in 120 realm-years, the worst eating 3,915.
+- **Slow change is there but small:** soil thins a little, the ore is being worked out, and the fish come back when there are fewer people.
+- **The design's test for this stage is not met.** It asks for a slow consequence nobody ordered, such as a flood from felled woods. The woods are not being felled faster than they grow, so no such flood happens; floods here follow the weather, not what people did.
+- **The creatures that feed on herds died out** in every realm, because people had already hunted the herds down. The blight never took hold.
+- **Realms are poorer and the fall is no better:** peaks of 250 to 320, from 330 to 430, and falls of 78 to 94%. Vermin and floods take a steady share.
+- **The first version of this stage killed every realm** within five years. Four faults were corrected; see the commit "the living land made liveable".
+
 ## Known gaps
 
 1. **The fall is still too deep** (64 to 87% where it happens), and it recurs about once a generation. Foresight, a past, customs and defended fields have each been tried; the last helped most and none cured it. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
@@ -267,4 +299,4 @@ A taking from ground whose holder lives within reach is now a struggle, by the r
 
 ## Next
 
-The rest of stage 5: a mind for each person, plans, practices of work, and learned foresight. Then stage 6, the living land.
+The rest of stage 5: a mind for each person, plans of several steps, practices of work that are copied imperfectly and recombined, beliefs about facts, and foresight that is learned and not given.
