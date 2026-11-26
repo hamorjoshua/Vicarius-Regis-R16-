@@ -1,0 +1,21 @@
+{
+  "name": "vicarius-regis-realm",
+  "private": true,
+  "type": "module",
+  "description": "Vicarius Regis: the living realm. A material simulation beneath the court's docket.",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test test/invariants.test.ts",
+    "build": "node build.mjs",
+    "courts": "node harness/run.ts courts",
+    "emergence": "node harness/run.ts emergence",
+    "chronicle": "node harness/run.ts chronicle",
+    "sweep": "node harness/run.ts sweep"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.25.0",
+    "preact": "^10.25.0",
+    "typescript": "^5.8.0"
+  }
+}

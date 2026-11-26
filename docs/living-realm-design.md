@@ -2,6 +2,10 @@
 
 Nov 26, 2026 · Exported from the [Claude Doc](https://claude.ai/artifact/HejEULhYmPgyQz9c882bHT) of the same name. Once building starts, treat this file as the source and keep it current.
 
+## Build status
+
+A first complete pass is built in [`realm/`](../realm/README.md): every system at coarse grain, the court, the composer, the harness, the invariants and a playable screen. Its README records where it stands against the tests in this document, the decisions it took, and its known gaps. This document has not yet been revised to match the build.
+
 ## Summary and recommendation
 
 Rebuild the simulation from scratch; keep the court. The player still hears three petitions a week, rules grant, alternative or deny, and keeps the court's standing until the king returns in week 52. Everything beneath the docket is replaced by a living realm in which weather, harvests, prices, disease, unrest, belief, kinship and politics determine one another.
