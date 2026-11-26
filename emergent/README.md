@@ -491,6 +491,25 @@ Five courts on eight full-size realms, a three-year reign each (means):
 - **Rules rarely stand in the way of a dealing:** 2 to 57 times a reign. Their effect on what people agree to is real but small.
 - **Still short:** the five commonest shapes are 25% of what the rule-making court hears, against a target of under 15%.
 
+## The Crown's store and the regent's word
+
+The Crown holds a store: about a week of each pressing need for the whole realm at the start, spoiling like any other, fed by a tenth of what the court enforces. Relief for a house in want and the redeeming of a debt come out of it and cannot be given when it is empty. The regent may give his word that relief will come within a quarter; when it falls due it is kept out of the store or broken before everyone.
+
+Five courts on eight full-size realms, a three-year reign each (means):
+
+| Court | Reigns kept | Standing at end | Heard | Repeating a recent shape | Five commonest shapes | Crown's store left | Word kept / broken |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Hears nobody | 5 of 8 | 1.6 | 0 | | | 67% | |
+| Grants everything | 6 of 8 | 3.1 | 200 | 75% | 60% | 30% | 0 / 0 |
+| Rules at random | 7 of 8 | 4.1 | 94 | 31% | 28% | 28% | 10.3 / 2.8 |
+| This case only | 5 of 8 | 3.0 | 263 | 78% | 58% | 74% | 0 / 0 |
+| A rule for the realm each time | 8 of 8 | 5.0 | 62 | 10% | 28% | 38% | 0 / 0 |
+
+- **The careful court that makes rules now stands clear of the rest:** every reign kept at full standing. The random court loses a reign and ends at 4.1; before the store and the word the two were level.
+- **Granting everything fares better than it did** (3.1, from 2.0), because relief out of the store pleases and three years is not long enough to empty it: 30% is left. Over a longer reign it would run out; that has not been run.
+- **Repetition for the regent who makes rules is 10%.**
+- **A regent who makes rules hears about 62 matters in three years,** against three hearings a week.
+
 ## Known gaps
 
 1. **The fall was largely a matter of size.** On 100 cells it took 64 to 87% where it happened and nothing cured it. On 400 cells it is 18 to 54% in seven realms of eight. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
