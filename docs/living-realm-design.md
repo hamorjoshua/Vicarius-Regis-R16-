@@ -1,14 +1,35 @@
 # Vicarius Regis — The Living Realm: Simulation Design
 
-Nov 26, 2026 · Exported from the [Claude Doc](https://claude.ai/artifact/HejEULhYmPgyQz9c882bHT) of the same name. Once building starts, treat this file as the source and keep it current.
+Nov 26, 2026 · Revised after the first build. This file is the source. The [Claude Doc](https://claude.ai/artifact/HejEULhYmPgyQz9c882bHT) it was first exported from holds the earlier version.
 
 ## Build status
 
-A first complete pass is built in [`realm/`](../realm/README.md): every system at coarse grain, the court, the composer, the harness, the invariants and a playable screen. Its README records where it stands against the tests in this document, the decisions it took, and its known gaps. This document has not yet been revised to match the build.
+A first complete pass was built in [`realm/`](../realm/README.md): every system at coarse grain, the court, the composer, the harness, the invariants and a playable screen. It worked, and it was monotonous. This revision answers that. The parts of `realm/` that carry over, and the parts to be rebuilt, are listed under Build plan.
+
+## What this revision changes
+
+The first build simulated quantities. Variety comes from particular people, places and things colliding, so this revision adds them, and makes non-repetition something the harness measures.
+
+| Change | Where |
+| --- | --- |
+| Goal 7 now names repetition as well as blandness | The goals |
+| Four new pillars: particulars, a mouth for every system, nothing is free, a question settled stays settled | Pillars |
+| The reign runs three or four years, so seasons pass often and decisions have time to echo | What stays, what goes |
+| Parishes, named people, particular things, several scarcities, claims and disputes, aims, misfortune and justice | Systems IV |
+| A generation of history is simulated before every reign | Randomness; Systems IV |
+| Petitions have a particular object and, in a dispute, two sides | From simulation to petition |
+| Rulings leave artefacts that act later; one table sets how harm becomes grievance | Rulings and feedback |
+| Monotony measures with targets, beside the emergence checks | Validation |
+| An eighth admission test: a mouth | Extending the realm |
+| A new build plan in rings, starting from what `realm/` proved | Build plan |
+
+Balance takes a back seat in this revision. If what the player chooses changes what the realm later does, good and bad choices separate on their own. The one thing still set by hand is how a harm compares with the court's standing, and that is a single table.
 
 ## Summary and recommendation
 
-Rebuild the simulation from scratch; keep the court. The player still hears three petitions a week, rules grant, alternative or deny, and keeps the court's standing until the king returns in week 52. Everything beneath the docket is replaced by a living realm in which weather, harvests, prices, disease, unrest, belief, kinship and politics determine one another.
+Rebuild the simulation from scratch; keep the court. The player still hears three petitions a week, rules grant, alternative or deny, and keeps the court's standing until the king returns, three or four years on. Everything beneath the docket is replaced by a living realm in which weather, harvests, prices, disease, unrest, belief, kinship and politics determine one another.
+
+Beneath the docket live particular people in particular places, holding particular things and claims against one another. The material realm makes a hard year; they decide whose year it was and what was done about it.
 
 Petitions become the realm speaking about what is actually happening to it. A frost in week 9 can, through the barley crop, the price of bread, a hungry winter and a fever in the crowded Capital, bring a weaver to the court in week 30 asking for alms. Nobody writes that story.
 
@@ -38,7 +59,7 @@ This document is one attempt at a set of goals. If a better version would serve 
 4. **Decisions that echo.** The player's rulings feed back into the realm and shape what it later produces, down to the odds of its draws.
 5. **The court.** The player governs only through a weekly docket of hearings, three as now, and the rulings given there, with the court's standing at stake.
 6. **Nothing authored.** Events and their flavour arise from the machinery, never from scripts or situations written in advance.
-7. **Never bland.** Life is not bland, so the realm should not be. Where it is, something is missing.
+7. **Never bland, never repetitive.** Life is not bland, so the realm should not be. A player should not see the same thing happen again for the same reasons, nor see things happen regardless of what they ruled. Where either occurs, something is missing.
 8. **Texture and truth.** Belief, superstition, kinship and custom give the realm its texture, grounded in how medieval life actually worked.
 
 ### The principle
@@ -59,7 +80,7 @@ The goals themselves change only when the designer decides they should.
 
 ## Pillars
 
-Nine rules are the current best reading of the goals. When a design question is unclear, they decide it, until something serves the goals better.
+Thirteen rules are the current best reading of the goals. When a design question is unclear, they decide it, until something serves the goals better.
 
 1. **Everything is caused.** Every change of state traces to something else in the simulation: a frost, a price, a death, a ruling. There is no event table, no scheduled crisis and no weekly roll for "something happens".
 2. **Chance enters only at the boundary.** Randomness lives only where the world beyond the realm touches it: the weather, sickness from abroad, raiders. Every draw is seeded and logged, and its odds are shaped by the realm's own state.
@@ -70,6 +91,10 @@ Nine rules are the current best reading of the goals. When a design question is 
 7. **Blandness means a missing system.** If the realm feels flat, deepen or add a system. Never write an event to fill the gap.
 8. **Every reinforcing loop has a balancing partner.** Famine spirals meet migration, charity and death; panics meet explanation. The realm can collapse, but not by default.
 9. **The realm stays open to addition.** Anything that completeness or historical precedent warrants can be added: a system, a good, a disease, an institution, a tie, a binding, a motive. Each addition joins the causal web like everything else; nothing is ever added as an event.
+10. **Particulars, not averages.** Variety comes from particular people, places and things with histories of their own. Aggregates set the conditions; particulars make the cases. When a system can be built either as a quantity or as a set of named things, prefer the named things wherever a petition could turn on which one it was.
+11. **Every system needs a mouth.** Depth is worth simulating only where it can reach the docket as a new shape of petition, or change who brings one. A system nobody ever comes to court about is decoration.
+12. **Nothing is free.** Every grant comes out of something particular that someone else holds or wants. A ruling with no loser is a sign that something is not being counted.
+13. **A question settled stays settled.** Once the court has held on a conflict, lesser courts apply the holding and like cases stop arriving. The same question returns only when someone challenges the holding or circumstances outrun it.
 
 ## What stays, what goes
 
@@ -79,14 +104,13 @@ The player's side of the game survives; the machinery under it is replaced. Each
 
 | Element | As it works today |
 | --- | --- |
-| The reign | 52 weeks. The king returns at the close, and the reign is kept if any standing remains. |
+| The reign's end | The king returns at the close, and the reign is kept if any standing remains. |
 | The calendar | Four quarter days: Lady Day (week 7), Midsummer (20), Michaelmas (34) and Christmas (46). |
 | Audience and docket | Petitioners wait in an audience. The player hears 3 a week, or 4 by spending 2 standing. |
 | Rulings | Grant, an alternative, or deny. Each option shows its effects before it is chosen. |
 | Standing | 10 seals. A breach of confidence costs 4, standing recovers at most 2 a week, and the reign falls at 0. |
 | Breaches | A constituency breaches when its grievance reaches the line (3 today). |
 | Regions and estates | Capital, Highlands, Riverlands. Noble, Cleric, Official, Merchant, Soldier, Commoner. |
-| Named households | Petitioners are named households with kin, holdings and memory. |
 | The visual language | Cards, pressure pips, regard graph, binding boxes, rule and law plates, shields, rings, tiles. |
 | The platform | A static web app that runs offline in a browser. |
 
@@ -103,6 +127,10 @@ The player's side of the game survives; the machinery under it is replaced. Each
 | Esteem and rivalry | Ties between estates and their members | The same, now driven by who gains and who pays |
 | Rules and laws | Precedents and statutes | The same, and laws now change economic rules: prices, tolls, usury |
 | Offices, garrisons, readiness | Titles and a readiness count | Garrisons that must be fed and paid; readiness falls with hunger and arrears |
+| The reign's length | 52 weeks | Three or four years. Seasons come round often enough to be planned for, and a ruling has time to come back |
+| Named households | Units with kin, holdings and memory | Made of named people who are born, marry, quarrel, hold office and die |
+| Regions | Three, each a single place | Three, divided into about forty parishes with neighbours |
+| Quarrels between houses | Authored hallway matters | Disputes that arise when two claims meet on one thing |
 
 ### Retired
 
@@ -115,6 +143,7 @@ The player's side of the game survives; the machinery under it is replaced. Each
 
 - `index.html`: the current game. It stays playable until the new one surpasses it.
 - `core/`: the primitives prototype, with its bindings engine, petition grid, flavour composer and emergence checks. `core/README.md` lists its vocabulary.
+- `realm/`: the first build of this design. Its foundations carry over; `realm/README.md` records what it showed.
 
 ## World model
 
@@ -138,14 +167,22 @@ The realm is a stack of physical layers, each feeding the next. Every quantity i
 | --- | --- | --- |
 | Realm | 1 | Week, standing, laws in force, the Crown's purse and granary if adopted |
 | Region | 3 | Terrain, climate, river, market, built works, disease, unrest |
+| Parish | about 40 | Neighbours, land by kind, water, what stands on it, its people, local weather, sickness and rumour |
 | Cohort | 18 (3 regions × 6 estates) | Workers and dependants, holdings, stocks, coin, nourishment, health, grievance |
-| Household | 24–48, named | Members, holdings, stocks, coin, debts, duties, kin, ties, memory, expectations |
+| Household | 60–90, named | Its people, holdings, stocks, coin, debts, duties, claims, aims, memory, expectations |
+| Person | 300–500, named | Age, kin, household, trade and skill, health, constitution, traits, esteem, memory |
+| Thing | 150–250 | Kind (mill, plough team, bridge, barge, loom, forge, barn, bell, relic), owner, keeper, condition, wear, soundness |
 | Work | about 15 | Kind (levee, road, wall, granary, wells and drains, bridge), condition 0–1, capacity |
 | Route | 3–6 | Ends, carrying capacity, cost, danger |
 | Duty | 10–15 | Purpose, region, what it requires, who carries which share |
 | Binding | open | Kind, parties, tests, span, effects |
 | Tie | open | Kind (kin, owes, charge, grudge, esteem, rivalry), parties, weight |
-| Office | 6–10 | Title, holder, powers, duties |
+| Office | 20–30 | Title, holder, powers, duties, fees |
+| Claim | open | Holder, object, kind, basis, strength, age |
+| Aim | one or two per household | What is sought, the steps taken so far, who it crosses |
+| Artefact | open | What a ruling left behind: a charter, a precedent, a ward, an appointment |
+
+Entities come in two kinds. Cohorts are quantities: thousands of people counted together. People, things, claims and aims are particulars: each one is itself and no other. Quantities set the conditions and particulars make the cases.
 
 A cohort is everyone in a region and estate who is not a named household, simulated in aggregate. Named households belong to a cohort and face its weather, prices and duties, but differ in holdings, debts, kin and memory. Petitions come from named households; the numbers in them come from cohorts.
 
@@ -315,7 +352,7 @@ These three systems move goods, coin and protection between people. They turn th
 
 ### Economy and markets
 
-Prices come from what people actually offer and want, region by region. Goods are kept few: grain, beasts and meat, wool, cloth, timber and stone, and coin.
+Prices come from what people actually offer and want, region by region. The goods are those in the table of scarcities in Systems IV; grain is only the largest of them.
 
 Each region has one market. Holders offer what exceeds the reserve they want to keep, and that reserve grows when they expect scarcity. Buyers bid up to what their coin allows.
 
@@ -395,6 +432,8 @@ Pressure is read, never set. It measures weeks of cover, then adds for dated thr
 ```
 
 Sixteen weeks of cover reads 0; eight weeks reads 2, today's pressing line; four weeks reads 4, today's urgent line. One week or less reads 8.
+
+Bread is only one need. The same reading is taken for each scarcity in Systems IV, and a household's pressure is the worst of them.
 
 Each week a strained household weighs its remedies by the relief it expects, the chance of success and the cost. The court is one remedy among many.
 
@@ -486,6 +525,191 @@ People act on what they believe, and belief travels slowly and badly. This is al
 
 A court that grants debt relief teaches debtors to come to court instead of selling their beasts. A court that never hears the Highlands teaches them to stop asking and start withholding.
 
+## Systems IV: particulars, claims and aims
+
+These systems give the realm its particular people, places and things, and the claims and aims that set them against one another. The first three groups of systems make a hard year. These decide whose year it was, what they did about it, and why no two years bring the same cases to court.
+
+### Places
+
+Each region is divided into parishes: about ten wards in the Capital, twelve townships in the Highlands and eighteen manors in the Riverlands. A parish is where things stand next to one another, so it is where they collide.
+
+| A parish has | Which matters because |
+| --- | --- |
+| Neighbours, and a place on a road or the river | Sickness, fire, rumour, carts and raiders move from neighbour to neighbour |
+| Land by kind: arable, meadow, common pasture, wood, marsh | Each kind feeds a different need and carries different claims |
+| Water: a stream, a ford, a well, a reach of the levee | Mills, floods, fever and boundary quarrels all follow the water |
+| What stands on it: church, mill, bridge, hall, market cross | Each is a particular thing, with an owner, a keeper and a condition |
+| Its own people | The households and named people who live there |
+
+Weather stays regional, with a small local term for each parish drawn on the weather channel. A hailstorm can strip one parish and leave its neighbour standing.
+
+- **Feeds:** every system, by making its effects local.
+- **Emerges:** one manor flooded and the next spared; a ward where fever settles; a township cut off when its one bridge falls.
+
+### People
+
+A few hundred people are simulated one by one: every member of a named household, and anyone others depend on, such as a parish priest, a reeve, a miller, a smith, a master and his apprentices. Everyone else stays in a cohort.
+
+Each person has an age, kin, a household, a trade and a skill at it, health, a constitution, traits, esteem among neighbours, and a memory of who helped and who harmed.
+
+The life course is the source of cases the material realm cannot supply.
+
+| Passage | What it sets in motion |
+| --- | --- |
+| Birth | An heir, and a mouth; a line secured or a holding to be divided |
+| Service and apprenticeship | A tie to a master; a place in another household; a runaway |
+| Marriage | A dowry, the lord's leave, a tie between two houses, new claims by kin |
+| Taking a holding or an office | A fine to the lord; duties owed; rivals passed over |
+| Sickness and injury | Service that cannot be done; a household without its worker |
+| Old age | A holding handed on for keep; a quarrel if the keep is not given |
+| Death | A heriot to the lord, a widow's third, an heir, a ward, debts and grudges passed on |
+
+Skill matters because it sits in one person. A mill without its miller stands idle; a parish whose priest died of the fever has no one to console or explain.
+
+- **Feeds:** households, claims, offices, devotion, the composer.
+- **Emerges:** a widow holding her third against a stepson; a ward whose guardian is stripping the wood; an apprentice gone to the roads; a line that ends and a holding with three claimants.
+
+### Things
+
+Things that are few and that many depend on are simulated one by one. Each has an owner, a keeper, a condition, the wear it has taken, and a soundness drawn once at its making.
+
+| Thing | Serves | Fails by | Its failure reaches |
+| --- | --- | --- | --- |
+| Mill | A parish's bread; the lord's income | Flood, a broken wheel, no miller | Every household that must grind there; the lord; the miller |
+| Plough team | A holding's sowing | Murrain, sale under debt, fodder failing | Next year's acres |
+| Bridge or ford | A road | Flood, neglect, a loaded cart | Carting, a market, a township's food |
+| Barge or cart | Trade on one route | Wreck, seizure, bandits | Its merchant, his creditors, a town's stalls |
+| Loom or forge | A craft household | Fire, debt, want of wool or iron | Wages, tools, the plough itself |
+| Barn or granary | Stored grain | Damp, fire, rats, a crowd | A year's keep |
+| Church, bell, relic | A parish's devotion | Fire, theft, neglect | Consolation, pilgrims, alms |
+| A reach of the levee | The fields behind it | The river, neglect upstream | One manor, or six |
+
+A thing does work for many people at once, so when it fails it harms them in different ways and sets them against one another over who must mend it.
+
+- **Feeds:** production, trade, claims, misfortune, the composer.
+- **Emerges:** a harvest ground late because the wheel broke in August; a merchant ruined by one wreck and the lenders behind him; a quarrel over who owes the bridge.
+
+### Scarcities
+
+A household needs many things that do not stand in for one another, and its condition is set by the scarcest. This replaces the single measure of the first build, in which every hardship read as hunger.
+
+| Need | Comes from | Binds when | Its lack brings |
+| --- | --- | --- | --- |
+| Bread | Grain, the mill | Harvest fails, the mill stands, prices rise | Hunger |
+| Meat, dairy and fish | Herds, rivers, the fasting calendar | Murrain, fodder fails, Lent | Weakness; fast days broken |
+| Fuel | Woodland, peat, common rights | A hard winter, the wood enclosed | Cold, sickness, poaching |
+| Salt | Trade from the coast | Roads closed, tolls, war abroad | Meat that cannot be kept |
+| Cloth | Wool, looms | The clip fails, weavers idle | Cold; rank unmarked |
+| Iron and tools | Trade, the forge | The smith dies, iron dear | Ploughs unmended |
+| Draught | Oxen and horses | Murrain, sale, seizure | Land unsown |
+| Hands | The household's workers | Sickness, service owed, death | Harvest lost |
+| Shelter | The house, the ward | Fire, flood, crowding | Exposure, fever |
+| Ready coin | Sales and wages | Dues fall before the harvest is sold | Borrowing, default |
+| Credit | Lenders' trust | A default nearby, a usury rule | No bridge over a bad month |
+| Safety | The watch, the wall, a lord | Bandits, raids, a feud | Flight; paying for protection |
+| Right | A claim acknowledged | A rival claim, a lost charter | Dispossession |
+| Honour | Esteem among peers | An insult, a match refused | Feud; a house shut out |
+| Salvation | Priest, sacraments, alms | An empty parish, an interdict | Fear, and odd remedies |
+
+Pressure is still read, never set. It is read for each need, and the pressure shown is the worst of them. Which need binds decides the motive and the kind of help sought.
+
+- **Feeds:** remedies, petitions, the composer, unrest.
+- **Emerges:** a village with full barns and no salt in a murrain year; a household rich in land and unable to find the coin for Michaelmas; a winter when the quarrel is over the wood.
+
+### Claims and disputes
+
+Medieval life was a web of claims, and most of what came before a court was two of them meeting on one thing. A claim is a particular object: a holder, the thing claimed, a kind, a basis and a strength.
+
+| Kind of claim | For example |
+| --- | --- |
+| Tenure | A holding, by the custom of the manor |
+| Common right | So many beasts on the pasture; wood for the hearth |
+| Suit | Tenants must grind at the lord's mill |
+| Toll and passage | A penny a cart at the bridge; a right of way to the ford |
+| Water | The mill's pond; the meadow's flooding |
+| Tithe, rent and service | A tenth; three days at harvest |
+| Dower, inheritance and wardship | The widow's third; the heir's land; the lord's keeping of a minor |
+| Office | The right to collect, to judge, to hold the key |
+| Charter and liberty | A market; freedom from toll; a borough's self-rule |
+| Debt and pledge | Money owed against beasts, land or a surety |
+
+A claim rests on a basis: long custom, a charter, a grant by ruling, purchase, or bare possession. Custom strengthens with age and weakens with disuse.
+
+No dispute is scheduled. When the state of a thing changes, the claims on it are checked, and a dispute opens if they can no longer all be met.
+
+| What changed | The dispute it opens |
+| --- | --- |
+| A drought lowers the stream | The mill's pond against the meadow below it |
+| A death | Heir, widow, lord and creditor on one holding |
+| A herd grows, or a common shrinks | Stints on the pasture |
+| A new work is built | Who pays, who may use it, whose land it took |
+| A thing fails | Who was bound to keep it |
+| A claim goes unused | Whether it has lapsed |
+| A ruling grants something | Everyone whose claim it crossed |
+
+Each side then weighs its remedies: yield, bargain, help itself by distraint or force, go to the manor, church or borough court, or petition the regent.
+
+- **Feeds:** redress and ambition petitions, grudges, feuds, rivalry between estates, crime.
+- **Emerges:** quarrels of a kind nobody wrote, different in every realm because the claims and the shocks are different.
+
+### Aims
+
+Each named household pursues one or two aims over seasons. An aim is chosen from position and temper, never rolled: it is the gain within reach that the household's traits most incline it to.
+
+| Aim | Arises when | Steps it takes | Whom it crosses |
+| --- | --- | --- | --- |
+| Enlarge the holding | A neighbour is weak or in debt | Lend, buy, foreclose, claim | The neighbour, his kin |
+| Make a match | A child of age; a house worth joining | Court, bargain, seek leave | Rival suitors; the lord |
+| Win an office | A holder old, charged or dead | Serve, pay, petition, accuse | The holder, other claimants |
+| Outdo a rival | A grudge, or a slight to honour | Undersell, sue, spread a tale | The rival's whole house |
+| Buy a liberty | A town grown rich | Raise a purse, seek a charter | The lord whose tolls it ends |
+| Corner a trade | Scarcity foreseen | Buy forward, hold back | Everyone who buys |
+| Found a chantry | Age, piety, a death | Endow land to the church | Heirs who expected it |
+| Clear a debt | A debt that threatens the holding | Sell, marry, beg time | The creditor |
+| Restore the house | A loss: fire, death, disgrace | Borrow, serve a patron | Whoever gained by the loss |
+
+The steps are ordinary acts with material effects. A petition is then often a move in someone's scheme, and the party it crosses comes to court as well.
+
+- **Feeds:** claims, debts, marriages, offices, rumour, petitions.
+- **Emerges:** a lender whose kindness in a bad year was the first step to a neighbour's land; two houses whose rivalry runs through every case either brings.
+
+### Misfortune without dice
+
+Fires, accidents and crimes follow from wear and hazard gathering against a threshold drawn once. This is how named people already die, extended to things and deeds.
+
+| Misfortune | Hazard gathers with | It strikes |
+| --- | --- | --- |
+| Fire | Drought, thatch, crowding, forges, a hard frost and big hearths | The most exposed thing in the parish; it spreads to neighbours with the wind |
+| A thing breaking | Use, neglect, flood, overloading | When wear passes its soundness |
+| Injury | Dangerous work, haste at harvest, age | The person whose hazard passes their constitution |
+| Theft and poaching | A binding need, opportunity, a weak watch | A particular victim, by a particular hand |
+| Violence | Temper, a grudge, honour slighted, drink at a feast | Between two people with a history |
+
+Because the threshold is fixed and the hazard comes from the realm's state, the same seed burns in the reign where the ward was crowded and does not in the reign where it was not.
+
+### Justice
+
+Most wrongs never reach the regent. The manor, the church and the borough each hold a court that settles what falls to it by standing rule, and only what they cannot settle, or what a party will not accept, comes up.
+
+- **The tithing.** Households answer for one another in groups of about ten. A theft unanswered falls on the neighbours, which gives them a reason to accuse and a reason to conceal.
+- **Hue and cry, and the watch.** Whether a wrongdoer is taken depends on who saw, how strong the watch is and who his kin are.
+- **Sanctuary and clergy.** The church shelters the fugitive and claims its own, which splits justice between church and Crown.
+- **Appeal.** A party may bring a lesser court's judgment to the regent.
+- **Precedent.** What the regent holds, the lesser courts then apply. Like cases stop arriving, and the next case on that question arrives citing the holding.
+
+This is what keeps the docket from repeating. The first tenant who would not grind at the lord's mill comes to the regent. After the ruling, the others are dealt with in the manor court, and the regent next hears of the mill when a lord pushes the holding further than it went.
+
+- **Feeds:** grievance, grudges, the church's standing, the docket.
+- **Emerges:** a pardon that empties the roads and enrages the robbed; a fugitive in sanctuary whose kin and victims both petition; a holding that quietly reshapes a whole region's custom.
+
+### History before the reign
+
+Every realm is founded by simulating a generation, twenty or thirty years, at a coarse step before the reign begins. The regent then inherits a realm with a past.
+
+That past supplies standing claims and old charters, feuds two generations deep, debts, wards, half-ruined works, lines that have died out, and precedents set by earlier regents that some now rely on.
+
+The history is written to the record, so the composer can speak of it and the player can read it.
+
 ## The causal web
 
 The systems form loops: a change in one comes back through the others to push on itself. Reinforcing loops amplify a shock and balancing loops damp it, and every reinforcing loop has at least one balancing partner.
@@ -557,7 +781,7 @@ Every week runs the same four phases in the same order. Causes always come befor
 18. Bindings tested at the close are kept, broken or expire.
 19. Readouts are derived: pressure, provision, grievance; then breaches and standing.
 20. The causal ledger and the record are written.
-21. The reign ends at week 52, or when standing reaches 0.
+21. The reign ends when the king returns, or when standing reaches 0.
 
 ### Why this order
 
@@ -566,6 +790,20 @@ Weather comes before land, and land before harvest. Dues are owed before the mar
 Within a step, every entity reads the state as it stood when the step began. The order in which households are processed therefore cannot bias the outcome.
 
 Some things happen on the calendar rather than every week. Rents, dues and debts fall due on quarter days; fertility is settled once a year at Michaelmas.
+
+### Scales of time
+
+The realm moves at several paces at once, and variety needs all of them.
+
+| Pace | What moves at it |
+| --- | --- |
+| The week | Weather, prices, sickness, quarrels, fires, the docket |
+| The season | Sowing and harvest, the hungry gap, the building season, raiding |
+| The year | Fertility, rents and dues, a herd rebuilt, a debt run its course |
+| Several years | A feud, a ward coming of age, a work built or left to fall, soil worn out |
+| A generation | Lines, custom, the standing of a house |
+
+A reign of three or four years lets the player see the first four. The history before the reign supplies the fifth.
 
 Petitions are formed in step 16, after the week's facts. The audience at dawn is the realm reporting what has just happened to it.
 
@@ -577,9 +815,10 @@ Chance enters only where the world beyond the realm touches it. Inside the realm
 
 | Draw | When | What it decides | Odds shaped by |
 | --- | --- | --- | --- |
-| The founding | Once, from the seed | The starting realm: households, holdings, kin, traits, the opening weather | Nothing |
+| The founding | Once, from the seed | The realm a generation before the reign: parishes, people, things, claims, traits. The history that follows is simulated, not drawn | Nothing |
 | Weather shock | Weekly: one realm-wide, one per region | The temperature and rain anomalies | Nothing; persistence carries each shock forward |
 | Constitution | Once per person, at the founding or at birth | How much hardship and sickness that person can survive | Nothing |
+| Soundness | Once per thing and per parish, at its making | How much wear a thing bears before it breaks; how much hazard a parish bears before it burns | Nothing |
 | Pestilence | Weekly | Whether a carrier arrives along a route | Trade through the routes, sickness abroad, quarantine |
 | Raiders | Weekly in the raiding season | Whether a band crosses the Highland border, and its size | Season, walls, readiness, disorder in the realm |
 | Prices abroad | Monthly | The drift of the outside market | Nothing inside the realm |
@@ -592,7 +831,9 @@ Cohorts die by fractions, but a named person either dies or does not. Each perso
 
 This gives the same odds as a weekly roll, but the randomness sits at one designated point. Afterwards, whether the head of a house survives the winter depends only on what the winter did to them.
 
-Households also draw traits at the founding: thrift, piety, temper and ambition. From then on they act on their traits and circumstances, never on a roll.
+Things and places work the same way. A mill wheel has a soundness drawn when it was made and breaks when its wear passes it; a ward has a threshold for fire. Crimes are not drawn at all: a person offends when need, opportunity and temper together pass what their traits will bear.
+
+People also draw traits at birth: thrift, piety, temper and ambition. From then on they act on their traits and circumstances, never on a roll.
 
 ### How a draw is made
 
@@ -638,7 +879,7 @@ Keepers speak for purposes in shortfall: the captain for an unfed garrison, the 
 
 ### What they ask
 
-Every petition is a motive, a means, a payer and an object. The motive comes from the largest cause of the strain in the household's ledger.
+Every petition is a motive, a means, a payer and an object. The motive comes from the need that binds, or the claim that has been crossed, or the aim being pursued.
 
 | Motive | Arises from | A cause in the ledger |
 | --- | --- | --- |
@@ -670,6 +911,31 @@ The means and payers are the prototype's, with the Crown's purse and granary add
 
 The household asks for the combination with the best expected value. Alternatives are the next-best combinations that address the same cause and that the petitioner would still accept. Deny is always offered.
 
+### The object
+
+The object is a particular thing, never only a quantity. This is what makes the space of petitions large: the same means and payer applied to a different kind of object is a different case.
+
+| Kind of object | For example |
+| --- | --- |
+| A stock | Grain, coin, salt, fuel, seed |
+| A person | A ward, an heir, a runaway apprentice, a fugitive in sanctuary |
+| A thing | The mill, the bridge, a plough team, a barge |
+| A place | The common, a reach of the levee, a boundary |
+| A claim | A tenure, a toll, a suit, a dower, a charter |
+| A tie | A marriage, a debt, a tithing, a feud |
+| An office | The reeve, the collector, the keeper of the key |
+| A holding of the court | A precedent, a law, the court's own word |
+
+The first build offered about twenty-four kinds of ask, and four of them made up three quarters of all petitions. With objects, a petition that asks the court to defer something is a different case when the thing deferred is a debt, a marriage, a wardship, a levy or a hanging.
+
+### Two sides
+
+A dispute brings both parties. The card shows the petitioner's plea and the answer of whoever it is against, each composed from that side's own ledger and claims.
+
+Each option names who gains and who loses by it, and neither side is the court's invention: both are people with kin, aims and a memory of how they were ruled.
+
+A party may shade the truth. What a plea asserts comes from the pleader's own view, which can be partial or self-serving, and an inquest costs a hearing and finds out.
+
 ### The audience
 
 Urgency combines pressure, how close the threat is, how long the petitioner has waited and the weight of their estate. The six most urgent are seated, after any holder of the court's word.
@@ -687,6 +953,17 @@ Diversity comes from position, not from variety tables. One famine brings a wido
 5. **The petition.** Protection, defer, paid by Aldous Crane: put off the debt until Christmas. Alternatives: the parish shares the debt, or seed from the granary. Or deny.
 
 No line of that was written for that situation. A different frost, a different debt or a different court would have produced a different petition, or none.
+
+### One dispute, traced
+
+1. **Twenty years before the reign.** A lord builds a mill at Ashford, and an earlier regent holds that his tenants must grind there.
+2. **Year 1, week 19.** A dry summer lowers the stream. The miller raises his dam to keep the wheel turning.
+3. **Week 22.** Below the dam, the meadow that the widow Agnes Thorne holds in dower is no longer flooded, and her hay fails.
+4. **Week 40.** At Martinmas she has no fodder and must sell her oxen. Her stepson, who wants the holding entire, offers to buy them.
+5. **The petition.** Redress, a claim to water, against the lord of the mill: lower the dam. The lord answers that his right is by a regent's own holding and that the parish must have its bread.
+6. **The ruling echoes.** Hold for the mill, and the manor courts apply it along the whole river; three more meadows dry out next summer, but those cases never reach the regent. Hold for the meadow, and every lord with a mill now doubts his pond.
+
+None of it was written. A wet summer, a different widow or an earlier holding would have produced a different case, or none.
 
 ## Rulings and feedback
 
@@ -728,6 +1005,48 @@ The court's rules carry over from the current game, with their maxims: "The bond
 
 Following a rule makes the court predictable, and estates rely on it. Breaking one aggrieves those who relied on it and blurs every estate's estimates, so they petition more widely and less wisely.
 
+### What a ruling leaves behind
+
+Every ruling leaves something in the realm that persists and acts. This is the main way a decision comes back.
+
+| A ruling that | Leaves | Which later |
+| --- | --- | --- |
+| Grants a right | A charter | Is used, stretched, envied, and cited against the court |
+| Decides a conflict | A precedent | Is applied by lesser courts, relied on, and one day challenged |
+| Appoints | An office-holder with his own aims | Serves, skims, feuds, dies and leaves a vacancy |
+| Assigns a ward or a match | A guardian, a marriage | Strips the estate or mends it; joins two houses' fortunes |
+| Lends or defers | A debt to the Crown, a date | Falls due in a year the court did not foresee |
+| Orders a work | A thing that must be kept | Decays, and somebody is bound to mend it |
+| Pardons or punishes | A man returned, or a family aggrieved | Reoffends, repays, or is avenged |
+| Gives the court's word | A binding | Is kept or broken in public |
+
+A reign of several years is long enough for these to come round. The test of the design is that, by the second year, much of the docket is the player's own earlier rulings returning.
+
+### Nothing is free
+
+Every grant comes out of something particular. Grain comes from a named granary that will be empty when next wanted; a remitted due is pay the garrison does not get; a right given to one house is a right another house held or hoped for.
+
+When an option appears to have no loser, the ledger is missing a claim. The first build failed here: a court that granted everything kept more reigns than a careful one, because relief cost too little within the year.
+
+### The measure of harm
+
+Balance is otherwise left to the realm. The one thing set by hand is how a harm compares with the court's standing, and it is a single table.
+
+A harm counts against the court only as far as the ledger traces it to a ruling, a petition left unheard or a word broken. Hardship that the court had no hand in raises unrest, not grievance.
+
+| Harm traced to the court | Counts as |
+| --- | --- |
+| A household a week without bread, or another need | 1 |
+| A holding, a beast team or a tool of trade lost | 20 |
+| A claim taken away by ruling | 30, more for an old one |
+| A death | 60 |
+| A petition in urgent need left unheard | 5 a week |
+| The court's word broken | 50, to all who heard of it |
+| A holding relied upon, then reversed | 15 to each house that relied |
+| A wrong left unpunished | 10 to the wronged and their kin |
+
+Grievance is the sum of these across a constituency, for each head. A breach of confidence comes at a fixed sum, and costs standing as now. The numbers are first guesses; the point is that there is one table, and nothing else in the realm is tuned to make the game hard or easy.
+
 ### No hidden score
 
 There is no secret karma. The feedback is the state itself, and the player can always ask why.
@@ -765,6 +1084,8 @@ Cards, pressure pips, the regard graph, binding boxes (ordinance, the court's wo
 | The streets | Each region's stage of unrest and its leading causes |
 | The map | The three regions, the routes, and the works with their condition |
 | The record | Last week's events with their causes, and each draw with its odds |
+| A person, a place, a thing, a claim | Its history, its ties, who depends on it, and every ruling that touched it |
+| The history | What happened in the generation before the reign |
 
 ### Petitions on screen
 
@@ -833,6 +1154,27 @@ These are patterns read from the record of many simulated reigns. Each should ha
 
 The targets are starting points, to be tuned during calibration.
 
+### Monotony measures
+
+These test goal 7 directly. A shape is a petition's motive, ask, cause and kind of object. The baseline is the first build, over 30 reigns.
+
+| Measure | First build | Target |
+| --- | --- | --- |
+| Petitions repeating a shape seen in the last 26 weeks | 79% | Under 35% |
+| The commonest shape, as a share of a reign | 19% | Under 8% |
+| The five commonest shapes together | 51% | Under 25% |
+| Distinct shapes in a year | 17 | 40 or more |
+| Weeks in which nobody new comes to court | 31% | Under 10% |
+| Petitions whose object is a particular person, thing, place or claim | Few | Most |
+| Petitions whose chain of causes, three links back, occurs in no other of 100 reigns | Not measured | 60% or more |
+| Petitions after the first year whose chain includes one of the player's rulings | Not measured | 30% or more |
+| The same seed under two different courts: dockets in common after a year | Not measured | Under half |
+| Each system appears as a cause in at least 2% of petitions | No: debt and price were 53% | Yes |
+
+The last four are the ones that matter most. They ask whether the realm produces cases nobody has seen, whether the player's rulings return, whether a different court makes a different realm, and whether each system has a mouth.
+
+The harness prints the ten commonest petitions of every batch. If a person could have guessed that list, the realm is still monotonous.
+
 ### Scripted courts
 
 Each court plays 1,000 reigns.
@@ -860,7 +1202,7 @@ Each parameter is moved 20% up and down in turn. No single parameter should flip
 
 ### Performance
 
-A week should tick in 2 ms or less, so a 1,000-reign batch finishes in under two minutes. A four-week preview then costs about 8 ms, and a 20-future ensemble about 160 ms per option, run in a web worker.
+The first build ticks a week in about 1.4 ms with 52 holders. With a few hundred people, forty parishes and their claims, a week should tick in 8 ms or less, so a 200-week reign runs in under two seconds and a hundred reigns in about three minutes. A four-week preview then costs about 8 ms, and a 20-future ensemble about 160 ms per option, run in a web worker.
 
 ## Architecture
 
@@ -945,7 +1287,7 @@ The realm is never finished. Anything that completeness or historical precedent 
 
 ### The admission test
 
-Every addition, large or small, must pass all seven.
+Every addition, large or small, must pass all eight.
 
 1. **A warrant.** It names the gap it fills or the precedent it follows.
 2. **Roots and reach.** It takes at least one input from an existing system and feeds at least one other. Nothing dangles.
@@ -954,6 +1296,7 @@ Every addition, large or small, must pass all seven.
 5. **A check.** It arrives with an emergence check that fails before it lands and passes after.
 6. **No harm to the invariants.** Determinism, conservation and bounds still hold, and the scripted courts still differ.
 7. **Old saves still load.** New state starts from a sensible default.
+8. **A mouth.** It names the new shape of petition it can produce, or how it changes who comes to court, and the monotony measures move after it lands.
 
 ### Where additions plug in
 
@@ -984,7 +1327,9 @@ Every kind of thing the realm knows lives in a table of data. A new good is a ne
 
 ### A register of candidates
 
-These historical mechanisms are candidates as the realm grows. None is needed for the first playable reign, and each would enter through the admission test.
+These historical mechanisms are candidates as the realm grows. Each enters through the admission test.
+
+This revision moves several into the core, because they are sources of cases: the lord's mill, death and marriage dues with wardship, frankpledge, forest law and common rights, sanctuary and benefit of clergy, town charters, and salt, fuel and iron.
 
 | Candidate | Precedent | What it would add |
 | --- | --- | --- |
@@ -1014,51 +1359,86 @@ The register grows with play and reading. When a crisis feels thin, or a period 
 
 ## Build plan
 
-Build an ant farm before a throne. The first six milestones have no player at all: the realm must live convincingly on its own before the court is added.
+Build in rings outward from what the first build proved. Each ring adds a source of particular cases, and is finished only when the monotony measures move.
 
-| Milestone | Builds | Done when | Size |
-| --- | --- | --- | --- |
-| M0 Skeleton | State, draws, parameters, the pipeline, a ledger stub, the Node harness | An empty realm ticks 52 weeks with identical hashes on every run and browser | S |
-| M1 Sky and land | Weather, soil moisture, the river, the farming calendar, crops, herds | A thousand years of weather show wet and dry runs; floods follow Highland storms and weak levees | M |
-| M2 People and food | Cohorts, nourishment, health, labour, eating, births and deaths | A short harvest brings a hungry gap and excess deaths; with no shocks the realm is stable for 50 years | M |
-| M3 Economy | Markets, merchants, carting, credit, rents, wages, dues | Prices follow King's rule; hoarding comes before shortage; defaults cluster after bad harvests | L |
-| M4 Health | Disease counts, reservoirs, the pestilence draw, sanitation | Fever follows floods; cough worsens with hunger; deaths raise wages | M |
-| M5 Duties, works, security | Duties in labour and goods, provision, works, garrisons, banditry, raids | Unfed garrisons lose readiness; bandits follow famine; raids follow weakness | M |
-| M6 Households and society | Named households, remedies, pressure, grievance, unrest, migration, riots | The null court shows recognisable crises and recoveries: a living ant farm | L |
-| M7 The court | Petitions from remedies, the audience, options, rulings, bindings, standing, previews, scripted courts | The first playable reign; the careful court clearly beats the null court | L |
-| M8 Belief, politics, rumour | Devotion, superstition, signs, esteem, rivalry, laws as parameters, offices, rumour, memory, expectations | The learning check passes; sign and scapegoat petitions appear unprompted | M |
-| M9 Flavour and legibility | The composer, explain on every number, the new panels, the record | Every number explains itself, and testers can say why things happened | M |
-| M10 Calibration | Sweeps, emergence targets, pacing | Targets met; no single parameter collapses the realm; reigns feel different | M |
+### What carries over from `realm/`
 
-M4 can run alongside M3, and M8 can start once M6 is done. M9 needs M7. Additions can arrive at any milestone, through the admission test.
+| Kept | Rebuilt |
+| --- | --- |
+| The pure step, plain state, exact replay | Households, as people rather than small copies of a cohort |
+| The designated draws and the test that nothing else draws | Pressure, as a reading per need rather than one number |
+| The causal ledger and `explain` | How a petition is formed: objects, two sides, aims |
+| The composer's method: clauses keyed to kinds of cause | The composer's grammars, to speak of people, things and claims |
+| The harness: scripted courts, emergence checks, chronicle | Markets, to carry several goods |
+| The material base: sky, river, crops, herds, sickness | The same systems, run per parish rather than per region |
+| The screen's language and its explain sheets | The screen's pages: a person, a place, a thing, a claim |
+
+### The rings
+
+| Ring | Builds | Done when |
+| --- | --- | --- |
+| R1 Places and things | Parishes with neighbours, local weather, the material base per parish, things with wear and soundness | One manor floods and its neighbour does not; a mill breaks at harvest and its parish grinds late |
+| R2 People | Named people, the life course, households made of people, skill, death and inheritance | A thirty-year run leaves family trees with widows, wards, runaways and lines that ended |
+| R3 History | A generation simulated before the reign, written to the record | Two seeds open on visibly different realms: different feuds, debts, ruins and wards |
+| R4 Scarcities | Fuel, salt, cloth, iron, draught, shelter, credit; pressure per need | Petitions spread across needs; no one need causes more than a quarter of them |
+| R5 Claims and lesser courts | Claims on things, the checks that open disputes, manor, church and borough courts | With no regent, disputes arise unprompted and most are settled below |
+| R6 The court | Objects, two sides, artefacts, precedent that settles, the harm table, a reign of years | The first playable reign; repeats under 50%; the careful court beats the naive one |
+| R7 Aims | Aims chosen from position, their steps, opposing parties | Petitions that are moves in a scheme; rivalries that run through a reign |
+| R8 Misfortune and justice | Fire, breakage, injury, crime; tithing, sanctuary, appeal | Crimes with a victim and a culprit; a fire whose cause the ledger can give |
+| R9 Legibility | Pages for people, places, things and claims; the chronicle; the history | A tester can say why a case arose and which of their rulings it came from |
+| R10 Calibration | The harm table; the monotony and emergence targets | Targets met; reigns differ; a second reign on the same seed plays differently |
+
+R4 can run beside R2 and R3. R7 and R8 can run beside each other once R6 is playable.
 
 ### Working habits
 
-- Keep a chronicle printer in the harness from M1: run ten years and print what happened, in plain sentences.
-- Add each emergence check in the milestone that should make it pass, and watch it fail first.
-- Port the current game's components in M7, not before.
+- Run the monotony report after every ring, and read the ten commonest petitions. A ring that does not move the measures is not done.
+- Keep the chronicle printer: run thirty years and print what happened, in plain sentences. If it reads like the last one, something is missing.
+- Add each emergence check in the ring that should make it pass, and watch it fail first.
+- Leave balance alone until R10. Before that, fix only what stops the realm running.
 - Keep the current game playable throughout.
 
 ## Decisions to make
 
-These choices are open. Each has a recommendation, but none blocks M0 to M2.
+Settled so far, by the designer or by the first build:
+
+| Decision | Settled as |
+| --- | --- |
+| Reign length | Three or four years |
+| Balance | A back seat: one table of harm, tuned last |
+| Scale | About 14,000 souls |
+| The Crown's purse and granary | Both adopted |
+| Language and place | TypeScript, in `realm/` |
+| Tests and build | Node's own test runner and esbuild |
+
+Still open. Each has a recommendation, and none blocks R1 to R3.
 
 | Decision | Options | Recommendation |
 | --- | --- | --- |
-| Scale | About 5,000, 14,000 or 40,000 souls | 14,000: large enough for cohorts to behave smoothly, small enough that named households matter |
-| The Crown's purse and granary | None, so the court only moves burdens; or a purse and granary filled by dues | Adopt both. Direct grants then have a real cost, and preparing ahead pays |
-| Court's view or ledger | Which is the default way to play | Use the ledger during development; decide after the M9 play-tests |
-| Reign length | 52 weeks; several years; open-ended with succession | Keep 52 for the first playable, but let soil, debts and memory carry over so longer reigns work |
-| Map | Three regions; or regions divided into parishes | Three regions, with room in the state for parishes later |
-| Goods | Six; or more, such as salt, ale, fuel and iron | Start with six; add fuel if winter needs it |
-| Catastrophe | Endemic disease only; or a plague-scale pestilence | Pestilence that is rare and survivable. A full Black Death would swallow a 52-week reign |
-| Named people | Households as units; or named members who age, marry, die and inherit | Named heads and heirs, with deaths and inheritance; other members counted |
-| The fourth hearing | Keep at 2 standing; or tie it to something material | Keep it as it is |
+| Three years or four | A fixed length; or the king's return itself uncertain | Three to start. Consider later letting the return date move with events abroad |
+| The pace of play | Three hearings every week; or quiet weeks passing at a touch | Weekly throughout, but a week with nobody waiting closes itself |
+| How many people | 150, 300–500, or a thousand | 300–500: enough for kin and rivals, few enough to know |
+| How many parishes | 20, 40 or 80 | 40 |
+| How long a history | Ten years, a generation, or a century | A generation at a coarse step; a longer one if the founding stays under a few seconds |
+| How much a plea may shade the truth | Always true; partial; or outright false | Partial and self-serving, never outright false, until play shows the player enjoys doubting |
+| The court's view or the ledger | Which is the default way to play | The ledger during development; decide after R9 |
+| Lesser courts | Simulated case by case; or settled by rule in aggregate | By rule, with a record the player can read |
+| Standing over a long reign | Ten seals as now; or a larger measure | As now, with the harm table deciding how fast it moves |
+| Catastrophe | Endemic disease only; or a plague-scale pestilence | Pestilence that is rare and survivable |
 | The outside world | Fixed; or drifting prices and sickness abroad | Simple drift now; a richer outside world later |
-| Language | TypeScript or plain JavaScript | TypeScript |
-| Where to build | A new folder here, or a new repository | A `realm/` folder in this repository |
 
 ## Appendix
+
+### Lessons from the `realm/` build
+
+1. **Caused is not the same as varied.** Every event in the first build had a cause, and a reign still showed about 17 shapes of petition, 79% of them repeats.
+2. **One number hides everything.** Frost, murrain, a raid and a debt all became weeks of cover, and then one of four asks. The variety was in the world and was lost on the way to the docket.
+3. **Averages make no cases.** Eighteen cohorts behave smoothly, and named households built as small copies of them had no troubles of their own.
+4. **Depth without a mouth is wasted.** Murrain and the wool clip were simulated with care and almost never reached the court.
+5. **Free relief breaks the game.** A court that granted every ask kept 82% of reigns; a careful one kept 75%.
+6. **Balancing loops are easy to leave out.** The realm collapsed until merchants had credit, the hungry could leave, and emptied land drew settlers back. Each was a missing system, not a number.
+7. **A history helps at once.** One year of real weather before the reign was enough to make openings differ.
+8. **The harness finds what reading cannot.** Summer fever never broke out, pestilence was seeded by mistake, and one small cohort caused most breaches. Each showed up as a number long before it would have shown up in play.
 
 ### Lessons from the `core/` prototype
 
@@ -1096,6 +1476,16 @@ In its last run of 300 reigns, 78% were kept, with a mean length of 43.5 weeks. 
 | Constituency | One estate in one region |
 | Cohort | A constituency's unnamed members, simulated together |
 | Household | A named family that can petition |
+| Parish | One of about forty places, with neighbours; a ward, a township or a manor |
+| Person | One of the few hundred people simulated one by one |
+| Thing | A particular mill, bridge, plough team or the like, with an owner, a keeper and a soundness |
+| Scarcity | One of the needs that do not stand in for one another; the scarcest sets a household's condition |
+| Claim | A right to a thing, with a holder, a basis and a strength |
+| Dispute | Two claims that can no longer both be met |
+| Aim | What a household is working toward over seasons |
+| Artefact | What a ruling leaves behind that later acts: a charter, a precedent, a ward |
+| Shape | A petition's motive, ask, cause and kind of object; the unit of the monotony measures |
+| Mouth | A system's path to the docket |
 | Keeper | An office-holder who speaks for a purpose: the captain, the dike-reeve, the almoner |
 | Pressure | A household's strain, read from weeks of cover and dated threats: 0 to 8; pressing at 2, urgent at 4 |
 | Provision | What a duty delivers, divided by what it requires |
@@ -1108,4 +1498,4 @@ In its last run of 300 reigns, 78% were kept, with a mean length of 43.5 weeks. 
 | Causal ledger | The record of the largest causes behind each number |
 | Binding | A commitment tested over time: word, ordinance, compact, pledge, bond, rule, law |
 | Tie | A relationship: kin, owes, charge, grudge, esteem, rivalry or alliance |
-| Motive, means, payer | Why a household asks, what it asks the court to do, and who bears the cost |
+| Motive, means, payer, object | Why a household asks, what it asks the court to do, who bears the cost, and the particular thing it is about |
