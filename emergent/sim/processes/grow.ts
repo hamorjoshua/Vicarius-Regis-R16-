@@ -65,12 +65,12 @@ export function grow(s: State): void {
     for (let k = 0; k < NS; k++) {
       const r = St[k]!, x = c.stock[k]!;
       if (!r.eater) continue;
-      const thrives = r.wet ? Math.max(0, c.wet - 1.1) * 5 : 1;
+      const thrives = r.wet ? Math.max(0, c.wet - 1.2) * 5 : 1;
       if (x <= 0) { c.stock[k] = r.self * c.pot[k]! * Math.min(1, thrives); continue; }
       if (temp < r.kill && r.frost > 0) { c.stock[k] = x * (1 - r.frost) < 0.05 ? 0 : x * (1 - r.frost); continue; }
       let fed = 1;
       for (const [prey, each] of r.eats) {
-        const want = each * x, got = Math.min(want, c.stock[prey]! * 0.5);
+        const want = each * x, got = Math.min(want, c.stock[prey]! * (r.catch ?? 0.5));
         c.stock[prey] = c.stock[prey]! - got;
         fed = Math.min(fed, got / want);
       }
@@ -79,12 +79,12 @@ export function grow(s: State): void {
         const here = homes.get(i) ?? [];
         let have = 0;
         for (const b of here) have += b.store[kind]!;
-        const want = each * x, got = Math.min(want, have * 0.05);
+        const want = each * x, got = Math.min(want, have * (r.catch ?? 0.05));
         if (have > 0) for (const b of here) b.store[kind] = b.store[kind]! * (1 - got / have);
         fed = Math.min(fed, got / want);
         if (got > 5) rec(s, 'decay', { cell: i, kind, q: got, kind2: k, q2: 2 });
       }
-      c.stock[k] = x * (1 + r.r * fed * Math.max(thrives, 0.2) - (r.starve ?? 0) * (1 - fed)) + r.self * c.pot[k]! * fed * Math.min(1, thrives);
+      c.stock[k] = x * (1 + r.r * fed * Math.min(1, thrives) - (r.starve ?? 0) * (1 - fed));
       if (c.stock[k]! < 0.05) c.stock[k] = 0;
       if (r.dung) c.soil = Math.min(c.soil0 + 0.25, c.soil + r.dung * c.stock[k]!);
     }

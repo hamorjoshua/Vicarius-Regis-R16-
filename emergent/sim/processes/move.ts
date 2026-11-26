@@ -37,7 +37,7 @@ export function move(prev: State, s: State): void {
     const c = s.cells[i]!, was = prev.cells[i]!, ratio = s.sky.rain[i]! / P.rainMean;
     // What soaks in wets the ground; what runs off is gone downhill, and on a bare slope takes soil with it.
     const soak = ratio * (0.3 + 0.5 * R.held[i]!);
-    c.wet = P.wetKeep * was.wet + (1 - P.wetKeep) * (soak / 0.55 + Math.min(1, (R.flow[i]! - R.own[i]!) * 0.1));
+    c.wet = P.wetKeep * was.wet + (1 - P.wetKeep) * (soak / 0.6 + Math.min(1, (R.flow[i]! - R.own[i]!) * 0.1));
     c.flow = R.flow[i]!;
     c.flood = c.flow > c.bank ? c.flow / c.bank - 1 : 0;
     const lo = R.low[i]!;
@@ -59,7 +59,7 @@ export function move(prev: State, s: State): void {
     }
     for (const b of s.bodies) {
       if (!b.alive || b.home !== i || b.parts.length) continue;
-      const share = Math.min(0.5, 0.15 * c.flood);
+      const share = Math.min(0.3, 0.1 * c.flood);
       let lost = 0;
       for (let k = 0; k < NK; k++) if (!Kn[k]!.fixed && b.store[k]! > 0) { lost += b.store[k]! * share; b.store[k] = b.store[k]! * (1 - share); }
       if (lost > 5) rec(s, 'decay', { a: b.id, cell: i, q: lost, q2: 1 });

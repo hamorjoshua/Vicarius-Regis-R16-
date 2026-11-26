@@ -91,6 +91,8 @@ export interface StockRow {
   eatsStore?: Record<string, number>;
   /** How much of the rain it holds back when it stands full; the share of it a flood carries off; what it adds to the soil; the share that wanders off each week toward better feeding. */
   holds?: number; drowns?: number; dung?: number; roams?: number;
+  /** The most of what it feeds on that it can take in a week, as a share of what is there. */
+  catch?: number;
   starve?: number;
   /** The level at which a day's taking yields half its full rate. */
   thin: number;
@@ -103,13 +105,13 @@ export interface StockRow {
 export const STOCKS: StockRow[] = [
   { id: 'sward', holds: 0.35, drowns: 0.1, cap: 320, r: 0.25, lo: 5, kill: 1, frost: 0.03, self: 2, soil: 0.5, wet: true, drain: 0, thin: 60, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0.6 },
   { id: 'grove', holds: 0.8, cap: 1600, r: 0.02, lo: 5, kill: -99, frost: 0, self: 0.6, soil: 0.3, drain: 0, thin: 300, lies: { base: 0.1, low: 0, high: 1.1, water: 0 }, start: 0.7 },
-  { id: 'corn', holds: 0.2, drowns: 0.5, cap: 1000, r: 0.2, lo: 6, kill: 1.5, frost: 0.3, self: 0, soil: 1.5, wet: true, drain: 0.00012, thin: 250, lies: { base: 0.15, low: 1, high: 0, water: 0 }, start: 0 },
+  { id: 'corn', holds: 0.2, drowns: 0.3, cap: 1000, r: 0.2, lo: 6, kill: 1.5, frost: 0.3, self: 0, soil: 1.5, wet: true, drain: 0.00012, thin: 250, lies: { base: 0.15, low: 1, high: 0, water: 0 }, start: 0 },
   { id: 'herd', dung: 0.0002, cap: 0, r: 0.012, lo: -99, kill: -99, frost: 0, self: 0.05, soil: 0, drain: 0, eats: { sward: 0.5 }, starve: 0.06, thin: 6, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 12 },
   { id: 'shoal', cap: 260, r: 0.08, lo: -99, kill: -99, frost: 0, self: 1, soil: 0, drain: 0, thin: 70, lies: { base: 0, low: 0, high: 0, water: 1 }, start: 0.7 },
   { id: 'vein', cap: 4000, r: 0, lo: -99, kill: -99, frost: 0, self: 0, soil: 0, drain: 0, thin: 200, lies: { base: 0, low: 0, high: 1, water: 0, rare: 3 }, start: 1 },
-  { id: 'pack', cap: 0, r: 0.01, lo: -99, kill: -99, frost: 0, self: 0.02, soil: 0, drain: 0, eats: { herd: 0.05 }, starve: 0.03, roams: 0.3, thin: 1, lies: { base: 0, low: 0, high: 1, water: 0 }, start: 0.5 },
-  { id: 'vermin', cap: 0, r: 0.08, lo: -99, kill: 0, frost: 0.15, self: 0.05, soil: 0, drain: 0, eatsStore: { grain: 0.2 }, starve: 0.1, roams: 0.2, thin: 1, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0.5 },
-  { id: 'blight', cap: 0, r: 0.25, lo: -99, kill: 2, frost: 0.5, self: 0.3, soil: 0, wet: true, drain: 0, eats: { corn: 0.3 }, starve: 0.4, roams: 0.3, thin: 1, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0 },
+  { id: 'pack', cap: 0, r: 0.01, lo: -99, kill: -99, frost: 0, self: 0.01, soil: 0, drain: 0, eats: { herd: 0.03 }, catch: 0.05, starve: 0.05, roams: 0.3, thin: 1, lies: { base: 0, low: 0, high: 1, water: 0 }, start: 0.2 },
+  { id: 'vermin', cap: 0, r: 0.05, lo: -99, kill: 1, frost: 0.2, self: 0.05, soil: 0, drain: 0, eatsStore: { grain: 0.05 }, catch: 0.02, starve: 0.1, roams: 0.2, thin: 1, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0.5 },
+  { id: 'blight', cap: 0, r: 0.15, lo: -99, kill: 2, frost: 0.5, self: 0.02, soil: 0, wet: true, drain: 0, eats: { corn: 0.1 }, starve: 0.4, roams: 0.3, thin: 1, lies: { base: 1, low: 0, high: 0, water: 0 }, start: 0 },
   { id: 'seep', cap: 40, r: 0, lo: -99, kill: -99, frost: 0, self: 2, soil: 0, drain: 0, thin: 10, lies: { base: 1, low: 0, high: 0, water: 0, rare: 2 }, start: 1 },
 ];
 
@@ -161,7 +163,7 @@ export const P = {
   skyPersist: 0.8, skyRealm: 0.6, skyQuarter: 0.4, skyCell: 0.2, sigmaT: 2, sigmaR: 0.42,
   wetKeep: 0.8, downhill: 0.15, soilMend: 0.012,
   /** Soil a week's run of water carries off a bare slope; how many times its usual flow a channel carries before it floods. */
-  wash: 0.02, bankfull: 2.5,
+  wash: 0.02, bankfull: 4,
 
   // A body's week
   days: 6, block: 2, reach: 2, travel: 0.15, dealReach: 4, carry: 0.004,
