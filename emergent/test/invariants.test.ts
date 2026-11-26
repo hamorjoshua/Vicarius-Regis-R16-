@@ -10,6 +10,7 @@ import { step } from '../sim/step.ts';
 import { choose } from '../sim/processes/choose.ts';
 import { CHANNELS, draw } from '../sim/rng.ts';
 import { KINDS, NEEDS, RECIPES, STOCKS } from '../sim/tables.ts';
+import { Readers } from '../readers/readers.ts';
 import type { State } from '../sim/types.ts';
 
 const here = new URL('..', import.meta.url).pathname;
@@ -101,4 +102,20 @@ test('the sky is the same whatever the people do', () => {
   let s = b;
   for (let w = 0; w < 60; w++) s = step(s);
   assert.deepEqual(a.sky.temp, s.sky.temp);
+});
+
+test('readers are apart: they cannot change the state, and no process calls them', () => {
+  const R = new Readers();
+  run(9, 156, (_p, n) => { const before = JSON.stringify(n); R.read(n); assert.equal(JSON.stringify(n), before, `week ${n.t}`); });
+  R.close();
+  assert.ok(R.pop.length === 156);
+  for (const e of R.events) assert.ok(e.text.length > 0 && e.t1 >= e.t0);
+  for (const f of [...rules, join(here, 'sim/found.ts'), join(here, 'sim/tables.ts')]) assert.ok(!/readers/.test(read(f)), `${f} reaches for the readers`);
+});
+
+test('a chain of causes can be followed back from a record', () => {
+  const R = new Readers();
+  run(3, 52 * 14, (_p, n) => R.read(n));
+  R.close();
+  assert.ok(R.events.some(e => e.chain.length > 0), 'no event carries a chain');
 });

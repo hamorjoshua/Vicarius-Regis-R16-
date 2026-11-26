@@ -4,6 +4,8 @@
 export const YEAR = 52;
 
 // --- Needs: what a person must have, and how much its lack harms ---
+// The design's list also has health, safety, company, standing, security in what one holds and the
+// hope of salvation. Nothing made can serve those; they wait for bonds on bonds, bodies and beliefs.
 
 export interface NeedRow {
   id: string;
@@ -24,6 +26,8 @@ export const NEEDS: NeedRow[] = [
   { id: 'dress', per: 1, cold: 0, harm: 0.15, horizon: 60 },
   { id: 'roof', per: 1, cold: 0, harm: 0.25, horizon: 300 },
   { id: 'savour', per: 0.04, cold: 0, harm: 0.08, horizon: 20 },
+  { id: 'drink', per: 0.5, cold: 0, harm: 0.1, horizon: 10 },
+  { id: 'repose', per: 1, cold: 0, harm: 0.2, horizon: 2 },
 ];
 
 // --- Matter: every kind is a row of the same shape ---
@@ -56,6 +60,8 @@ export const KINDS: KindRow[] = [
   { id: 'blade', use: 0.012, keep: 0.001, weight: 1, aids: { cut: 1.6 } },
   { id: 'coulter', use: 0.012, keep: 0.001, weight: 4, aids: { till: 1.8 } },
   { id: 'brine', serves: { savour: 1 }, use: 1, keep: 0.002, weight: 1 },
+  { id: 'ale', serves: { drink: 1 }, use: 1, keep: 0.05, weight: 1.5 },
+  { id: 'leisure', serves: { repose: 1 }, use: 1, keep: 1, weight: 999, fixed: true },
   { id: 'hall', serves: { roof: 6 }, use: 0.004, keep: 0.002, weight: 999, fixed: true },
 ];
 
@@ -129,6 +135,8 @@ export const RECIPES: RecipeRow[] = [
   { id: 'weaving', in: { fleece: 1 }, out: { cloth: 1 } },
   { id: 'salting', in: { meat: 3, brine: 0.3 }, out: { cured: 3 } },
   { id: 'smoking', in: { haul: 4, brine: 0.3 }, out: { cured: 3 } },
+  { id: 'brewing', in: { grain: 2 }, out: { ale: 3 } },
+  { id: 'resting', out: { leisure: 1 } },
   { id: 'raising', in: { timber: 3 }, out: { hall: 0.06 } },
 ];
 
@@ -164,7 +172,7 @@ export const P = {
   /** How strongly a holder waits for what is still growing. */
   wait: 20,
   /** A day's work must be worth at least this, or the day is rested. */
-  rest: 0.01,
+  rest: 0.002,
   /** Weeks of cover under which a body asks, and under which it will take. */
   short: 6, dire: 1.5,
   inputShare: 0.5, aidDays: 40, pile: 12,

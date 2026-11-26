@@ -10,7 +10,6 @@ import type { State } from '../types.ts';
 export function decay(s: State): void {
   for (const b of s.bodies) {
     if (!b.alive) continue;
-    for (let k = 0; k < NK; k++) if (b.store[k]! > 0) b.store[k] = b.store[k]! * (1 - Kn[k]!.keep);
 
     // Use: the most harmful need is served first, from what would spoil soonest.
     const R = ask(s, b), got = new Array<number>(NN).fill(0), used = new Array<number>(NK).fill(0);
@@ -27,6 +26,8 @@ export function decay(s: State): void {
       }
     }
     for (let k = 0; k < NK; k++) if (used[k]! > 0) b.store[k] = Math.max(0, b.store[k]! - used[k]! * Kn[k]!.use);
+    // What was not used spoils by its keeping.
+    for (let k = 0; k < NK; k++) if (b.store[k]! > 0) b.store[k] = b.store[k]! * (1 - Kn[k]!.keep);
     const met = R.map((r, n) => (r > 0 ? Math.min(1, got[n]! / r) : 1));
 
     // A person wears by what they lack and by their years, and mends when the wearing stops.

@@ -86,7 +86,7 @@ export function found(seed: number): State {
       if (k === undefined) continue;
       const weeks = need === first ? 46 + 16 * u() : Kn[k]!.fixed ? 0 : N.horizon * (0.3 + 0.5 * u());
       const per = N.per + N.cold * 5;
-      b.store[k] = Math.max(b.store[k]!, Kn[k]!.fixed ? 1 : (h * per * weeks * Kn[k]!.use) / Kn[k]!.serves[need]!);
+      b.store[k] = Math.max(b.store[k]!, Kn[k]!.fixed ? (Kn[k]!.keep < 0.5 ? 1 : 0) : (h * per * weeks * Kn[k]!.use) / Kn[k]!.serves[need]!);
     }
     for (let k = 0; k < NK; k++) if (Object.keys(Kn[k]!.aids).length && u() < 0.45) b.store[k] = 1;
     // Ground of its own nearby, by grant.

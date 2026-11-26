@@ -1,9 +1,12 @@
-// Watch the toy. `node harness/run.ts years [years] [seed]` runs a realm with no court and prints
-// what its people did each year. This file is a reader: it may name things; the rules may not.
+// Watch the realm. Commands: years, chronicle, measures, hearth, cell (see the README).
+// Each runs a realm with no court. This file is a reader: it may name things; the rules may not.
 
 import { found } from '../sim/found.ts';
 import { step } from '../sim/step.ts';
-import { KINDS, NEEDS, RECIPES } from '../sim/tables.ts';
+import { KINDS, NEEDS, RECIPES, STOCKS } from '../sim/tables.ts';
+import { deflateSync } from 'node:zlib';
+import { Readers, year } from '../readers/readers.ts';
+import { askAhead, cover } from '../sim/value.ts';
 import type { State } from '../sim/types.ts';
 
 const [cmd = 'years', a1, a2] = process.argv.slice(2);
@@ -39,4 +42,116 @@ if (cmd === 'years') {
     if (!alive.length) break;
   }
   console.log(`\n${((Date.now() - t0) / 1000).toFixed(1)} s`);
+}
+
+function watch(years: number, seed: number, each?: (s: State, R: Readers) => void): { s: State; R: Readers; ms: number } {
+  let s = found(seed);
+  const R = new Readers(), t0 = Date.now();
+  for (let w = 0; w < years * 52; w++) { s = step(s); R.read(s); each?.(s, R); }
+  R.close();
+  return { s, R, ms: (Date.now() - t0) / (years * 52) };
+}
+
+if (cmd === 'chronicle') {
+  const years = Number(a1 ?? 30), seed = Number(a2 ?? 1);
+  const { R } = watch(years, seed);
+  console.log(`The chronicle of realm ${seed}\n`);
+  for (let y = 1; y <= years; y++) {
+    const evs = R.events.filter(e => year(e.t0) === y).sort((a, b) => b.size - a.size);
+    const pop = R.pop[y * 52 - 1]!, was = y > 1 ? R.pop[(y - 1) * 52 - 1]! : R.pop[0]!;
+    const small = evs.filter(e => e.name === 'exhaustion' || e.name === 'recovery' || e.name === 'house died out');
+    const big = evs.filter(e => !small.includes(e));
+    console.log(`Year ${y}. ${pop} souls${pop > was * 1.03 ? ', more than the year before' : pop < was * 0.97 ? ', fewer than the year before' : ''}.`);
+    for (const e of big.slice(0, 6)) { console.log(`  ${e.text}`); for (const c of e.chain.slice(0, 2)) console.log(`      because ${c}`); }
+    if (big.length > 6) console.log(`  And ${big.length - 6} lesser quarrels and troubles.`);
+    const count = (n: string): number => small.filter(e => e.name === n).length;
+    const bits = [count('exhaustion') && `${count('exhaustion')} grounds or waters were stripped bare`, count('recovery') && `${count('recovery')} came back`, count('house died out') && `${count('house died out')} houses died out`].filter(Boolean);
+    if (bits.length) console.log(`  ${bits.join('; ')}.`);
+  }
+  const c = R.crash();
+  console.log(`\nThe deepest fall: from ${c.peak} souls in year ${year(c.from)} to ${c.trough} in year ${year(c.to)} (${Math.round(c.depth * 100)}%).`);
+}
+
+if (cmd === 'measures') {
+  const years = Number(a1 ?? 30), seeds = (a2 ?? '1,2,3,4').split(',').map(Number);
+  const runs = seeds.map(seed => {
+    const yearText: string[] = [];
+    let buf: string[] = [];
+    const out = watch(years, seed, s => {
+      for (const r of s.log) if (r.k !== 'make') buf.push(`${r.k}:${r.kind}:${r.need}:${r.q2 ? 1 : 0}`);
+      if (s.t % 52 === 0) { yearText.push(buf.join(' ')); buf = []; }
+    });
+    return { seed, yearText, ...out };
+  });
+  console.log(`Measures over ${seeds.length} realms of ${years} years\n`);
+  console.log('| Seed | ms a week | Peak | Trough | Fall | Years falling | End |');
+  console.log('| --- | --- | --- | --- | --- | --- | --- |');
+  for (const r of runs) { const c = r.R.crash(); console.log(`| ${r.seed} | ${r.ms.toFixed(1)} | ${c.peak} | ${c.trough} | ${Math.round(c.depth * 100)}% | ${((c.to - c.from) / 52).toFixed(1)} | ${r.R.pop[r.R.pop.length - 1]} |`); }
+
+  // Trouble at every scale: how many of each thing the readers found, and how large.
+  const by = new Map<string, number[]>();
+  for (const r of runs) for (const e of r.R.events) { const l = by.get(e.name) ?? []; l.push(e.size); by.set(e.name, l); }
+  console.log('\n| What the readers found | Count | Median size | Largest |');
+  console.log('| --- | --- | --- | --- |');
+  for (const [name, sizes] of [...by].sort((a, b) => b[1].length - a[1].length)) { sizes.sort((a, b) => a - b); console.log(`| ${name} | ${sizes.length} | ${sizes[sizes.length >> 1]} | ${sizes[sizes.length - 1]} |`); }
+
+  // Open-ended: how badly each year's record compresses given the years before. 1 is wholly new; near 0, a repeat.
+  console.log('\nNovelty of each year\'s record against the years before it (1: wholly new, 0: a repeat), mean of the realms:');
+  const nov: number[][] = [];
+  for (const r of runs) r.yearText.forEach((txt, y) => {
+    if (y === 0 || !txt) return;
+    const dict = Buffer.from(r.yearText.slice(0, y).join(' ')).subarray(-32000);
+    const alone = deflateSync(Buffer.from(txt)).length, given = dict.length ? deflateSync(Buffer.from(txt), { dictionary: dict }).length : alone;
+    (nov[y] ??= []).push(given / alone);
+  });
+  console.log('  ' + nov.map((v, y) => (v ? `y${y + 1} ${(v.reduce((a, b) => a + b, 0) / v.length).toFixed(2)}` : '')).filter(Boolean).join(' · '));
+
+  // Unforeseen: chains of causes found in no other realm, and shapes of event seen in only one.
+  const strip = (c: string): string => c.replace(/[0-9(),]+/g, '#');
+  const chains = runs.map(r => new Set(r.R.events.flatMap(e => e.chain.map(strip))));
+  const all = chains.flatMap(c => [...c]);
+  const lone = all.filter(c => chains.filter(x => x.has(c)).length === 1).length;
+  console.log(`\nChains of causes: ${new Set(all).size} distinct shapes; ${all.length ? Math.round((100 * lone) / all.length) : 0}% appear in only one realm.`);
+  const shapes = runs.map(r => new Set(r.R.events.map(e => e.shape)));
+  console.log(`Shapes of event: ${new Set(shapes.flatMap(x => [...x])).size} in all; per realm ${shapes.map(x => x.size).join(', ')}.`);
+
+  // What carried each fall.
+  console.log('\nWhat happened during each fall:');
+  for (const r of runs) {
+    const c = r.R.crash(), n: Record<string, number> = {};
+    for (const rec of r.R.index.values()) {
+      if (rec.t < c.from || rec.t > c.to) continue;
+      const k = rec.k === 'die' ? (rec.need >= 0 ? `died for want of ${NEEDS[rec.need]!.id}` : rec.cause >= 0 ? 'died of blows' : 'died otherwise') : rec.k === 'take' ? (rec.b < 0 ? 'gathered from held ground' : rec.need >= 0 ? 'took from a store' : 'fought or seized for a debt') : '';
+      if (k) n[k] = (n[k] ?? 0) + 1;
+    }
+    console.log(`  seed ${r.seed}: ` + Object.entries(n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(' · '));
+  }
+}
+
+if (cmd === 'hearth') {
+  const id = Number(a1 ?? 0), years = Number(a2 ?? 30), seed = Number(process.argv[5] ?? 1);
+  console.log(`House ${id} of realm ${seed}`);
+  watch(years, seed, (s, R) => {
+    const b = s.bodies[id];
+    if (!b) return;
+    for (const r of s.log) if (r.k !== 'make' && r.k !== 'trade' && (r.a === id || r.b === id) && !['born', 'die', 'wed', 'join'].includes(r.k)) console.log(`  y${year(r.t)} w${r.t % 52}: ${R.describe(r)}`);
+    for (const r of s.log) if ((r.k === 'born' || r.k === 'die') && r.b === id) console.log(`  y${year(r.t)} w${r.t % 52}: ${r.k === 'born' ? 'a child was born' : `one of the house died, aged ${Math.floor(r.q)}${r.need >= 0 ? ', for want of ' + NEEDS[r.need]!.id : ''}`}`);
+    if (s.t % 52 !== 0 || !b.alive) return;
+    const cov = cover(b.store, askAhead(s, b));
+    const lands = s.bonds.filter(x => x.about === 'land' && x.a === id).map(x => `${x.cell}(${x.strength.toFixed(1)})`).join(' ');
+    console.log(`year ${s.t / 52}: ${b.members.length} at cell ${b.home}; weeks of cover: ${NEEDS.map((n, i) => `${n.id} ${Math.min(999, Math.round(cov[i]!))}`).join(', ')}; holds ${lands || 'nothing'}; owes ${s.bonds.filter(x => x.about === 'act' && x.a === id).length}, is owed ${s.bonds.filter(x => x.about === 'act' && x.b === id).length}`);
+  });
+}
+
+if (cmd === 'cell') {
+  const id = Number(a1 ?? 0), years = Number(a2 ?? 30), seed = Number(process.argv[5] ?? 1);
+  const days = new Map<number, number>();
+  console.log(`Cell ${id} of realm ${seed}`);
+  watch(years, seed, s => {
+    for (const r of s.log) if ((r.k === 'make' || r.k === 'take') && r.cell === id && r.kind2 >= 0) days.set(r.a, (days.get(r.a) ?? 0) + r.q2);
+    if (s.t % 52 !== 26) return;
+    const c = s.cells[id]!;
+    console.log(`year ${Math.ceil(s.t / 52)}, midsummer: soil ${c.soil.toFixed(2)}; ${STOCKS.map((k, i) => `${k.id} ${Math.round(c.stock[i]!)}`).join(', ')}; held by ${s.bonds.filter(x => x.about === 'land' && x.cell === id).map(x => `house ${x.a}(${x.strength.toFixed(1)})`).join(' ') || 'no one'}; worked this year by ${[...days].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([b, d]) => `house ${b} ${Math.round(d)}d`).join(', ') || 'no one'}; homes here ${s.bodies.filter(b => b.alive && b.home === id).length}`);
+    days.clear();
+  });
 }

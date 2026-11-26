@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["sim", "harness", "test"]
+  "include": ["sim", "readers", "harness", "test"]
 }
