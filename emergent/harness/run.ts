@@ -145,6 +145,10 @@ if (cmd === 'measures') {
   [...STOCKS.map(k => k.id), 'soil (mean)'].forEach((name, i) => console.log(`  | ${name} | ${[1, ...tens].map(t => { const v = mean(r => r.land[t - 1]![i]!); return v < 10 ? v.toFixed(2) : Math.round(v); }).join(' | ')} |`));
   console.log(`  | floods in the ten years to | - | ${tens.map(t => mean(r => r.R.events.filter(e => e.shape === 'flood' && e.t0 >= (t - 10) * 52 && e.t0 < t * 52).length).toFixed(1)).join(' | ')} |`);
 
+  // Skill: how good the hearths are at each kind of work at the end, and how far the best stands above the rest.
+  console.log('\nSkill at each kind of work at the end (mean of hearths / best hearth), by realm:');
+  RECIPES.forEach((rc, i) => console.log(`  ${rc.id}: ${runs.map(r => { const hs = r.s.bodies.filter(b => b.alive && !b.parts.length && b.skill.length); return hs.length ? `${(hs.reduce((x, b) => x + b.skill[i]!, 0) / hs.length).toFixed(2)}/${Math.max(...hs.map(b => b.skill[i]!)).toFixed(2)}` : '-'; }).join(', ')}`));
+
   // Customs: what half or more of a body's houses hold, at the end.
   console.log('\nCustoms standing at the end (bodies in which half or more of the houses hold it), by realm:');
   const customs = runs.map(r => {

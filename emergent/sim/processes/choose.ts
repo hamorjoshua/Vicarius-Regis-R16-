@@ -474,7 +474,7 @@ function work(s: State, L: Land, c: Ctx): void {
       const r = Rc[o.r]!, cell = s.cells[o.cell]!;
       // Only want of the very thing drives a body to take it from ground that others hold.
       if (o.take && !(bold && r.out.some(([k]) => Kn[k]!.serves[c.pressNeed]! > 0))) continue;
-      let m = d * (1 - P.travel * dist(s.side, b.home, o.cell)), aid = -1;
+      let m = d * (1 - P.travel * dist(s.side, b.home, o.cell)) * (b.skill[o.r] ?? 1), aid = -1;
       if (r.aid) for (const k of AIDERS[r.aid] ?? []) if (helpLeft[k]! >= d) { m *= Kn[k]!.aids[r.aid]!; aid = k; break; }
       let waitFor = 1;
       for (const [st, q] of r.from) {

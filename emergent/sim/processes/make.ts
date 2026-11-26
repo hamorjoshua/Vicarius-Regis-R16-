@@ -15,7 +15,7 @@ export function make(s: State): void {
     const helpLeft = b.store.map(q => q * P.days);
     for (const w of b.plan) {
       const r = Rc[w.r]!, c = s.cells[w.cell]!;
-      let m = w.days * Math.max(0, 1 - P.travel * dist(s.side, b.home, w.cell)), aid = -1;
+      let m = w.days * Math.max(0, 1 - P.travel * dist(s.side, b.home, w.cell)) * (b.skill[w.r] ?? 1), aid = -1;
       if (r.aid) for (const k of AIDERS[r.aid] ?? []) if (helpLeft[k]! >= w.days) { helpLeft[k] = helpLeft[k]! - w.days; m *= Kn[k]!.aids[r.aid]!; aid = k; break; }
       for (const [st] of r.from) { const x = c.stock[st]!; m *= x / (x + St[st]!.thin); }
       if (m <= 0) continue;

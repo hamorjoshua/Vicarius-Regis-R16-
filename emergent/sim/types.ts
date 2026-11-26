@@ -30,6 +30,10 @@ export interface Person {
   blow: number; blowAt: number;
   /** How far each need was met last week. */
   fed: number[];
+  /** A mind: what this person believes brings harm, the ways of dealing they know, and how good they are at each kind of work. */
+  lore: Record<string, number>;
+  ways: Record<string, { w: number; p: number }>;
+  skill: number[];
 }
 
 export interface Work { r: number; cell: number; days: number }
@@ -59,6 +63,8 @@ export interface Body {
   /** What it believes brings harm, and how strongly; and what it has lately met with. */
   lore: Record<string, number>;
   recent: [string, number][];
+  /** How good its grown members are, together, at each kind of work. */
+  skill: number[];
 }
 
 export type Basis = 'birth' | 'word' | 'use' | 'grant' | 'wrong';

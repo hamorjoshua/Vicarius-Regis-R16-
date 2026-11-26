@@ -10,6 +10,7 @@ import { bind } from './processes/bind.ts';
 import { choose } from './processes/choose.ts';
 import { gather } from './processes/gather.ts';
 import { learn } from './processes/learn.ts';
+import { attend, settle } from './processes/mind.ts';
 import type { State } from './types.ts';
 
 export function step(prev: State): State {
@@ -22,8 +23,10 @@ export function step(prev: State): State {
   decay(s);
   move(prev, s);
   bind(s);
+  attend(s);        // each hearth takes up the mind of the one who speaks for it
   choose(s);
   learn(s);         // beliefs are made, told and forgotten
+  settle(s);        // what was learned is kept by people
   gather(prev, s);  // bodies form and dissolve
   s.t = prev.t + 1;
   return s;

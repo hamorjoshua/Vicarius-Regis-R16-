@@ -208,6 +208,8 @@ export const P = {
   hire: 1.5,
   /** Dealing: how much a thing promised is worth beside a thing in hand, the margin the other must be left, the share of the gain usually conceded, and the weeks of going without before something new is tried. */
   /** Belief: how much a harm adds to what is blamed, how fast belief fades, how strong it must be to be told and to be acted on, and how long a thing met with stays in mind. */
+  /** Skill: what a day of a kind of work adds, the most it reaches, what it slips back to unused, and what a child starts with. */
+  practise: 0.004, mastery: 1.6, rust: 0.002, green: 0.6,
   blame: 0.5, forget: 0.995, tell: 0.2, heed: 0.5, mind: 12,
   patience: 0.9, margin: 1.05, concede: 0.33, stuck: 4,
   stay: 1.6, scout: 4,
