@@ -244,7 +244,26 @@ function deal(s: State, cs: Map<number, Ctx>, kin: Map<number, Set<number>>, A: 
 
   // Short of a need, and nothing to trade for it: ask kin, then ask for a loan, then, if desperate, take.
   const n = A.pressNeed >= 0 ? A.pressNeed : A.scarce;
-  if (A.cov[n]! >= P.short) return;
+  const corp = a.of >= 0 && s.bodies[a.of]!.alive ? s.bodies[a.of]! : null;
+  if (A.cov[n]! >= P.short) {
+    // In plenty, a part of what it values least goes into the store its body holds in common.
+    if (!corp || (s.t + a.id) % 4 !== 0) return;
+    const k = offers[0];
+    if (k === undefined || a.store[k]! < 1 || !Kn[k]!.serves.some((sv, m) => sv > 0 && A.cov[m]! > NEEDS[m]!.horizon * 0.8)) return;
+    const q = a.store[k]! * P.common;
+    a.store[k] = a.store[k]! - q; corp.store[k] = corp.store[k]! + q;
+    rec(s, 'give', { a: a.id, b: corp.id, kind: k, q, kind2: 1 });
+    return;
+  }
+  // Short: what the body holds in common comes first.
+  if (corp) for (const k of kinds) {
+    if (Kn[k]!.serves[n]! <= 0) continue;
+    const q = Math.min(corp.store[k]! * P.part, (3 * A.ahead[n]! * Kn[k]!.use) / Kn[k]!.serves[n]!);
+    if (q <= 0.05) continue;
+    corp.store[k] = corp.store[k]! - q; a.store[k] = a.store[k]! + q;
+    rec(s, 'give', { a: corp.id, b: a.id, kind: k, q, need: n, kind2: 1, cause: a.why[n]! });
+    return;
+  }
   const lack = Math.max(0, 3 * A.ahead[n]!);
   const amount = (B: Ctx, k: number): number => Math.min(B.b.store[k]! * P.part, (lack * Kn[k]!.use) / Kn[k]!.serves[n]!);
   const serving = kinds.filter(k => Kn[k]!.serves[n]! > 0);

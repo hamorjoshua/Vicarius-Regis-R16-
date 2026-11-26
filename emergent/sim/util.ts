@@ -96,9 +96,11 @@ export function bond(s: State, f: Partial<Bond> & Pick<Bond, 'about' | 'a' | 'ba
 /** What a body can bring to a struggle: its grown members, and half of nearby kin who bear the other no goodwill. */
 export function might(s: State, kin: Map<number, Set<number>>, b: Body, against: number): number {
   let m = grown(s, b).length;
-  for (const k of kin.get(b.id) ?? []) {
+  const allies = new Set<number>(kin.get(b.id) ?? []);
+  for (const f of fellows(s, b)) allies.add(f);
+  for (const k of allies) {
     const kb = s.bodies[k]!;
-    if (kb.alive && k !== against && dist(s.side, kb.home, b.home) <= P.reach + 1 && tie(s, k, against) <= 0.2) m += 0.5 * grown(s, kb).length;
+    if (kb.alive && k !== against && k !== b.id && dist(s.side, kb.home, b.home) <= P.reach + 1 && tie(s, k, against) <= 0.2) m += 0.5 * grown(s, kb).length;
   }
   return m;
 }
@@ -146,4 +148,33 @@ export function payRent(s: State, lease: Bond, kind: number, amount: number): vo
     to.store[kind] = to.store[kind]! + pay;
     payer = to; due = pay; cur = over;
   }
+}
+
+/** The outermost body a body belongs to. */
+export function top(s: State, b: Body): Body {
+  let cur = b;
+  for (let i = 0; i < 20 && cur.of >= 0 && s.bodies[cur.of]!.alive; i++) cur = s.bodies[cur.of]!;
+  return cur;
+}
+
+/** The hearths a body is made of, however many bodies deep. */
+export function leaves(s: State, b: Body, out: number[] = []): number[] {
+  if (!b.parts.length) { if (b.alive) out.push(b.id); return out; }
+  for (const p of b.parts) leaves(s, s.bodies[p]!, out);
+  return out;
+}
+
+/** The other hearths that share a body with this one, at any level. */
+export function fellows(s: State, b: Body): number[] {
+  if (b.of < 0) return [];
+  return leaves(s, top(s, b)).filter(i => i !== b.id);
+}
+
+/** How one body holds another: for bodies made of bodies, the mean of how their hearths hold one another. */
+export function regard(s: State, a: Body, b: Body): number {
+  const la = leaves(s, a), lb = leaves(s, b);
+  if (!la.length || !lb.length) return 0;
+  let sum = 0;
+  for (const x of la) for (const y of lb) sum += tie(s, x, y);
+  return sum / (la.length * lb.length);
 }

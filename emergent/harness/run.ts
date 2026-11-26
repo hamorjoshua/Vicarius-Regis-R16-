@@ -18,6 +18,8 @@ function tally(s: State, c: Record<string, number>): void {
     else if (r.k === 'die') add(r.need >= 0 ? `died for want of ${NEEDS[r.need]!.id}` : r.cause >= 0 ? 'died of blows' : r.q < 2 ? 'died in infancy' : 'died of age');
     else if (r.k === 'take') add(r.kind2 === -2 ? 'took pledged ground' : r.kind2 >= 0 && r.b < 0 ? 'took from held land' : r.need < 0 ? (r.q2 ? 'seized what was owed, and fought' : 'seized what was owed') : 'took from a store, and fought');
     else if (r.k === 'trade') { add('trade'); add(`  got ${KINDS[r.kind]!.id} for ${KINDS[r.kind2]!.id}`); }
+    else if (r.k === 'give') add(r.kind2 === 1 ? (r.need >= 0 ? 'drew from the common store' : 'gave to the common store') : 'give');
+    else if (r.k === 'leave') add(r.kind2 === -3 ? 'left a band' : r.kind2 === -4 ? 'band came apart' : 'leave');
     else if (r.k === 'promise') add(r.kind2 === 1 ? 'promise of work' : r.kind2 === 2 ? 'loan against ground' : r.kind2 >= 3 ? (r.kind2 > 3 ? 'lease of a lease' : 'lease') : 'promise');
     else add(r.k);
   }
@@ -31,7 +33,7 @@ if (cmd === 'years') {
   for (let y = 0; y < years; y++) {
     const c: Record<string, number> = {};
     for (let w = 0; w < 52; w++) { s = step(s); tally(s, c); }
-    const alive = s.people.filter(p => p.alive), bodies = s.bodies.filter(b => b.alive);
+    const alive = s.people.filter(p => p.alive), bodies = s.bodies.filter(b => b.alive && !b.parts.length);
     const store = KINDS.map((k, i) => `${k.id} ${Math.round(bodies.reduce((x, b) => x + b.store[i]!, 0))}`).join(', ');
     const homes = new Set(bodies.map(b => b.home)).size;
     console.log(`\nyear ${y + 1}: ${alive.length} people, ${bodies.length} hearths on ${homes} cells, ${s.bonds.filter(b => b.about === 'land').length} holdings, ${s.bonds.filter(b => b.about === 'act').length} debts`);
@@ -124,6 +126,8 @@ if (cmd === 'measures') {
   console.log('\nForms of bond (year first seen in each realm; number standing at the end):');
   const allForms = new Set(runs.flatMap(r => [...r.forms.keys()]));
   for (const f of [...allForms].sort((x, y2) => x.length - y2.length)) console.log(`  ${f}: first in year ${runs.map(r => r.forms.get(f) ?? '-').join(', ')}; at the end ${runs.map(r => r.atEnd.get(f) ?? 0).join(', ')}`);
+
+  console.log(`\nBodies made of bodies standing at the end, by realm: ${runs.map(r => { const c = r.s.bodies.filter(b => b.alive && b.parts.length); return `${c.length} (deepest ${Math.max(0, ...c.map(b => { let d = 0, cur = [b]; while (cur.length) { d++; cur = cur.flatMap(x => x.parts.map(p => r.s.bodies[p]!)).filter(x => x.parts.length); } return d; }))})`; }).join(', ')}`);
 
   // What carried each fall.
   console.log('\nWhat happened during each fall:');

@@ -3,11 +3,11 @@
 
 import { Kn, NK, NN, P } from '../tables.ts';
 import { askAhead, heads, welfare } from '../value.ts';
-import { bond, dist, head, kinOf, living, rec } from '../util.ts';
+import { bond, dist, head, kinOf, leaves, living, rec, regard } from '../util.ts';
 import type { Body, Person, State } from '../types.ts';
 
 export function body(s: State, home: number): Body {
-  const b: Body = { id: s.bodies.length, home, store: new Array<number>(NK).fill(0), members: [], alive: true, since: s.t, plan: [], spent: 0, goto: -1, why: new Array<number>(NN).fill(-1) };
+  const b: Body = { id: s.bodies.length, home, store: new Array<number>(NK).fill(0), members: [], parts: [], of: -1, alive: true, since: s.t, plan: [], spent: 0, goto: -1, why: new Array<number>(NN).fill(-1) };
   s.bodies.push(b);
   return b;
 }
@@ -40,6 +40,45 @@ function handOver(s: State, from: Body, to: Body, share: number): void {
   }
 }
 
+const depth = (s: State, b: Body): number => (b.parts.length ? 1 + Math.max(...b.parts.map(p => depth(s, s.bodies[p]!))) : 0);
+
+/** Bodies that hold one another well enough, all round, become one body; one that no longer does, comes apart. */
+function band(s: State): void {
+  // Coming apart: a part that the rest no longer hold well leaves; a body of fewer than two is no body.
+  for (const c of s.bodies) {
+    if (!c.alive || !c.parts.length) continue;
+    c.parts = c.parts.filter(p => s.bodies[p]!.alive);
+    for (const p of c.parts.slice()) {
+      const pb = s.bodies[p]!;
+      let sum = 0, n = 0;
+      for (const q of c.parts) if (q !== p) { sum += regard(s, pb, s.bodies[q]!) + regard(s, s.bodies[q]!, pb); n += 2; }
+      if (n && sum / n >= 0) continue;
+      c.parts = c.parts.filter(x => x !== p);
+      pb.of = -1;
+      rec(s, 'leave', { a: p, b: c.id, kind2: -3, cell: pb.home });
+    }
+    if (c.parts.length >= 2) { c.home = s.bodies[c.parts[0]!]!.home; continue; }
+    const last = c.parts[0] !== undefined ? s.bodies[c.parts[0]]! : undefined;
+    if (last) { handOver(s, c, last, 1); last.of = -1; }
+    c.alive = false; c.parts = [];
+    rec(s, 'leave', { b: c.id, kind2: -4, cell: c.home });
+  }
+  // Coming together.
+  const units = s.bodies.filter(b => b.alive && b.of < 0 && (b.parts.length > 0 || b.members.length > 0));
+  const done = new Set<number>();
+  const friends = (a: Body, b: Body): boolean => dist(s.side, a.home, b.home) <= P.dealReach && regard(s, a, b) >= P.band && regard(s, b, a) >= P.band;
+  for (const u of units) {
+    if (done.has(u.id)) continue;
+    const group = [u];
+    for (const v of units) if (v !== u && !done.has(v.id) && group.length < 8 && group.every(g => friends(g, v))) group.push(v);
+    if (group.length < P.bandOf) continue;
+    const c = body(s, u.home);
+    c.parts = group.map(g => g.id);
+    for (const g of group) { g.of = c.id; done.add(g.id); }
+    rec(s, 'gather', { a: c.id, cell: u.home, q: leaves(s, c).length, q2: depth(s, c) });
+  }
+}
+
 export function gather(prev: State, s: State): void {
   for (const b of s.bodies) if (b.alive) b.members = b.members.filter(i => s.people[i]!.alive);
 
@@ -51,8 +90,11 @@ export function gather(prev: State, s: State): void {
     const bp = s.bodies[p.body]!, bq = s.bodies[q.body]!;
     const wp = welfare(bp.store, askAhead(s, bp)), wq = welfare(bq.store, askAhead(s, bq));
     const [mover, to] = wp < wq || (wp === wq && bp.id > bq.id) ? [p, bq] : [q, bp];
+    const from = s.bodies[mover.body]!;
     rec(s, 'leave', { a: mover.id, b: mover.body });
     shift(s, mover, to);
+    // The last to leave a hearth carries with them what it held.
+    if (!from.members.length) { handOver(s, from, to, 1); from.alive = false; }
     rec(s, 'join', { a: mover.id, b: to.id });
   }
 
@@ -87,7 +129,7 @@ export function gather(prev: State, s: State): void {
     return best;
   };
   for (const b of s.bodies) {
-    if (!b.alive) continue;
+    if (!b.alive || b.parts.length) continue;
     if (b.members.length && living(s, b).some(p => (s.t - p.born) / 52 >= 14)) continue;
     const heir = nearestKin(b);
     if (b.members.length && !heir) continue;
@@ -103,6 +145,8 @@ export function gather(prev: State, s: State): void {
     b.alive = false;
     b.plan = [];
   }
+
+  if (s.t % 13 === 0) band(s);
 
   // Bonds end with the people and bodies they bound, or when too weak to matter.
   s.bonds = s.bonds.filter(bd => {

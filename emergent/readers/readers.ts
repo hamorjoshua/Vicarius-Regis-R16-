@@ -60,7 +60,9 @@ export class Readers {
         if (r.kind2 >= 3) return `house ${r.a} took ground at ${place(this, r.cell)} from house ${r.b} for a share of its yield${r.kind2 > 3 ? ', ground that house ' + r.b + ' itself holds of another' : ''}`;
         if (r.kind2 === 2) return `house ${r.a}, in want of ${need}, borrowed ${kind} from house ${r.b} against its ground at ${place(this, r.cell)}`;
         return `house ${r.a}, in want of ${need}, borrowed ${kind} from house ${r.b}`;
-      case 'give': return `house ${r.a} gave ${kind} to its kin, house ${r.b}`;
+      case 'give':
+        if (r.kind2 === 1) return r.need >= 0 ? `house ${r.b} drew ${kind} from the store its body holds in common` : `house ${r.a} put ${kind} into the common store`;
+        return `house ${r.a} gave ${kind} to its kin, house ${r.b}`;
       case 'bar': return `house ${r.a} shut its door to house ${r.b}`;
       case 'move': return `house ${r.a} left for ${place(this, r.cell)}`;
       default: return `${r.k} (${r.a}, ${r.b})`;
@@ -129,9 +131,11 @@ export class Readers {
         f.last = t; f.takings++;
         if (r.q2) f.fights++;
       } else if (r.k === 'move') this.moves.push({ t, body: r.a, to: r.cell });
+      else if (r.k === 'gather') this.emit({ t0: t, t1: t, name: r.q2 > 1 ? 'league of bands' : 'band', shape: `body of depth ${r.q2}`, size: r.q, cell: r.cell, who: [r.a], text: r.q2 > 1 ? `Bands around ${place(s, r.cell)} joined into one body of ${r.q} houses, ${r.q2} deep, in the ${when(t)}.` : `${r.q} houses around ${place(s, r.cell)} that had long dealt well together became one body in the ${when(t)}.` });
+      else if (r.k === 'leave' && r.kind2 === -4) this.emit({ t0: t, t1: t, name: 'band broken', shape: 'band broken', size: 1, cell: r.cell, who: [r.b], text: `The body at ${place(s, r.cell)} came apart in the ${when(t)}.` });
       else if (r.k === 'decay') add(this.withered, r.q);
       else if (r.k === 'promise' || r.k === 'keep' || r.k === 'break') add(this.words[r.k], 1);
-      else if (r.k === 'leave' && r.a < 0) this.emit({ t0: t, t1: t, name: 'house died out', shape: 'house died out', size: 1, cell: r.cell, who: [r.b], text: `House ${r.b} at ${place(s, r.cell)} died out in the ${when(t)} with no kin to take what it left.` });
+      else if (r.k === 'leave' && r.a < 0 && r.kind2 !== -4) this.emit({ t0: t, t1: t, name: 'house died out', shape: 'house died out', size: 1, cell: r.cell, who: [r.b], text: `House ${r.b} at ${place(s, r.cell)} died out in the ${when(t)} with no kin to take what it left.` });
     }
 
     // Ground stripped of what lived on it, and ground where it came back.

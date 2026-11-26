@@ -60,35 +60,39 @@ export function found(seed: number): State {
   const year = (y: number): number => -Math.round(y * 52);
   while (s.people.filter(p => p.alive).length < P.souls) {
     const b = body(s, sites[Math.floor(u() * sites.length)]!);
-    const settle = (p: Person): Person => { p.body = b.id; b.members.push(p.id); return p; };
+    // Each grown person is founded alone; hearths are left to form.
+    const hers = body(s, b.home);
+    const settle = (p: Person, to = b): Person => { p.body = to.id; to.members.push(p.id); return p; };
     const ageHe = 22 + 26 * u(), ageShe = Math.max(18, ageHe - 6 * u());
-    const he = settle(person(s, null, null, year(ageHe))), she = settle(person(s, null, null, year(ageShe)));
+    const he = settle(person(s, null, null, year(ageHe))), she = settle(person(s, null, null, year(ageShe)), hers);
     he.sex = 0; she.sex = 1; he.spouse = she.id; she.spouse = he.id;
     bond(s, { about: 'person', a: he.id, b: she.id, basis: 'word' });
     for (let age = ageShe - 19 - 2 * u(); age > 0; age -= 2 + 2.5 * u()) {
       if (age > 16 || ageShe - age > P.bearTo) continue;
-      const child = settle(person(s, she, he, year(age)));
+      const child = settle(person(s, she, he, year(age)), hers);
       bond(s, { about: 'person', a: she.id, b: child.id, basis: 'birth' });
       bond(s, { about: 'person', a: he.id, b: child.id, basis: 'birth' });
       she.bore = Math.max(she.bore, child.born);
     }
     if (u() < 0.25) {
-      const elder = settle(person(s, null, null, year(ageHe + 22 + 8 * u())));
+      const elder = settle(person(s, null, null, year(ageHe + 22 + 8 * u())), body(s, b.home));
       elder.sex = 1;
       bond(s, { about: 'person', a: elder.id, b: he.id, basis: 'birth' });
       he.mother = elder.id;
     }
     // A store to see the winter out and sow in the warm weeks, a roof, and now and then a help.
-    let h = 0;
-    for (const p of b.members) h += clamp((0 - s.people[p]!.born) / 52 / P.eatFull, P.eatLeast, 1);
-    for (let need = 0; need < NEEDS.length; need++) {
-      const N = NEEDS[need]!, k = SERVING[need]![SERVING[need]!.length - 1];
-      if (k === undefined) continue;
-      const weeks = need === first ? 46 + 16 * u() : Kn[k]!.fixed ? 0 : N.horizon * (0.3 + 0.5 * u());
-      const per = N.per + N.cold * 5;
-      b.store[k] = Math.max(b.store[k]!, Kn[k]!.fixed ? (Kn[k]!.keep < 0.5 ? 1 : 0) : (h * per * weeks * Kn[k]!.use) / Kn[k]!.serves[need]!);
+    for (const x of s.bodies.slice(b.id)) {
+      let h = 0;
+      for (const p of x.members) h += clamp((0 - s.people[p]!.born) / 52 / P.eatFull, P.eatLeast, 1);
+      for (let need = 0; need < NEEDS.length; need++) {
+        const N = NEEDS[need]!, k = SERVING[need]![SERVING[need]!.length - 1];
+        if (k === undefined) continue;
+        const weeks = need === first ? 46 + 16 * u() : Kn[k]!.fixed ? 0 : N.horizon * (0.3 + 0.5 * u());
+        const per = N.per + N.cold * 5;
+        x.store[k] = Math.max(x.store[k]!, Kn[k]!.fixed ? (Kn[k]!.keep < 0.5 ? 1 : 0) : (h * per * weeks * Kn[k]!.use) / Kn[k]!.serves[need]!);
+      }
+      for (let k = 0; k < NK; k++) if (Object.keys(Kn[k]!.aids).length && u() < 0.45) x.store[k] = 1;
     }
-    for (let k = 0; k < NK; k++) if (Object.keys(Kn[k]!.aids).length && u() < 0.45) b.store[k] = 1;
     // Ground of its own nearby, by grant.
     const plot = near(side, b.home, 3).filter(i => !granted.has(i) && !s.cells[i]!.water).sort((x, y) => sownBear(s.cells[y]!) * (1 - 0.2 * dist(side, b.home, y)) - sownBear(s.cells[x]!) * (1 - 0.2 * dist(side, b.home, x)))[0];
     if (plot !== undefined) { granted.add(plot); bond(s, { about: 'land', a: b.id, cell: plot, basis: 'grant', strength: 3 }); }

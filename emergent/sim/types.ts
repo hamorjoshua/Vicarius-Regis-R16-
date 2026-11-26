@@ -35,6 +35,9 @@ export interface Body {
   home: number;
   store: number[];
   members: number[];
+  /** A body may be made of bodies, and may belong to one. */
+  parts: number[];
+  of: number;
   alive: boolean;
   since: number;
   /** What its members will do next week, and where it means to go. */

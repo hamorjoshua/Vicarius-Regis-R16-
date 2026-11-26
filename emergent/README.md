@@ -2,9 +2,9 @@
 
 The build of [The Emergent Realm](../docs/living-realm-design.md), stage by stage. The current game (`../index.html`) and the first build (`../realm/`) are untouched; `realm/` stays as a reference until stage 2 replaces its harness.
 
-**Stages 1 to 3 of 9 are here.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. The prediction log is not built. Stages 4 to 9 are not started.
+**Stages 1 to 4 of 9 are here.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. Stage 4 is bodies made of bodies. The prediction log is not built. Stages 5 to 9 are not started.
 
-**The tables and findings below "What thirty years look like" were taken before stage 3.** The section "After stage 3" has the current figures.
+**The tables and findings below "What thirty years look like" were taken before stage 3.** The sections "After stage 3" and "After stage 4" have the later figures.
 
 ## Run it
 
@@ -136,6 +136,30 @@ What changed:
 
 So the fall is not caused by fighting or by the landless having nothing to offer. The land fills by about year 12, stores per head shrink for several years while numbers keep rising, and then everyone runs out at once.
 
+## After stage 4
+
+Stage 4 added:
+
+- **Hearths are no longer given.** Each grown person is founded alone, with children beside their mother. In seed 1, 75 bodies at the founding become 51 hearths within a year, by the same rule that joins any wedded pair.
+- **Bodies made of bodies.** Bodies that hold one another well enough, all round, become one body. It keeps a store in common that its parts put into in plenty and draw on in want, and its parts stand with one another in a struggle. A part the rest no longer hold well leaves; a body of fewer than two comes apart.
+- **The same rule at every level.** A body made of bodies is a unit like any hearth, so bodies join bodies.
+
+Four realms of thirty years:
+
+| Seed | Peak | Trough | Fall | End | Bodies of bodies at year 30 | Deepest |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 421 | 41 | 90% | 104 | 4 | 1 |
+| 2 | 382 | 50 | 87% | 120 | 4 | 1 |
+| 3 | 396 | 88 | 78% | 195 | 6 | 2 |
+| 4 | 474 | 111 | 77% | 209 | 8 | 2 |
+
+- **Bands form and break:** 45 formed, 46 came apart, and 23 times bands joined into a larger body, the largest of 11 houses.
+- **Bodies of bodies stand at year thirty in every realm**, which no realm had at year one. Unlike the leases of stage 3, they outlast the fall.
+- **Realms begin to differ in kind:** 25 shapes of event in all, and 25, 24, 22 and 23 in the four realms. Before, every realm had the same 20.
+- **The fall is unchanged in most realms** (77 to 90%). Two of four are shallower than any after stage 3; four realms are too few to say bodies did that.
+- **Feuds rose somewhat** from stage 3 (about 60 a realm against 45), still far below the 200 before it.
+- **A body does little yet.** It shares a store and stands together. It does not hold land, make rules, speak with one voice or deal as one, all of which the design asks of a body.
+
 ## Known gaps
 
 1. **The fall is too deep, and stage 3 made it deeper** (85 to 91%). Numbers keep rising after the land is full, because nothing slows births until stores are nearly gone. What is missing is whatever makes people hold back sooner: seeing want coming, leaving, or marrying later. That is foresight and belief (stage 5) more than bonds.
@@ -155,4 +179,4 @@ So the fall is not caused by fighting or by the landless having nothing to offer
 
 ## Next
 
-Decide what to do about the fall before stage 4. See gap 1.
+Stage 5, minds: beliefs about causes and about others, practices copied and recombined, and plans. It is the stage the fall has been left for, and the one that should replace the hand-written foresight, the lease and the pledge.
