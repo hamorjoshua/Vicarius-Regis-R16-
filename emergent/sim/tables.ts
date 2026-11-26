@@ -216,6 +216,8 @@ export const P = {
   blame: 0.5, forget: 0.995, tell: 0.2, heed: 0.5, mind: 12,
   /** The court: hearings a week, seats at the audience, weeks a matter waits before it is dropped, weeks a reign lasts. */
   hearings: 3, seats: 6, wait: 13, reign: 156,
+  /** Going to court: what it costs beside what is hoped for, the days it takes, and how far one ruling moves what a house expects (its own; its neighbours'). */
+  pleaCost: 0.15, pleaDays: 3, pleaOwn: 0.5, pleaSeen: 0.15,
   /** Harm laid at the court's door: by kind; the grievance at which a house has had enough; the share of houses that must have had enough for confidence to be withdrawn; how fast grievance fades. */
   harmLost: 30, harmPaid: 12, harmUnheard: 5, harmReversed: 15, aggrieved: 40, faction: 0.12, griefFade: 0.98,
   /** Weeks a plan is held before it is given up as hopeless. */

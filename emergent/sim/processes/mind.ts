@@ -20,6 +20,7 @@ export function attend(s: State): void {
     b.ways = copy(h.ways);
     const g = grown(s, b);
     b.hope = h.hope.slice();
+    b.plea = h.plea.slice();
     b.skill = Rc.map((_r, i) => (g.length ? g.reduce((x, p) => x + p.skill[i]!, 0) / g.length : P.green));
   }
 }
@@ -45,7 +46,10 @@ export function settle(s: State): void {
       }
       b.put = []; b.got = [];
     }
-    for (const m of g) if (m !== h) for (let st = 0; st < NS; st++) m.hope[st] = m.hope[st]! + 0.05 * (h.hope[st]! - m.hope[st]!);
+    for (const m of g) if (m !== h) {
+      for (let st = 0; st < NS; st++) m.hope[st] = m.hope[st]! + 0.05 * (h.hope[st]! - m.hope[st]!);
+      for (let k = 0; k < h.plea.length; k++) m.plea[k] = m.plea[k]! + 0.05 * (h.plea[k]! - m.plea[k]!);
+    }
     const d = days.get(b.id);
     for (const m of g) {
       if (m !== h) {

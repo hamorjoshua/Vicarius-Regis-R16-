@@ -59,7 +59,7 @@ export function head(s: State, b: Body): Person | undefined {
 export function muster(s: State, b: Body): number {
   let d = 0;
   for (const p of living(s, b)) d += P.days * capacity((s.t - p.born) / 52) * clamp(1 - p.wear / p.sound, 0.1, 1);
-  return Math.max(0, d - b.spent);
+  return Math.max(0, d - b.spent - (b.away ?? 0));
 }
 
 /** Bodies bound by birth: every body that holds a parent or one of that parent's children. */

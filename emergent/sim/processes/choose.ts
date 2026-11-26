@@ -606,5 +606,5 @@ export function choose(s: State): void {
   const kin = kinOf(s);
   for (const c of cs.values()) deal(s, L, cs, kin, c);
   for (const c of cs.values()) arrange(s, L, cs, c, -1);
-  for (const c of cs.values()) { work(s, L, c); roam(s, L, c); }
+  for (const c of cs.values()) { work(s, L, c); roam(s, L, c); c.b.away = 0; }
 }

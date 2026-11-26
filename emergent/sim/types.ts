@@ -34,6 +34,8 @@ export interface Person {
   lore: Record<string, number>;
   ways: Record<string, { w: number; p: number }>;
   skill: number[];
+  /** What they expect of the court, for each way of standing before it: how likely it is to find for the one who asks. */
+  plea: number[];
   /** How much they believe a unit put onto the land returns, for each thing that can be sown. */
   hope: number[];
 }
@@ -70,6 +72,8 @@ export interface Body {
   /** A plan held over weeks: to make enough of a thing another wants, so as to get from them what it lacks. */
   /** What its speaker believes the land returns; and what it has put on and brought in since midwinter. */
   hope: number[]; put: number[]; got: number[];
+  /** What its speaker expects of the court; and days its people are away at court this week. */
+  plea: number[]; away: number;
   aim: { kind: number; q: number; for: number; worth: number; since: number; want: string } | null;
 }
 
@@ -121,7 +125,7 @@ export interface Wrong { by: number; to: number; kind: number; q: number; rec: n
 export interface Petition { id: number; t: number; by: number; against: number; bond: number; need: number; rec: number; shape: string; side: 'owed' | 'owes' | 'outside' | 'bare'; reason: 'none' | 'clash' | 'challenge'; speaksFor: number; waited: number; urgency: number }
 /** A rule: a bond that binds every member of a body, or the whole realm (scope -1). */
 export interface Rule { id: number; scope: number; shape: string; cut: string; since: number; uses: number }
-export interface Court { standing: number; docket: Petition[]; rules: Rule[]; grief: Record<number, number>; seen: Record<string, number>; next: number; quiet: number }
+export interface Court { standing: number; docket: Petition[]; rules: Rule[]; grief: Record<number, number>; seen: Record<string, number>; next: number; quiet: number; declined: number }
 export interface Use { body: number; cell: number; days: number }
 
 export interface State {

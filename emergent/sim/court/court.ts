@@ -8,13 +8,13 @@
 
 import { Kn, NEEDS, NK, NN, P, TOIL } from '../tables.ts';
 import { askAhead, cover } from '../value.ts';
-import { around, bond, dist, grown, hearthIndex, kinOf, leaves, rec, top } from '../util.ts';
+import { around, bond, dist, grown, hearthIndex, kinOf, leaves, might, rec, top } from '../util.ts';
 import type { Body, Bond, Court, Petition, Rule, State } from '../types.ts';
 
 export type Width = 'case' | 'body' | 'realm';
 export interface Ruling { petition: number; cut: string; width: Width }
 
-export const openCourt = (s: State): Court => (s.court = { standing: 5, docket: [], rules: [], grief: {}, seen: {}, next: 0, quiet: 0 });
+export const openCourt = (s: State): Court => (s.court = { standing: 5, docket: [], rules: [], grief: {}, seen: {}, next: 0, quiet: 0, declined: 0 });
 
 const grieve = (c: Court, id: number, by: number): void => { if (id >= 0) c.grief[id] = Math.max(0, (c.grief[id] ?? 0) + by); };
 const scopeOf = (s: State, id: number): number => { const t = top(s, s.bodies[id]!); return t.id === id ? -2 : t.id; };
@@ -26,6 +26,25 @@ export function formOf(byId: Map<number, Bond>, b: Bond | undefined, depth = 0):
   if (b.about === 'land') return `holding by ${b.basis}`;
   if (b.about === 'act') return `${b.labour ? 'work' : 'goods'} owed by ${b.basis}${b.way ? ' (' + b.way + ')' : ''}`;
   return `tie of ${b.basis}`;
+}
+
+export const SIDES = ['owed', 'owes', 'outside', 'bare'] as const;
+/** How far a cut finds for the one who asked, by how they stood. */
+const FAVOUR: Record<string, Record<string, number>> = {
+  owed: { enforce: 1, part: 0.5, stay: 0.2, strike: 0 },
+  owes: { strike: 1, stay: 0.7, part: 0.5, enforce: 0 },
+  outside: { turn: 1, part: 0.6, strike: 0.4, enforce: 0 },
+  bare: { levy: 1, dismiss: 0 },
+};
+
+/** A house that has been before the court, and those who live near enough to see, change what they expect of it. */
+function teach(s: State, idx: Body[][], by: number, side: string, found: number, own: number): void {
+  const k = SIDES.indexOf(side as (typeof SIDES)[number]), home = s.bodies[by]!.home;
+  if (k < 0) return;
+  for (const b of around(idx, s.side, home, P.reach)) {
+    const w = b.id === by ? own : P.pleaSeen;
+    for (const p of grown(s, b)) p.plea[k] = p.plea[k]! + w * (found - p.plea[k]!);
+  }
 }
 
 /** Who answers for a bond on the other side from a body. */
@@ -129,6 +148,7 @@ function ruleFor(s: State, c: Court, p: Petition): Rule | 'clash' | null {
 function below(s: State, c: Court, p: Petition, r: Rule): void {
   const before = [p.by, p.against].map(w => (w >= 0 ? c.grief[w] ?? 0 : 0));
   carry(s, c, p, r.cut);
+  teach(s, hearthIndex(s), p.by, p.side, FAVOUR[p.side]?.[r.cut] ?? 0.5, P.pleaOwn);
   r.uses++;
   rec(s, 'rule', { a: p.by, b: p.against, kind2: 1, q2: r.scope, way: p.shape });
   [p.by, p.against].forEach((who, i) => {
@@ -154,8 +174,17 @@ export function audience(s: State): Petition[] {
   const add = (by: number, against: number, bd: Bond | undefined, side: Petition['side'], need: number, recId: number, extra = ''): void => {
     const key = bd ? `${side}${bd.id}` : `w${by}:${need}`;
     if (s.t - (c.seen[key] ?? -999) < 26) return;
-    c.seen[key] = s.t;
     const A = s.bodies[by]!, B = against >= 0 ? s.bodies[against]! : undefined;
+    // Whether to go to court at all. A house weighs what it expects of the court, less the trouble of going,
+    // against its own way: what its might would win in a struggle, or what dealing may yet bring.
+    const hope = A.plea[SIDES.indexOf(side)] ?? 0.5;
+    let own = A.stuck >= P.stuck ? 0 : 0.25;
+    if (side === 'owed' && B) { const mA = might(s, kin, A, B.id), mB = might(s, kin, B, A.id); own = mA + mB > 0 ? mA / (mA + mB) - 0.15 : 0.35; }
+    if (hope - P.pleaCost <= own) { c.seen[key] = s.t - 18; c.declined++; return; }
+    c.seen[key] = s.t;
+    A.away += P.pleaDays;
+    // One who has gone to court holds their hand while the matter waits.
+    if (bd && bd.about === 'act' && side === 'owed') bd.due = Math.max(bd.due, s.t + P.wait);
     const near = !B ? 'nobody' : kin.get(by)?.has(against) ? 'kin' : A.of >= 0 && top(s, A).id === top(s, B).id ? 'of one body' : dist(s.side, A.home, B.home) <= P.reach ? 'a neighbour' : 'a stranger';
     const shape = `${side === 'owed' ? 'owed on' : side === 'owes' ? 'bound by' : side === 'outside' ? 'shut out by' : 'in want'} ${bd ? formOf(byId, bd) : extra}; for ${need >= 0 ? NEEDS[need]!.id : 'nothing pressing'}; against ${near}`;
     fresh.push({ id: c.next++, t: s.t, by, against, bond: bd ? bd.id : -1, need, rec: recId, shape, side, reason: 'none', speaksFor: leaves(s, top(s, A)).length, waited: 0, urgency: 0 });
@@ -216,7 +245,7 @@ export function audience(s: State): Petition[] {
   c.docket = c.docket.filter(p => {
     if (!s.bodies[p.by]!.alive) return false;
     if (p.reason !== 'challenge' && p.bond >= 0) { const bd = byId.get(p.bond); if (!bd || (bd.about === 'act' && bd.q <= 0.05) || (bd.about === 'land' && bd.strength < 0.05)) return false; }
-    if (p.waited > P.wait) { grieve(c, p.by, P.harmUnheard * 2); return false; }
+    if (p.waited > P.wait) { grieve(c, p.by, P.harmUnheard * 2); teach(s, idx, p.by, p.side, 0, P.pleaOwn / 2); return false; }
     return true;
   });
   for (const p of c.docket) {
@@ -242,6 +271,7 @@ export function hear(s: State, rulings: Ruling[]): void {
     if (!p || !cuts(s, p).includes(r.cut)) continue;
     const done = carry(s, c, p, r.cut);
     if (r.cut === 'inquire' && done) continue;
+    if (p.reason === 'none') teach(s, hearthIndex(s), p.by, p.side, done ? FAVOUR[p.side]?.[r.cut] ?? 0.5 : 0, P.pleaOwn);
     c.docket = c.docket.filter(x => x !== p);
     if (r.width === 'case' || p.reason === 'challenge') continue;
     // A rule: for the body the petitioner belongs to, or for everyone. It replaces any rule it contradicts there.
