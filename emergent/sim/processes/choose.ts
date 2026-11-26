@@ -231,6 +231,9 @@ function idleRights(s: State, L: Land, id: number): { rb: Bond; cell: number }[]
   return out;
 }
 
+/** One who believes newcomers bring harm will not deal with a house that settled within the year. */
+const shuns = (s: State, x: Body, y: Body): boolean => (x.lore.new ?? 0) > P.heed && y.since > 0 && s.t - y.since < 52;
+
 function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number): boolean {
   const a = A.b;
   const trust = (X: Ctx, Y: Ctx): number => Math.max(0.05, Math.min(1, P.trust + 0.6 * tie(s, X.b.id, Y.b.id)));
@@ -255,6 +258,7 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
   let best: { B: Ctx; way: string; get: Item; give: Item; gainA: number; share: number } | null = null;
   for (const B of cs.values()) {
     if (B === A || dist(s.side, a.home, B.b.home) > P.dealReach || tie(s, a.id, B.b.id) < P.barAt || tie(s, B.b.id, a.id) < P.barAt) continue;
+    if (shuns(s, a, B.b) || shuns(s, B.b, a)) continue;
     const tB = trust(B, A);
     for (const want of wants) {
       // What A would get from B, what it is worth to A, and what it costs B.
@@ -283,6 +287,8 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
         const way = `${want === 'U' && have === 'L' ? 'Y' : have}>${want}`;
         const known = a.ways[way];
         if (!known && a.stuck < P.stuck) continue;
+        // A way believed to bring harm is not used, by either.
+        if ((a.lore[`way:${way}`] ?? 0) > P.heed || (B.b.lore[`way:${way}`] ?? 0) > P.heed) continue;
         // The other is left a margin over what it gives up, or the share of the gain it is customary to concede.
         const share = known ? known.p : Math.max(0.1, Math.min(0.6, (P.concede * 2 * B.h.temper) / (A.h.temper + B.h.temper)));
         const target = Math.max(P.margin * costB, share * recvA);
@@ -358,7 +364,7 @@ function deal(s: State, L: Land, cs: Map<number, Ctx>, kin: Map<number, Set<numb
   // Trade: each gives what it values less for what it values more.
   let best: { B: Ctx; k: number; j: number; ra: number; rb: number } | null = null, bestEst = 0;
   for (const B of partners) {
-    if (tie(s, a.id, B.b.id) < P.barAt || tie(s, B.b.id, a.id) < P.barAt) continue;
+    if (tie(s, a.id, B.b.id) < P.barAt || tie(s, B.b.id, a.id) < P.barAt || shuns(s, a, B.b) || shuns(s, B.b, a)) continue;
     for (const k of wants) {
       if (B.b.store[k]! < 0.05) continue;
       for (const j of offers) {

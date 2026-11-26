@@ -9,6 +9,7 @@ import { move } from './processes/move.ts';
 import { bind } from './processes/bind.ts';
 import { choose } from './processes/choose.ts';
 import { gather } from './processes/gather.ts';
+import { learn } from './processes/learn.ts';
 import type { State } from './types.ts';
 
 export function step(prev: State): State {
@@ -22,6 +23,7 @@ export function step(prev: State): State {
   move(prev, s);
   bind(s);
   choose(s);
+  learn(s);         // beliefs are made, told and forgotten
   gather(prev, s);  // bodies form and dissolve
   s.t = prev.t + 1;
   return s;

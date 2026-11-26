@@ -20,7 +20,9 @@ export interface Person {
   alive: boolean;
   wear: number;
   /** Thresholds, fixed at birth. */
-  sound: number; scruple: number; temper: number; spacing: number;
+  sound: number; scruple: number; temper: number; spacing: number; credulous: number;
+  /** How the house stood when this person was born. */
+  omen: number;
   bore: number;
   /** The record of the last blow taken, and when. */
   blow: number; blowAt: number;
@@ -52,6 +54,9 @@ export interface Body {
   stuck: number;
   /** It has more to gather than hands to gather it: work owed to it is called in. */
   pressed: boolean;
+  /** What it believes brings harm, and how strongly; and what it has lately met with. */
+  lore: Record<string, number>;
+  recent: [string, number][];
 }
 
 export type Basis = 'birth' | 'word' | 'use' | 'grant' | 'wrong';

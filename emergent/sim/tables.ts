@@ -194,6 +194,8 @@ export const P = {
   /** Days owed for goods, as a multiple of the days it takes to make them. */
   hire: 1.5,
   /** Dealing: how much a thing promised is worth beside a thing in hand, the margin the other must be left, the share of the gain usually conceded, and the weeks of going without before something new is tried. */
+  /** Belief: how much a harm adds to what is blamed, how fast belief fades, how strong it must be to be told and to be acted on, and how long a thing met with stays in mind. */
+  blame: 0.5, forget: 0.995, tell: 0.2, heed: 0.5, mind: 12,
   patience: 0.9, margin: 1.05, concede: 0.33, stuck: 4,
   stay: 1.6, scout: 4,
 };

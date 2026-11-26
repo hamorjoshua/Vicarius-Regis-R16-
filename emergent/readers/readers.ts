@@ -22,6 +22,14 @@ export interface Event {
 
 const SIDE: Record<string, string> = { G: 'goods', L: 'goods later', D: 'days of work', U: 'the use of ground', Y: 'a share of what the ground yields', LS: 'goods later, with its ground as surety', DS: 'days of work, with its ground as surety' };
 /** A way of dealing, in words: what was given for what. */
+/** A belief, in words. */
+export function beliefWords(sign: string): string {
+  if (sign === 'new') return 'that newcomers bring harm';
+  if (sign.startsWith('house:')) return `that house ${sign.slice(6)} brings harm`;
+  if (sign.startsWith('way:')) return `that to give ${wayWords(sign.slice(4))} brings harm`;
+  if (sign.startsWith('born:')) return `that a child born to a house with ${['under a season', 'under half a year', 'under a year', 'a year or more'][Number(sign.slice(5))]} of bread in store comes to harm`;
+  return sign;
+}
 export const wayWords = (way: string): string => { const [give, get] = way.split('>'); return `${SIDE[give!] ?? give} for ${SIDE[get!] ?? get}`; };
 
 interface Cluster { need: number; t0: number; last: number; deaths: number; pop: number; cells: Map<number, number>; causes: number[] }
@@ -47,6 +55,8 @@ export class Readers {
   side = 10;
   /** Each way of dealing: when it was first used, and how often. */
   ways = new Map<string, { first: number; uses: number }>();
+  /** Each belief: when it first took hold, how many houses came to it themselves and how many were told. */
+  beliefs = new Map<string, { first: number; own: number; told: number }>();
 
   /** One link of a chain, in words. */
   describe(r: Rec): string {
@@ -70,7 +80,9 @@ export class Readers {
       case 'give':
         if (r.kind2 === 1) return r.need >= 0 ? `house ${r.b} drew ${kind} from the store its body holds in common` : `house ${r.a} put ${kind} into the common store`;
         return `house ${r.a} gave ${kind} to its kin, house ${r.b}`;
-      case 'learn': return `house ${r.a} came to know a way of dealing from house ${r.b}: ${wayWords(r.way ?? '')}`;
+      case 'learn':
+        if (r.way?.startsWith('belief:')) return `house ${r.a} came to believe ${beliefWords(r.way.slice(7))}${r.b >= 0 ? ', as house ' + r.b + ' told it' : ''}`;
+        return `house ${r.a} came to know a way of dealing from house ${r.b}: ${wayWords(r.way ?? '')}`;
       case 'bar': return `house ${r.a} shut its door to house ${r.b}`;
       case 'move': return `house ${r.a} left for ${place(this, r.cell)}`;
       default: return `${r.k} (${r.a}, ${r.b})`;
@@ -141,6 +153,12 @@ export class Readers {
       } else if (r.k === 'move') this.moves.push({ t, body: r.a, to: r.cell });
       else if (r.k === 'gather') this.emit({ t0: t, t1: t, name: r.q2 > 1 ? 'league of bands' : 'band', shape: `body of depth ${r.q2}`, size: r.q, cell: r.cell, who: [r.a], text: r.q2 > 1 ? `Bands around ${place(s, r.cell)} joined into one body of ${r.q} houses, ${r.q2} deep, in the ${when(t)}.` : `${r.q} houses around ${place(s, r.cell)} that had long dealt well together became one body in the ${when(t)}.` });
       else if (r.k === 'leave' && r.kind2 === -4) this.emit({ t0: t, t1: t, name: 'band broken', shape: 'band broken', size: 1, cell: r.cell, who: [r.b], text: `The body at ${place(s, r.cell)} came apart in the ${when(t)}.` });
+      else if (r.k === 'learn' && r.way?.startsWith('belief:')) {
+        const sign = r.way.slice(7), kind = sign.startsWith('house:') ? 'house:' : sign;
+        const bl = this.beliefs.get(kind) ?? { first: t, own: 0, told: 0 };
+        if (r.b >= 0) bl.told++; else bl.own++;
+        this.beliefs.set(kind, bl);
+      }
       else if (r.k === 'promise' && r.way) {
         const w = this.ways.get(r.way);
         if (w) w.uses++;

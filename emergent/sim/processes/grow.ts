@@ -31,6 +31,7 @@ export function person(s: State, mother: Person | null, father: Person | null, b
     scruple: clamp(mid(x => x.scruple, 0.5) + 0.25 * z(2), 0.15, 1.5),
     temper: clamp(mid(x => x.temper, 0.5) + 0.25 * z(3), 0.05, 1.5),
     spacing: Math.round(clamp(mid(x => x.spacing, P.spacing) + 25 * z(4), 70, 260)),
+    credulous: clamp(mid(x => x.credulous, 0.5) + 0.2 * u(5) - 0.1 + 0.15 * z(6), 0.1, 0.9), omen: -1,
     bore: -999, blow: -1, blowAt: -999, fed: new Array<number>(NN).fill(1),
   };
   s.people.push(p);
@@ -85,9 +86,14 @@ export function grow(s: State): void {
     if (!f.alive || f.body !== m.body || age < P.wedShe || age > P.bearTo) continue;
     if (s.t - m.bore < m.spacing || m.wear > 0.5 * m.sound || m.fed[first]! < 0.95) continue;
     const b = s.bodies[m.body]!;
-    if (cover(b.store, askAhead(s, b))[first]! < P.fertile) continue;
+    const c = cover(b.store, askAhead(s, b))[first]!;
+    if (c < P.fertile) continue;
+    // A house that believes children born in such a state come to harm, waits.
+    const omen = c < 13 ? 0 : c < 26 ? 1 : c < 52 ? 2 : 3;
+    if ((b.lore[`born:${omen}`] ?? 0) > P.heed) continue;
     const child = person(s, m, f, s.t);
     child.body = b.id; b.members.push(child.id);
+    child.omen = omen;
     m.bore = s.t;
     bond(s, { about: 'person', a: m.id, b: child.id, basis: 'birth' });
     bond(s, { about: 'person', a: f.id, b: child.id, basis: 'birth' });
