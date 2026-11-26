@@ -401,6 +401,23 @@ In `sim/court/court.ts`, with five scripted courts in `harness/courts.ts` (`node
 
 Not yet built: the screen, the regent's own word, giving from the Crown's store, appointments, and the two sides' pleas.
 
+Five scripted courts on eight full-size realms, a reign of three years each (means over the eight):
+
+| Court | Reigns kept | Standing at end | Heard | Settled below by a rule | Heard matters repeating a shape of the last half year | Shapes heard |
+| --- | --- | --- | --- | --- | --- | --- |
+| Hears nobody | 3 of 8 | 1.3 | 0 | 0 | | |
+| Grants everything | 8 of 8 | 4.6 | 160 | 0 | 93% | 6 |
+| Rules at random | 8 of 8 | 4.8 | 32 | 157 | 62% | 8 |
+| This case only | 8 of 8 | 4.2 | 167 | 0 | 93% | 6 |
+| Rules widely | 8 of 8 | 4.4 | 80 | 140 | 80% | 9 |
+
+- **Rules do what the design says:** a court that makes them hears a half to a fifth as many matters, and the rest are settled below.
+- **A court that hears nobody usually falls.**
+- **Nothing else is punished.** Every court that hears keeps every reign, and granting everything is as safe as judging with care. By the design's own test, something is free.
+- **Too little reaches the court.** Between 120 and 500 matters arise in a reign, one to three a week, against three hearings a week. In most realms the regent can hear everyone and never has to choose.
+- **Matters are far too alike.** A realm yields 6 to 12 shapes and the five commonest are 84 to 100% of what is heard; the design wants under 15%. A shape here is only what is owed, on what basis, by what way of dealing and for what need.
+- **People at the end are 105 to 110% of those at the start whatever the court does,** so in three years the court has not yet been shown to change the realm.
+
 ## Known gaps
 
 1. **The fall was largely a matter of size.** On 100 cells it took 64 to 87% where it happened and nothing cured it. On 400 cells it is 18 to 54% in seven realms of eight. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
