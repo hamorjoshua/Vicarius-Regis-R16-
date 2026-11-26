@@ -232,9 +232,25 @@ A belief that half or more of a body's houses hold is taken up by all its member
 - **No custom about children ever forms.** That belief arises only in a fall, when bodies are breaking apart, and never reaches half of one.
 - **In each fall, ground others hold is gathered from 1,500 to 3,000 times.** Unlike a taking from a store, this is never opposed.
 
+## With fields defended
+
+A taking from ground whose holder lives within reach is now a struggle, by the rule that already governed a taking from a store. The same three realms, forty years of run:
+
+| Seed | Before: deepest fall | Before: end | Now: deepest fall | Now: end |
+| --- | --- | --- | --- | --- |
+| 1 | 76% | 172 | 7% (no fall yet) | 270 |
+| 2 | 84% | 126 | 87% | 271 |
+| 3 | 77% | 106 | 64% | 248 |
+
+- **Not cured.** Seed 2 falls as hard as ever. Seed 3 is somewhat shallower. Seed 1 has not fallen in forty years, but it began the run small and may simply not have reached the land's limit.
+- **Realms end far larger** (about 250 to 270, from 100 to 170), so they recover faster.
+- **Blood feuds nearly vanish:** 12 across the three realms, from 110.
+- **A custom about children stands for the first time.** In seed 3, six bodies hold at the end that a child born to a house with under half a year of bread comes to harm.
+- Three realms are too few to be sure of any of this.
+
 ## Known gaps
 
-1. **The fall is still too deep** (85% where it happens), and it recurs. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
+1. **The fall is still too deep** (64 to 87% where it happens), and it recurs about once a generation. Foresight, a past, customs and defended fields have each been tried; the last helped most and none cured it. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
 2. **Blame of particular houses is too catching**, and has brought feuds back up.
 3. **Realms are alike.** They differ in when and where, not in what kinds of thing happen. Bonds on bonds, bodies and minds are meant to change that.
 4. **The prediction log is not built**, and no predictions were written before these runs.
