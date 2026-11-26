@@ -19,6 +19,8 @@ interface Ctx {
   opts: Opt[];
   /** What it expects to gather later from what already stands on its own ground. */
   pend: number[];
+  /** Things on its own ground that it could not gather in the time the cold leaves, were it to wait. */
+  rush: boolean[];
 }
 
 /** Everything about the land that is worked out once a week. */
@@ -35,29 +37,45 @@ function weeksLeft(s: State, L: Land, cell: number, st: number): number {
     n = 0;
     const high = s.cells[cell]!.high, w = weekOf(s.t), lo = St[st]!.lo;
     while (n < 40 && tBar(high, (w + n + 1) % 52) >= lo) n++;
+    n = Math.max(0, n - P.prudence);
     L.left.set(key, n);
   }
   return n;
 }
 
+/** The temperature expected on a cell i weeks on: the usual year, shifted by how far this week is from usual, fading. */
+function outlook(s: State, cell: number, i: number): number {
+  const high = s.cells[cell]!.high, w = weekOf(s.t);
+  let fade = 1;
+  for (let k = 0; k < i; k++) fade *= P.skyPersist;
+  return tBar(high, (w + i) % 52) + (s.sky.temp[cell]! - tBar(high, w)) * fade;
+}
+
 /** How much more there will be in four weeks if it is left alone. */
 function growth(s: State, L: Land, cell: number, st: number): number {
-  const r = St[st]!, x = s.cells[cell]!.stock[st]!;
-  if (x <= 0) return 1;
+  const r = St[st]!, x0 = s.cells[cell]!.stock[st]!;
+  if (x0 <= 0) return 1;
   if (r.eats.length) {
     let fed = 1;
-    for (const [prey, each] of r.eats) fed = Math.min(fed, (s.cells[cell]!.stock[prey]! * 0.5) / (each * x));
+    for (const [prey, each] of r.eats) fed = Math.min(fed, (s.cells[cell]!.stock[prey]! * 0.5) / (each * x0));
     return 1 + 4 * (r.r * fed - (r.starve ?? 0) * (1 - fed));
   }
-  const T = weeksLeft(s, L, cell, st);
-  if (T <= 0) {
-    // Not growing: it waits, unless the usual year turns cold enough to wither it within the month.
-    const high = s.cells[cell]!.high, w = weekOf(s.t);
-    let keep = 1;
-    for (let i = 1; i <= 4; i++) if (tBar(high, (w + i) % 52) < r.kill) keep *= 1 - r.frost;
-    return keep;
+  const K = L.bears[cell]![st]!;
+  let x = x0;
+  for (let i = 1; i <= 4; i++) {
+    const te = outlook(s, cell, i);
+    if (te >= r.lo) x += K > 0 ? r.r * x * (1 - x / K) : 0;
+    else if (te < r.kill) x *= 1 - r.frost;
   }
-  return ripen(x, L.bears[cell]![st]!, r.r, Math.min(4, T)) / x;
+  return x / x0;
+}
+
+/** Weeks until the cold is expected to wither a thing on a cell. */
+function witherIn(s: State, cell: number, st: number): number {
+  const r = St[st]!;
+  if (r.frost <= 0) return 99;
+  for (let i = 1; i <= 12; i++) if (outlook(s, cell, i) < r.kill) return i;
+  return 99;
 }
 
 function rights(L: Land, body: number, cell: number): { mine: number; free: boolean } {
@@ -127,6 +145,7 @@ function context(s: State, L: Land, b: Body): Ctx | null {
 
   // What stands on its own ground and will be gathered later.
   const pend = zeros();
+  const standing = St.map(() => 0), soon = St.map(() => 99);
   for (const [cell, over] of L.holds) {
     let sum = 0, own = 0;
     for (const x of over) { sum += x.strength; if (x.a === b.id) own += x.strength; }
@@ -135,6 +154,8 @@ function context(s: State, L: Land, b: Body): Ctx | null {
       if (!St[st]!.sown) continue;
       const x = s.cells[cell]!.stock[st]!;
       if (x <= 0) continue;
+      standing[st] = standing[st]! + (x * own) / sum;
+      soon[st] = Math.min(soon[st]!, witherIn(s, cell, st));
       const end = ripen(x, L.bears[cell]![st]!, St[st]!.r, weeksLeft(s, L, cell, st));
       for (const [k, q] of gathered(st)) pend[k] = pend[k]! + (end * q * own) / sum;
     }
@@ -163,7 +184,9 @@ function context(s: State, L: Land, b: Body): Ctx | null {
     }
   }
   const v = direct.map((d, k) => d + extra[k]!);
-  return { b, h, days: muster(s, b), grown: nGrown, ahead, cov, W, v, extra, scarce, press, pressNeed, opts, pend };
+  const days = muster(s, b);
+  const rush = St.map((row, st) => row.reap >= 0 && standing[st]! > 0 && standing[st]! / Math.max(1, 0.5 * Rc[row.reap]!.from[0]![1] * days) >= soon[st]! - 1);
+  return { b, h, days, rush, grown: nGrown, ahead, cov, W, v, extra, scarce, press, pressNeed, opts, pend };
 }
 
 /** The good to a body of a change to a store. */
@@ -302,7 +325,7 @@ function work(s: State, L: Land, c: Ctx): void {
         if (q * m > x * P.glean) m = (x * P.glean) / q;
         // What is still growing on one's own ground is worth leaving, unless the need is dire.
         const dire = r.out.some(([k]) => Kn[k]!.serves.some((sv, n) => sv > 0 && c.cov[n]! < P.dire && NEEDS[n]!.harm >= 0.5));
-        if (!dire && o.mine > 0) waitFor = Math.max(0, 1 - P.wait * (growth(s, L, o.cell, st) - 1) * o.mine);
+        if (!dire && o.mine > 0 && !c.rush[st]) waitFor = Math.max(0, 1 - P.wait * (growth(s, L, o.cell, st) - 1) * o.mine);
       }
       for (const [k, q] of r.inp) if (q * m > proj[k]!) m = proj[k]! / q;
       if (m <= 1e-6) continue;

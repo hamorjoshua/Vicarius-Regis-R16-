@@ -169,6 +169,8 @@ export const P = {
   // Choosing
   /** Worth today of something that will only be had later. */
   later: 0.7,
+  /** Growing weeks at the end of the season that nobody counts on. */
+  prudence: 4,
   /** How strongly a holder waits for what is still growing. */
   wait: 20,
   /** A day's work must be worth at least this, or the day is rested. */
