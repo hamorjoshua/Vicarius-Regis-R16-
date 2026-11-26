@@ -34,3 +34,5 @@ node core/sim.js [reigns=200] [seed=1]
 3. Flavour will be composed from the same primitives, never mapped from named situations.
 
 The current game (`index.html`) is untouched by this work.
+
+The design for rebuilding the whole simulation from scratch, a living realm with weather, harvests, prices, disease and unrest beneath the same docket, is in [`docs/living-realm-design.md`](../docs/living-realm-design.md).

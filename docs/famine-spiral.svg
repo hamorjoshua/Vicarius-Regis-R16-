@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 692" width="760" height="692" role="img" aria-label="The famine spiral feeds itself until its brakes catch it" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13">
+  <rect width="760" height="692" fill="#fbf8f1"/>
+  <defs>
+    <marker id="web-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8f8570"/></marker>
+    <marker id="web-arrow-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8f2a1e"/></marker>
+    <marker id="web-arrow-good" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3d5e3f"/></marker>
+  </defs>
+
+  <text x="24" y="34" font-size="15" font-weight="600" fill="#2a231a">The famine spiral feeds itself until its brakes catch it</text>
+  <text x="24" y="56" font-size="11.5" fill="#66573f">Red: the famine spiral (R1), a loop that feeds itself. Green: the brakes that push back.</text>
+
+  <!-- the spiral -->
+  <g fill="none" stroke="#8f2a1e" stroke-width="1.5">
+    <path d="M200 236H292" marker-end="url(#web-arrow-bad)"/>
+    <path d="M380 264V352" marker-end="url(#web-arrow-bad)"/>
+    <path d="M292 380H200" marker-end="url(#web-arrow-bad)"/>
+    <path d="M112 352V264" marker-end="url(#web-arrow-bad)"/>
+  </g>
+
+  <!-- the brakes -->
+  <g fill="none" stroke="#3d5e3f" stroke-width="1.25">
+    <path d="M504 236H468" marker-end="url(#web-arrow-good)"/>
+    <path d="M504 336H486"/>
+    <path d="M504 408H486"/>
+    <path d="M504 480H486"/>
+    <path d="M200 640H486V336"/>
+    <path d="M486 380H468" marker-end="url(#web-arrow-good)"/>
+  </g>
+
+  <!-- the trigger and the court's loop -->
+  <g fill="none" stroke="#8f8570" stroke-width="1.25">
+    <path d="M112 140V208" marker-end="url(#web-arrow)"/>
+    <path d="M380 408V528H200" marker-end="url(#web-arrow)"/>
+    <path d="M112 556V612" marker-end="url(#web-arrow)"/>
+  </g>
+
+  <!-- neutral boxes -->
+  <rect x="24" y="84" width="176" height="56" rx="8" fill="none" stroke="#8f8570" stroke-width="1.25"/>
+  <text x="112" y="108" text-anchor="middle" font-weight="600" fill="#2a231a">Weather</text>
+  <text x="112" y="124" text-anchor="middle" font-size="11.5" fill="#66573f">the one random input</text>
+
+  <rect x="24" y="500" width="176" height="56" rx="8" fill="none" stroke="#8f8570" stroke-width="1.25"/>
+  <text x="112" y="524" text-anchor="middle" font-weight="600" fill="#2a231a">Petitions</text>
+  <text x="112" y="540" text-anchor="middle" font-size="11.5" fill="#66573f">the realm asks the court</text>
+
+  <rect x="24" y="612" width="176" height="56" rx="8" fill="none" stroke="#8f8570" stroke-width="1.25"/>
+  <text x="112" y="636" text-anchor="middle" font-weight="600" fill="#2a231a">The court (B7)</text>
+  <text x="112" y="652" text-anchor="middle" font-size="11.5" fill="#66573f">three hearings a week</text>
+
+  <!-- the spiral's states -->
+  <rect x="24" y="208" width="176" height="56" rx="8" fill="#8f2a1e" fill-opacity="0.08" stroke="#8f2a1e" stroke-width="2"/>
+  <text x="112" y="232" text-anchor="middle" font-weight="600" fill="#2a231a">Short harvest</text>
+  <text x="112" y="248" text-anchor="middle" font-size="11.5" fill="#66573f">Crops and herds</text>
+
+  <rect x="292" y="208" width="176" height="56" rx="8" fill="#8f2a1e" fill-opacity="0.08" stroke="#8f2a1e" stroke-width="2"/>
+  <text x="380" y="232" text-anchor="middle" font-weight="600" fill="#2a231a">Dear grain</text>
+  <text x="380" y="248" text-anchor="middle" font-size="11.5" fill="#66573f">Stocks and prices</text>
+
+  <rect x="292" y="352" width="176" height="56" rx="8" fill="#8f2a1e" fill-opacity="0.08" stroke="#8f2a1e" stroke-width="2"/>
+  <text x="380" y="376" text-anchor="middle" font-weight="600" fill="#2a231a">Hunger and fever</text>
+  <text x="380" y="392" text-anchor="middle" font-size="11.5" fill="#66573f">Nourishment, disease</text>
+
+  <rect x="24" y="352" width="176" height="56" rx="8" fill="#8f2a1e" fill-opacity="0.08" stroke="#8f2a1e" stroke-width="2"/>
+  <text x="112" y="376" text-anchor="middle" font-weight="600" fill="#2a231a">Fewer hands</text>
+  <text x="112" y="392" text-anchor="middle" font-size="11.5" fill="#66573f">Labour, seed corn eaten</text>
+
+  <!-- the brakes' boxes -->
+  <rect x="504" y="208" width="232" height="56" rx="8" fill="none" stroke="#3d5e3f" stroke-width="1.25"/>
+  <text x="620" y="232" text-anchor="middle" font-weight="600" fill="#2a231a">Carting (B1)</text>
+  <text x="620" y="248" text-anchor="middle" font-size="11.5" fill="#66573f">the price gap draws grain in</text>
+
+  <rect x="504" y="308" width="232" height="56" rx="8" fill="none" stroke="#3d5e3f" stroke-width="1.25"/>
+  <text x="620" y="332" text-anchor="middle" font-weight="600" fill="#2a231a">Stores and alms (B3, B4)</text>
+  <text x="620" y="348" text-anchor="middle" font-size="11.5" fill="#66573f">old grain, the granary, charity</text>
+
+  <rect x="504" y="380" width="232" height="56" rx="8" fill="none" stroke="#3d5e3f" stroke-width="1.25"/>
+  <text x="620" y="404" text-anchor="middle" font-weight="600" fill="#2a231a">Migration (B2)</text>
+  <text x="620" y="420" text-anchor="middle" font-size="11.5" fill="#66573f">the hungry leave: fewer mouths</text>
+
+  <rect x="504" y="452" width="232" height="56" rx="8" fill="none" stroke="#3d5e3f" stroke-width="1.25"/>
+  <text x="620" y="476" text-anchor="middle" font-weight="600" fill="#2a231a">Immunity (B6)</text>
+  <text x="620" y="492" text-anchor="middle" font-size="11.5" fill="#66573f">survivors cannot catch it again</text>
+
+  <!-- what each arrow carries -->
+  <g font-size="11.5" fill="#66573f">
+    <text x="120" y="178">frost, drought, blight</text>
+    <text x="246" y="226" text-anchor="middle">less to sell</text>
+    <text x="388" y="312">too dear to buy</text>
+    <text x="246" y="398" text-anchor="middle">sick and weak</text>
+    <text x="120" y="312">less sown and reaped</text>
+    <text x="290" y="518" text-anchor="middle">hardship</text>
+    <text x="120" y="588">heard</text>
+    <text x="340" y="630" text-anchor="middle">relief, remitted dues</text>
+  </g>
+</svg>
