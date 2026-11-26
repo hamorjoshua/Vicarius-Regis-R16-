@@ -55,7 +55,7 @@ export function decay(s: State): void {
 
   // Bonds weaken with disuse and lapse; regard fades.
   for (const bd of s.bonds) {
-    if (bd.about === 'person') continue;
+    if (bd.about === 'person' || bd.about === 'yield' || bd.basis === 'birth') continue;
     bd.strength *= 1 - (bd.about === 'land' ? P.lapse : P.lapse / 2);
   }
   for (const a in s.ties) {

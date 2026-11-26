@@ -152,6 +152,8 @@ export const RECIPES: RecipeRow[] = [
 // --- Constants ---
 
 export const P = {
+  /** The founding's estates: one lord for so many hamlets, with so many men about him and so much more laid by; a priest's share and the Crown's share of what is gathered. */
+  lordEvery: 3, lordMen: 4, lordStore: 3, manorShare: 0.2, tithe: 0.1, crownDue: 0.05,
   /** The toy, which the tests use. */
   side: 10,
   souls: 200,

@@ -76,6 +76,10 @@ export interface Body {
   hope: number[]; put: number[]; got: number[];
   /** What its speaker expects of the court; and days its people are away at court this week. */
   plea: number[]; away: number;
+  /** A label for what it was at the founding (a lord, a priest, the king's bailiff). No rule reads it. */
+  rank: string;
+  /** What it has taken in for the Crown and not yet sent up. */
+  owedUp: number[];
   aim: { kind: number; q: number; for: number; worth: number; since: number; want: string } | null;
 }
 
@@ -84,8 +88,9 @@ export type Basis = 'birth' | 'word' | 'use' | 'grant' | 'wrong';
 /** Something that holds between parties about an object: a person, land, an act still owed, or another bond. */
 export interface Bond {
   id: number;
-  about: 'person' | 'land' | 'act' | 'bond';
+  about: 'person' | 'land' | 'act' | 'bond' | 'yield';
   /** person: a and b are people. land: a is the body that holds. act: a owes b.
+   *  yield: a owes b a share of whatever a gathers from sown ground.
    *  bond: a has a right in the bond `on`: its use for a share (a lease), or the bond itself should the debt `secures` be broken (a pledge). */
   a: number; b: number;
   cell: number;
@@ -129,7 +134,7 @@ export interface Petition { id: number; t: number; by: number; against: number; 
 export interface Rule { id: number; scope: number; shape: string; cut: string; since: number; uses: number }
 export interface Court { standing: number; docket: Petition[]; rules: Rule[]; grief: Record<number, number>; seen: Record<string, number>; next: number; quiet: number; declined: number; chilled: number;
   /** What the Crown has laid by, kind by kind; and the regent's word, given and not yet made good. */
-  store: number[]; words: { to: number; need: number; due: number }[]; wordsKept: number; wordsBroken: number }
+  store: number[]; words: { to: number; need: number; due: number }[]; wordsKept: number; wordsBroken: number; store0: number }
 export interface Use { body: number; cell: number; days: number }
 
 export interface State {

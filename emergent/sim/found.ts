@@ -110,6 +110,42 @@ export function found(seed: number, t0 = 0, side = P.side, souls = P.souls): Sta
     const plot = near(side, b.home, 3).filter(i => !granted.has(i) && !s.cells[i]!.water).sort((x, y) => sownBear(s.cells[y]!) * (1 - 0.2 * dist(side, b.home, y)) - sownBear(s.cells[x]!) * (1 - 0.2 * dist(side, b.home, x)))[0];
     if (plot !== undefined) { granted.add(plot); bond(s, { about: 'land', a: b.id, cell: plot, basis: 'grant', strength: 3 }); }
   }
+  // Estates. Every few hamlets have a lord: the ground the others were granted is his, and they hold it of him
+  // by birth for a share of what it yields. A priest is owed a tenth by those within reach, and in each quarter
+  // of the realm the king's bailiff takes in the Crown's share.
+  const firstAt = new Map<number, number>();
+  for (const b of s.bodies) if (b.members.some(i => s.people[i]!.sex === 0 && s.people[i]!.spouse >= 0) && !firstAt.has(b.home)) firstAt.set(b.home, b.id);
+  const seats = [...firstAt.entries()];
+  const taken = new Set<number>();
+  seats.forEach(([site, id], n) => {
+    if (n % P.lordEvery !== 0) return;
+    const lord = s.bodies[id]!;
+    lord.rank = 'lord'; taken.add(id);
+    for (let i = 0; i < P.lordMen; i++) { const man = person(s, null, null, year(20 + 20 * u())); man.sex = 0; man.body = lord.id; lord.members.push(man.id); }
+    for (let k = 0; k < NK; k++) if (!Kn[k]!.fixed) lord.store[k] = lord.store[k]! * P.lordStore;
+    for (const bd of s.bonds.slice()) {
+      if (bd.about !== 'land' || bd.a === lord.id || s.bodies[bd.a]!.rank || dist(side, s.bodies[bd.a]!.home, site) > 2) continue;
+      const tenant = bd.a;
+      bd.a = lord.id;
+      bond(s, { about: 'bond', a: tenant, b: lord.id, on: bd.id, share: P.manorShare, due: 1e9, used: t0, basis: 'birth', way: 'manor' });
+    }
+  });
+  const pick = (ok: (b: (typeof s.bodies)[number]) => boolean): (typeof s.bodies)[number] | undefined => s.bodies.find(b => !taken.has(b.id) && !b.rank && b.members.some(i => s.people[i]!.sex === 0 && s.people[i]!.spouse >= 0) && ok(b));
+  seats.forEach(([site], n) => {
+    if (n % P.lordEvery !== 1) return;
+    const priest = pick(b => b.home === site);
+    if (!priest) return;
+    priest.rank = 'priest'; taken.add(priest.id);
+    for (const b of s.bodies) if (b !== priest && !b.rank && dist(side, b.home, site) <= 3 && !s.bonds.some(x => x.about === 'yield' && x.a === b.id && x.way === 'tithe')) bond(s, { about: 'yield', a: b.id, b: priest.id, share: P.tithe, due: t0, basis: 'grant', way: 'tithe' });
+  });
+  for (let q = 0; q < 4; q++) {
+    const inQ = (b: (typeof s.bodies)[number]): boolean => ((b.home % side) * 2 < side ? 0 : 1) + (Math.floor(b.home / side) * 2 < side ? 0 : 2) === q;
+    const bailiff = pick(inQ);
+    if (!bailiff) continue;
+    bailiff.rank = 'bailiff'; taken.add(bailiff.id);
+    for (const b of s.bodies) if (b !== bailiff && inQ(b)) bond(s, { about: 'yield', a: b.id, b: bailiff.id, share: P.crownDue, due: t0, basis: 'grant', way: 'crown' });
+  }
+
   // Those here at the founding have always been here.
   for (const b of s.bodies) b.since = -1e6;
   void Rc;

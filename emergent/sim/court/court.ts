@@ -8,7 +8,7 @@
 
 import { Kn, NEEDS, NK, NN, P, TOIL } from '../tables.ts';
 import { askAhead, cover } from '../value.ts';
-import { around, bond, dist, grown, hearthIndex, kinOf, leaves, might, rec, top } from '../util.ts';
+import { around, bond, dist, grown, head, hearthIndex, kinOf, leaves, might, rec, top } from '../util.ts';
 import type { Body, Bond, Court, Petition, Rule, State } from '../types.ts';
 
 export type Width = 'case' | 'body' | 'realm';
@@ -25,7 +25,7 @@ export function openCourt(s: State): Court {
     for (let j = 0; j < NK; j++) if (!Kn[j]!.fixed && Kn[j]!.serves[n]! > 0 && (k < 0 || Kn[j]!.keep < Kn[k]!.keep)) k = j;
     if (k >= 0) store[k] = Math.max(store[k]!, (heads * P.crownWeeks * (NEEDS[n]!.per + NEEDS[n]!.cold * 5) * Kn[k]!.use) / Kn[k]!.serves[n]!);
   }
-  return (s.court = { standing: 5, docket: [], rules: [], grief: {}, seen: {}, next: 0, quiet: 0, declined: 0, chilled: 0, store, words: [], wordsKept: 0, wordsBroken: 0 });
+  return (s.court = { standing: 5, docket: [], rules: [], grief: {}, seen: {}, next: 0, quiet: 0, declined: 0, chilled: 0, store, words: [], wordsKept: 0, wordsBroken: 0, store0: store.reduce((x, y) => x + y, 0) });
 }
 
 /** Give a house three weeks of what it needs out of the Crown's store. False if the store has not got it. */
@@ -47,6 +47,7 @@ export function formOf(byId: Map<number, Bond>, b: Bond | undefined, depth = 0):
   if (!b || depth > 12) return 'gone';
   if (b.about === 'bond') return `${b.secures >= 0 ? 'pledge' : b.share > 0 ? 'lease for a share' : 'lease'} of ${formOf(byId, byId.get(b.on), depth + 1)}`;
   if (b.about === 'land') return `holding by ${b.basis}`;
+  if (b.about === 'yield') return `share of all it gathers owed by ${b.basis}${b.way ? ' (' + b.way + ')' : ''}`;
   if (b.about === 'act') return `${b.labour ? 'work' : 'goods'} owed by ${b.basis}${b.way ? ' (' + b.way + ')' : ''}`;
   return `tie of ${b.basis}`;
 }
@@ -157,8 +158,8 @@ function carry(s: State, c: Court, p: Petition, cut: string): boolean {
   }
   if (bd.about === 'act' && bd.q <= 0.05) return false;
   // Who gains by the bond and who bears it.
-  const bears = bd.about === 'act' ? bd.a : bd.about === 'land' ? (p.side === 'outside' ? p.by : other(bd, p.by)) : bd.secures >= 0 ? bd.b : bd.a;
-  const gains = bd.about === 'act' ? bd.b : bd.about === 'land' ? bd.a : bd.secures >= 0 ? bd.a : bd.b;
+  const bears = bd.about === 'act' || bd.about === 'yield' ? bd.a : bd.about === 'land' ? (p.side === 'outside' ? p.by : other(bd, p.by)) : bd.secures >= 0 ? bd.b : bd.a;
+  const gains = bd.about === 'act' || bd.about === 'yield' ? bd.b : bd.about === 'land' ? bd.a : bd.secures >= 0 ? bd.a : bd.b;
   const e = rec(s, 'judge', { a: p.by, b: p.against, kind: bd.kind, q: bd.q, cell: bd.cell, need: p.need, cause: bd.rec, way: `${cut} ${p.shape}` });
   if (cut === 'inquire') {
     // An inquest shows what the ledger knows: who truly did it.
@@ -205,6 +206,13 @@ function carry(s: State, c: Court, p: Petition, cut: string): boolean {
     else if (cut === 'part') { bd.strength /= 2; bond(s, { about: 'land', a: p.by, cell: bd.cell, basis: 'grant', strength: bd.strength, rec: e.id }); grieve(c, gains, P.harmLost / 2); }
     else if (cut === 'strike') { bd.strength = 0; grieve(c, gains, P.harmLost); }
     else { grieve(c, gains, P.harmLost); bd.a = p.by; bd.basis = 'grant'; }
+    return true;
+  }
+  if (bd.about === 'yield') {
+    // A standing share of what is gathered: confirmed, halved, ended, or lifted for a year.
+    if (cut === 'enforce') grieve(c, bears, P.harmPaid);
+    else if (cut === 'part') { bd.share /= 2; grieve(c, gains, P.harmPaid); }
+    else { bd.share = 0; grieve(c, gains, P.harmLost); }
     return true;
   }
   // A bond about a bond: a surety or a letting.
@@ -298,8 +306,11 @@ export function audience(s: State): Petition[] {
       // Owed on and not met: the one owed asks. Owing and in want: the one who owes asks.
       if ((!bd.labour && bd.broken) || bd.basis === 'wrong') add(bd.b, bd.a, bd, 'owed', lack.get(bd.b) ?? -1, bd.rec);
       // One held to a wrong they did not do asks to be cleared of it.
-      if (bd.basis === 'wrong' && bd.doer >= 0 && bd.doer !== bd.a) add(bd.a, bd.b, bd, 'owes', lack.get(bd.a) ?? -1, bd.rec);
+      // So, brazenly, may one who did.
+      if (bd.basis === 'wrong' && bd.doer >= 0 && (bd.doer !== bd.a || (head(s, A)?.scruple ?? 1) < 0.4)) add(bd.a, bd.b, bd, 'owes', lack.get(bd.a) ?? -1, bd.rec);
       if (lack.has(bd.a) && (bd.labour || bd.due - s.t < 13)) add(bd.a, bd.b, bd, 'owes', lack.get(bd.a)!, bd.rec);
+    } else if (bd.about === 'yield' && B) {
+      if (lack.has(bd.a) && bd.due <= s.t) add(bd.a, bd.b, bd, 'owes', lack.get(bd.a)!, bd.rec);
     } else if (bd.about === 'bond' && B) {
       // A surety or a letting weighs on one side of it when that side is in want.
       const bears = bd.secures >= 0 ? bd.b : bd.a;
@@ -396,15 +407,38 @@ export function hear(s: State, rulings: Ruling[]): void {
     teach(s, idx, w.to, 'bare', 0, P.pleaOwn);
     return false;
   });
+  // The king's bailiffs send up what they took in for the Crown. When the store runs low they take for the king
+  // from those with most, and pay nothing: a taking like any other, and the court's own.
+  const low = c.store.reduce((x, y) => x + y, 0) < 0.5 * c.store0 && s.t % 13 === 0;
+  for (const b of s.bodies) {
+    if (!b.alive || b.rank !== 'bailiff') continue;
+    for (let k = 0; k < NK; k++) { const up = Math.min(b.owedUp[k] ?? 0, b.store[k]!); if (up > 0) { b.store[k] = b.store[k]! - up; c.store[k] = c.store[k]! + up; } }
+    b.owedUp = [];
+    if (!low) continue;
+    const payers = s.bonds.filter(x => x.about === 'yield' && x.b === b.id && x.way === 'crown').map(x => s.bodies[x.a]!).filter(x => x.alive && !x.rank);
+    let kind = -1;
+    for (let k = 0; k < NK; k++) if (!Kn[k]!.fixed && Kn[k]!.serves.some((v, n) => v > 0 && NEEDS[n]!.harm >= 0.5) && (kind < 0 || c.store[k]! < c.store[kind]!)) kind = k;
+    if (kind < 0) continue;
+    for (const v of payers.sort((x, y) => y.store[kind]! - x.store[kind]! || x.id - y.id).slice(0, 3)) {
+      const q = v.store[kind]! * 0.15;
+      if (q < 1) continue;
+      v.store[kind] = v.store[kind]! - q; c.store[kind] = c.store[kind]! + q;
+      const e = rec(s, 'take', { a: b.id, b: v.id, kind, q, kind2: -3 });
+      s.wrongs.push({ by: b.id, to: v.id, kind, q, rec: e.id, doer: b.id });
+      grieve(c, v.id, P.harmPaid);
+    }
+  }
   // Those still waiting in want hold it against the court.
   for (const p of c.docket) { p.waited++; if (p.urgency > 3) grieve(c, p.by, P.harmUnheard); }
   // Enough houses with enough grievance withdraw their confidence.
   let hearths = 0, sore = 0;
   for (const b of s.bodies) if (b.alive && !b.parts.length && b.members.length) { hearths++; if ((c.grief[b.id] ?? 0) >= P.aggrieved) sore++; }
   for (const k in c.grief) { const v = c.grief[k]! * P.griefFade; if (v < 0.5 || !s.bodies[Number(k)]!.alive) delete c.grief[k]; else c.grief[k] = v; }
-  if (hearths > 0 && sore >= P.faction * hearths) {
+  // Confidence once withdrawn is not withdrawn again for a season: people wait to see what the court does next.
+  c.quiet++;
+  if (hearths > 0 && sore >= P.faction * hearths && c.quiet > 8) {
     c.standing -= 1; c.quiet = 0;
     for (const k in c.grief) c.grief[k] = c.grief[k]! * 0.5;
     rec(s, 'withdraw', { q: sore, q2: hearths });
-  } else if (++c.quiet % 13 === 0 && c.standing < 5) c.standing = Math.min(5, c.standing + 0.25);
+  } else if (c.quiet % 13 === 0 && c.standing < 5) c.standing = Math.min(5, c.standing + 0.25);
 }

@@ -4,7 +4,7 @@
 import { AIDERS, Kn, NS, P, Rc, St } from '../tables.ts';
 import { around, dist, hearthIndex, holdsByCell, kinOf, payRent, rec, struggle, tenancies, tie } from '../util.ts';
 import { bear } from './grow.ts';
-import type { Body, State, Work } from '../types.ts';
+import type { Body, Bond, State, Work } from '../types.ts';
 
 interface Job { b: Body; w: Work; m: number; aid: number }
 
@@ -32,6 +32,8 @@ export function make(s: State): void {
   const lets = tenancies(s);
   const kin = kinOf(s);
   const hearths = hearthIndex(s);
+  const dues = new Map<number, Bond[]>();
+  for (const bd of s.bonds) if (bd.about === 'yield' && bd.due <= s.t) { const l = dues.get(bd.a); if (l) l.push(bd); else dues.set(bd.a, [bd]); }
   for (const j of jobs) {
     const r = Rc[j.w.r]!, c = s.cells[j.w.cell]!, b = j.b;
     let m = j.m;
@@ -57,6 +59,16 @@ export function make(s: State): void {
     for (const [k, q] of r.out) b.store[k] = b.store[k]! + q * m;
     for (const [st, q] of r.to) { c.stock[st] = c.stock[st]! + q * m; b.put[st] = (b.put[st] ?? 0) + q * m; }
     for (const [st, q] of r.from) if (St[st]!.sown) b.got[st] = (b.got[st] ?? 0) + q * m;
+    // A share of what is gathered from sown ground goes to whoever it is owed to.
+    if (r.from.some(([st]) => St[st]!.sown)) for (const bd of dues.get(b.id) ?? []) {
+      const to = s.bodies[bd.b]!;
+      if (!to.alive) continue;
+      for (const [k, q] of r.out) {
+        const pay = Math.min(b.store[k]!, q * m * bd.share);
+        b.store[k] = b.store[k]! - pay; to.store[k] = to.store[k]! + pay;
+        if (bd.way === 'crown') to.owedUp[k] = (to.owedUp[k] ?? 0) + pay;
+      }
+    }
     if (j.aid >= 0) b.store[j.aid] = Math.max(0, b.store[j.aid]! - (Kn[j.aid]!.use * j.w.days) / P.days);
     const first = r.out[0];
     const e = rec(s, 'make', { a: b.id, cell: j.w.cell, kind: first ? first[0] : -1, q: first ? first[1] * m : 0, kind2: j.w.r, q2: j.w.days });

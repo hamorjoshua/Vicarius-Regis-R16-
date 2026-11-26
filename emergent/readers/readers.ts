@@ -70,6 +70,7 @@ export class Readers {
     switch (r.k) {
       case 'take':
         if (r.kind2 === -2) return `house ${r.a} took the ground at ${place(this, r.cell)} that house ${r.b} had pledged`;
+        if (r.kind2 === -3) return `house ${r.a} took ${kind} from house ${r.b} for the Crown, and paid nothing`;
         if (r.b < 0) return `house ${r.a} gathered ${kind} from ground others hold at ${place(this, r.cell)}`;
         if (r.need >= 0) return `house ${r.a}, in want of ${need}, took ${kind} from house ${r.b}`;
         return `house ${r.a} ${r.q2 ? 'fought house ' + r.b + ' for' : 'seized from house ' + r.b} the ${kind} it was owed`;
@@ -94,6 +95,8 @@ export class Readers {
         return `house ${r.a} came to know a way of dealing from house ${r.b}: ${wayWords(r.way ?? '')}`;
       case 'plan': return r.q2 > 0 ? `house ${r.a} got from house ${r.b} what it had set itself to make ${kind} for` : r.q2 < 0 ? `house ${r.a} gave up its plan to make ${kind} for house ${r.b}` : `house ${r.a}${r.need >= 0 ? ', in want of ' + need + ',' : ''} set itself to make ${kind}, which house ${r.b} wants, so as to get ${(SIDE[(r.way ?? '').split('>')[1] ?? ''] ?? 'what it lacks')} from it`;
       case 'blame': return r.q2 ? `house ${r.a}, finding its ground at ${place(this, r.cell)} stripped, laid it to house ${r.b}, though it was house ${r.kind2} that did it` : `house ${r.a}, finding its ground at ${place(this, r.cell)} stripped, rightly laid it to house ${r.b}`;
+      case 'die': return `one of house ${r.b} died${r.need >= 0 ? ' for want of ' + NEEDS[r.need]!.id : r.cause >= 0 ? ' of wounds' : ''}`;
+      case 'judge': return `the court ruled between house ${r.a} and ${r.b >= 0 ? 'house ' + r.b : 'nobody'}`;
       case 'bar': return `house ${r.a} shut its door to house ${r.b}`;
       case 'move': return `house ${r.a} left for ${place(this, r.cell)}`;
       default: return `${r.k} (${r.a}, ${r.b})`;

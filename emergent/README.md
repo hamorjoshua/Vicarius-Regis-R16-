@@ -510,6 +510,18 @@ Five courts on eight full-size realms, a three-year reign each (means):
 - **Repetition for the regent who makes rules is 10%.**
 - **A regent who makes rules hears about 62 matters in three years,** against three hearings a week.
 
+## The screen, and a world with power in it
+
+`index.html` is the game in one file that runs offline (`npm run build` rebuilds it from `ui/`). It founds a realm in the browser, lets it live through its past, and seats the regent.
+
+Played, the first screen showed that matters were dull: nearly all were one house owing another goods or ground. The measures had counted how far matters differed as text, not whether they were worth hearing. Three things were changed in answer.
+
+- **Estates at the founding.** Every few hamlets have a lord: the ground the others were granted is his, and they hold it of him by birth for a fifth of its yield. A priest is owed a tenth of what those within reach gather. In each quarter the king's bailiff takes in the Crown's twentieth and sends it up. When the Crown's store runs low the bailiffs take from those with most and pay nothing.
+- **More of what happens can reach the court.** One killed by another's blows leaves their house owed a price in days of work. One held to a taking may ask to be cleared, guilty or not, and an inquest can be held once on any taking. A newcomer whose neighbours will not deal with it may ask the regent to vouch for it.
+- **People.** On the screen houses are called by the name of whoever speaks for them, with their age, who is in the house and whose tenant they are, and each side says something from what it holds true or wants believed.
+
+Not yet built of what medieval petitions were made of: works that need leave and upkeep (a mill, a weir, a bridge), licences and pardons, offices in the regent's gift, wardship and dower, and whole communities petitioning as one. None of the scripted-court figures above has been re-run since these changes.
+
 ## Known gaps
 
 1. **The fall was largely a matter of size.** On 100 cells it took 64 to 87% where it happened and nothing cured it. On 400 cells it is 18 to 54% in seven realms of eight. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.

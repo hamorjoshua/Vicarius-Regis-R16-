@@ -7,7 +7,7 @@ import { around, bond, dist, head, kinOf, leaves, living, rec, regard } from '..
 import type { Body, Person, State } from '../types.ts';
 
 export function body(s: State, home: number): Body {
-  const b: Body = { id: s.bodies.length, home, store: new Array<number>(NK).fill(0), members: [], parts: [], of: -1, alive: true, since: s.t, plan: [], spent: 0, goto: -1, why: new Array<number>(NN).fill(-1), ways: {}, stuck: 0, pressed: false, lore: {}, recent: [], skill: [], aim: null, hope: [], put: [], got: [], plea: [], away: 0 };
+  const b: Body = { id: s.bodies.length, home, store: new Array<number>(NK).fill(0), members: [], parts: [], of: -1, alive: true, since: s.t, plan: [], spent: 0, goto: -1, why: new Array<number>(NN).fill(-1), ways: {}, stuck: 0, pressed: false, lore: {}, recent: [], skill: [], aim: null, hope: [], put: [], got: [], plea: [], away: 0, rank: '', owedUp: [] };
   s.bodies.push(b);
   return b;
 }
@@ -21,6 +21,7 @@ function shift(s: State, p: Person, to: Body): void {
 
 /** Hand everything a body holds or owes to another. */
 function handOver(s: State, from: Body, to: Body, share: number): void {
+  if (share >= 1 && from.rank && !to.rank) to.rank = from.rank;
   for (let k = 0; k < NK; k++) {
     if (Kn[k]!.fixed && to.home !== from.home) continue;
     const q = from.store[k]! * share;
@@ -28,7 +29,11 @@ function handOver(s: State, from: Body, to: Body, share: number): void {
     to.store[k] = to.store[k]! + q;
   }
   for (const bd of s.bonds.slice()) {
-    if (bd.about === 'land' && bd.a === from.id) {
+    if (share >= 1 && bd.about !== 'person' && bd.about !== 'act') {
+      // Everything passes whole: the bond itself changes hands, so that whatever rests on it still does.
+      if (bd.a === from.id) bd.a = to.id;
+      if (bd.b === from.id) bd.b = to.id;
+    } else if (bd.about === 'land' && bd.a === from.id) {
       const mine = s.bonds.find(x => x.about === 'land' && x.a === to.id && x.cell === bd.cell);
       if (mine) mine.strength += bd.strength * share; else bond(s, { about: 'land', a: to.id, cell: bd.cell, basis: bd.basis, strength: bd.strength * share, since: bd.since });
       bd.strength *= 1 - share;
@@ -156,6 +161,7 @@ export function gather(kin: Map<number, Set<number>>, s: State): void {
   s.bonds = s.bonds.filter(bd => {
     if (bd.about === 'person') return s.people[bd.b]!.alive && (bd.basis === 'birth' || s.people[bd.a]!.alive);
     if (bd.about === 'land') return s.bodies[bd.a]!.alive && bd.strength >= 0.05;
+    if (bd.about === 'yield') return s.bodies[bd.a]!.alive && s.bodies[bd.b]!.alive && bd.share > 0.001;
     if (bd.about === 'bond') return s.bodies[bd.a]!.alive && (bd.secures >= 0 || (bd.secures === -1 && bd.due > s.t));
     return bd.q > 0.05 && bd.strength >= 0.3 && s.bodies[bd.a]!.alive && s.bodies[bd.b]!.alive;
   });
