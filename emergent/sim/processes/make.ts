@@ -2,7 +2,7 @@
 // Last week's choices are carried out against what is there now.
 
 import { AIDERS, Kn, NS, P, Rc, St } from '../tables.ts';
-import { dist, holdsByCell, rec } from '../util.ts';
+import { dist, holdsByCell, payRent, rec, tenancies } from '../util.ts';
 import { bear } from './grow.ts';
 import type { Body, State, Work } from '../types.ts';
 
@@ -29,6 +29,7 @@ export function make(s: State): void {
   const avail = new Map<number, number>();
   for (const [key] of want) avail.set(key, s.cells[Math.floor(key / NS)]!.stock[key % NS]! * P.glean);
   const holds = holdsByCell(s);
+  const lets = tenancies(s);
   for (const j of jobs) {
     const r = Rc[j.w.r]!, c = s.cells[j.w.cell]!, b = j.b;
     let m = j.m;
@@ -44,10 +45,16 @@ export function make(s: State): void {
     const first = r.out[0];
     const e = rec(s, 'make', { a: b.id, cell: j.w.cell, kind: first ? first[0] : -1, q: first ? first[1] * m : 0, kind2: j.w.r, q2: j.w.days });
     // Whoever puts something onto the land has used it; that is what a holding grows from.
-    if (r.to.length) s.uses.push({ body: b.id, cell: j.w.cell, days: j.w.days });
+    // One who works ground through another's bond pays the share agreed, and the use is the holder's.
+    const let_ = r.from.length || r.to.length ? lets.find(x => x.cell === j.w.cell && x.lease.a === b.id) : undefined;
+    if (let_) {
+      let_.lease.used = s.t;
+      for (const [k, q] of r.out) payRent(s, let_.lease, k, q * m);
+    }
+    if (r.to.length) s.uses.push({ body: let_ ? let_.root.a : b.id, cell: j.w.cell, days: j.w.days });
     // Taking from land that others hold, with no bond of one's own, is a taking against their bonds.
     const over = holds.get(j.w.cell) ?? [];
-    if (!r.from.length || !first || over.some(h => h.a === b.id)) continue;
+    if (!r.from.length || !first || let_ || over.some(h => h.a === b.id)) continue;
     let sum = 0;
     for (const h of over) sum += h.strength;
     if (sum < P.held) continue;

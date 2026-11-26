@@ -47,14 +47,20 @@ export interface Body {
 
 export type Basis = 'birth' | 'word' | 'use' | 'grant' | 'wrong';
 
-/** Something that holds between parties about an object: a person, land, or an act still owed. */
+/** Something that holds between parties about an object: a person, land, an act still owed, or another bond. */
 export interface Bond {
   id: number;
-  about: 'person' | 'land' | 'act';
-  /** person: a and b are people. land: a is the body that holds. act: a owes b. */
+  about: 'person' | 'land' | 'act' | 'bond';
+  /** person: a and b are people. land: a is the body that holds. act: a owes b.
+   *  bond: a has a right in the bond `on`: its use for a share (a lease), or the bond itself should the debt `secures` be broken (a pledge). */
   a: number; b: number;
   cell: number;
   kind: number; q: number; due: number;
+  /** What is owed is days of work, not matter. */
+  labour: boolean;
+  on: number; share: number; secures: number;
+  /** When the right was last used. */
+  used: number;
   basis: Basis;
   strength: number;
   since: number;

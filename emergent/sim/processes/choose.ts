@@ -2,14 +2,14 @@
 // promise, take, move. Nothing more specific exists. Every body reads the realm as the step began.
 
 import { exp } from '../math.ts';
-import { AIDERS, BY_HARM, Kn, NEEDS, NK, NN, NS, P, Rc, St } from '../tables.ts';
+import { AIDERS, BY_HARM, Kn, NEEDS, NK, NN, NS, P, Rc, St, TOIL } from '../tables.ts';
 import { askAhead, cover, welfare, welfareLater, zeros } from '../value.ts';
-import { bond, dist, grown, head, holdsByCell, kinOf, muster, near, rec, struggle, tie, warm } from '../util.ts';
+import { bond, dist, grown, head, holdsByCell, kinOf, muster, near, rec, struggle, tenancies, tie, warm, type Tenancy } from '../util.ts';
 import { bear } from './grow.ts';
 import { tBar } from './sky.ts';
 import { weekOf, type Body, type Bond, type Person, type State } from '../types.ts';
 
-interface Opt { r: number; cell: number; mine: number; take: boolean; score: number }
+interface Opt { r: number; cell: number; mine: number; take: boolean; score: number; rent: number }
 interface Ctx {
   b: Body; h: Person; days: number; grown: number;
   ahead: number[]; cov: number[]; W: number;
@@ -24,7 +24,7 @@ interface Ctx {
 }
 
 /** Everything about the land that is worked out once a week. */
-interface Land { holds: Map<number, Bond[]>; bears: number[][]; left: Map<number, number>; homes: number[] }
+interface Land { lets: Tenancy[]; holds: Map<number, Bond[]>; bears: number[][]; left: Map<number, number>; homes: number[] }
 
 /** Where a living thing will stand after T more growing weeks. */
 const ripen = (x: number, K: number, r: number, T: number): number => (x <= 0 || K <= 0 ? 0 : K / (1 + (K / x - 1) * exp(-r * T)));
@@ -78,11 +78,13 @@ function witherIn(s: State, cell: number, st: number): number {
   return 99;
 }
 
-function rights(L: Land, body: number, cell: number): { mine: number; free: boolean } {
+function rights(L: Land, body: number, cell: number): { mine: number; free: boolean; rent: number } {
   let sum = 0, own = 0;
   for (const h of L.holds.get(cell) ?? []) { sum += h.strength; if (h.a === body) own += h.strength; }
-  if (own > 0) return { mine: own / sum, free: true };
-  return { mine: 0, free: sum < P.held };
+  if (own > 0) return { mine: own / sum, free: true, rent: 0 };
+  // Ground used through another's bond is used as that other might, less the share owed.
+  for (const x of L.lets) if (x.cell === cell && x.lease.a === body) return { mine: x.root.strength / sum, free: true, rent: x.lease.share };
+  return { mine: 0, free: sum < P.held, rent: 0 };
 }
 
 /** What one unit of a thing on the land becomes in the store when gathered. */
@@ -97,7 +99,7 @@ function options(s: State, L: Land, b: Body): Opt[] {
   const out: Opt[] = [];
   for (let ri = 0; ri < Rc.length; ri++) {
     const r = Rc[ri]!;
-    if (!r.from.length && !r.to.length) { out.push({ r: ri, cell: b.home, mine: 1, take: false, score: 1 }); continue; }
+    if (!r.from.length && !r.to.length) { out.push({ r: ri, cell: b.home, mine: 1, take: false, score: 1, rent: 0 }); continue; }
     const cands: Opt[] = [];
     for (const cell of near(s.side, b.home, P.reach)) {
       const c = s.cells[cell]!, far = 1 - P.travel * dist(s.side, b.home, cell);
@@ -117,7 +119,7 @@ function options(s: State, L: Land, b: Body): Opt[] {
       const rt = rights(L, b.id, cell);
       // Nobody puts their own onto ground another has begun to hold.
       if (r.to.length && rt.mine <= 0 && (!rt.free || (L.holds.get(cell)?.length ?? 0) > 0)) continue;
-      cands.push({ r: ri, cell, mine: rt.mine, take: !rt.free, score });
+      cands.push({ r: ri, cell, mine: rt.mine, take: !rt.free, score: score * (1 - rt.rent), rent: rt.rent });
     }
     cands.sort((a, b2) => b2.score - a.score || a.cell - b2.cell);
     let free = 0, barred = 0;
@@ -262,20 +264,41 @@ function deal(s: State, cs: Map<number, Ctx>, kin: Map<number, Set<number>>, A: 
     rec(s, 'give', { a: giver.b.id, b: a.id, kind: gk, q, need: n, cause: a.why[n]! });
     return;
   }
-  let lender: Ctx | null = null, lk = -1, lBest = 0;
+  // Work for it: goods now, against days owed to whoever has goods to spare.
+  let master: Ctx | null = null, mk = -1, mBest = 0;
+  for (const B of partners) {
+    if (tie(s, B.b.id, a.id) < P.barAt) continue;
+    for (const k of serving) {
+      const q = Math.min(amount(B, k), (2 * A.days) / (TOIL[k]! * P.hire));
+      if (q > 0.05 && B.v[k]! < 0.6 * A.v[k]! && B.cov[n]! > 2 * P.short && q > mBest) { mBest = q; master = B; mk = k; }
+    }
+  }
+  if (master && A.pend[mk]! < mBest * (1 + P.premium)) {
+    const q = mBest, owed = q * TOIL[mk]! * P.hire;
+    master.b.store[mk] = master.b.store[mk]! - q; a.store[mk] = a.store[mk]! + q;
+    const e = rec(s, 'promise', { a: a.id, b: master.b.id, kind: mk, q, q2: owed, kind2: 1, need: n, cause: a.why[n]! });
+    bond(s, { about: 'act', a: a.id, b: master.b.id, kind: mk, q: owed, due: s.t, labour: true, basis: 'word', rec: e.id });
+    warm(s, a.id, master.b.id, P.warm);
+    return;
+  }
+  let lender: Ctx | null = null, lk = -1, lBest = 0, lPledge = false;
+  const myGround = s.bonds.find(x => x.about === 'land' && x.a === a.id && x.strength >= 0.5 && !s.bonds.some(y => y.about === 'bond' && y.secures >= 0 && y.on === x.id));
   for (const B of partners) {
     const trust = Math.min(1, P.trust + 0.6 * tie(s, B.b.id, a.id));
-    if (trust * (1 + P.premium) <= 1) continue;
+    // One who is not trusted may still borrow against ground they hold.
+    const pledged = trust * (1 + P.premium) <= 1;
+    if (pledged && (!myGround || tie(s, B.b.id, a.id) < P.barAt)) continue;
     for (const k of serving) {
       const q = amount(B, k);
-      if (q > 0.05 && B.v[k]! < 0.6 * A.v[k]! && B.cov[n]! > 2 * P.short && q * trust > lBest) { lBest = q * trust; lender = B; lk = k; }
+      if (q > 0.05 && B.v[k]! < 0.6 * A.v[k]! && B.cov[n]! > 2 * P.short && q * Math.max(trust, 0.3) > lBest) { lBest = q * Math.max(trust, 0.3); lender = B; lk = k; lPledge = pledged; }
     }
   }
   if (lender) {
     const q = amount(lender, lk);
     lender.b.store[lk] = lender.b.store[lk]! - q; a.store[lk] = a.store[lk]! + q;
     const e = rec(s, 'promise', { a: a.id, b: lender.b.id, kind: lk, q, q2: q * (1 + P.premium), need: n, cause: a.why[n]! });
-    bond(s, { about: 'act', a: a.id, b: lender.b.id, kind: lk, q: q * (1 + P.premium), due: s.t + P.term, basis: 'word', rec: e.id });
+    const debt = bond(s, { about: 'act', a: a.id, b: lender.b.id, kind: lk, q: q * (1 + P.premium), due: s.t + P.term, basis: 'word', rec: e.id });
+    if (lPledge && myGround) { bond(s, { about: 'bond', a: lender.b.id, b: a.id, on: myGround.id, secures: debt.id, basis: 'word', rec: e.id }); e.kind2 = 2; e.cell = myGround.cell; }
     return;
   }
   if (A.cov[n]! >= P.dire) return;
@@ -331,12 +354,12 @@ function work(s: State, L: Land, c: Ctx): void {
       if (m <= 1e-6) continue;
       const delta: [number, number][] = [];
       for (const [k, q] of r.inp) delta.push([k, -q * m]);
-      for (const [k, q] of r.out) delta.push([k, q * m]);
+      for (const [k, q] of r.out) delta.push([k, q * m * (1 - o.rent)]);
       let g = gain(c, proj, W0, delta) * waitFor;
       for (const [st, q] of r.to) {
         const key = o.cell * NS + st, K = L.bears[o.cell]![st]!, T = weeksLeft(s, L, o.cell, st);
         const x = cell.stock[st]! + (sown.get(key) ?? 0);
-        const more = ripen(x + q * m, K, St[st]!.r, T) - ripen(x, K, St[st]!.r, T);
+        const more = (ripen(x + q * m, K, St[st]!.r, T) - ripen(x, K, St[st]!.r, T)) * (1 - o.rent);
         const after = pend.slice();
         for (const [k, per] of gathered(st)) after[k] = after[k]! + more * per;
         g += P.later * (welfareLater(proj, after, c.ahead, T) - welfareLater(proj, pend, c.ahead, T));
@@ -396,8 +419,38 @@ function roam(s: State, L: Land, c: Ctx): void {
   b.plan = [];
 }
 
+// --- Letting: a right to ground that lies unused is let to one who has less, for a share of what it yields ---
+
+function letOut(s: State, L: Land, cs: Map<number, Ctx>): void {
+  const count = new Map<number, number>();
+  const bump = (b: number, d: number): void => { count.set(b, (count.get(b) ?? 0) + d); };
+  for (const b of s.bonds) if (b.about === 'land' && b.strength >= P.held) bump(b.a, 1);
+  for (const x of L.lets) { bump(x.lease.a, 1); const over = s.bonds.find(b => b.id === x.lease.on); if (over) bump(over.a, -1); }
+  const letAlready = new Set(L.lets.map(x => x.lease.on));
+  const rightsBonds: { bond: Bond; cell: number }[] = [];
+  for (const b of s.bonds) if (b.about === 'land' && b.strength >= 0.5) rightsBonds.push({ bond: b, cell: b.cell });
+  for (const x of L.lets) rightsBonds.push({ bond: x.lease, cell: x.cell });
+  for (const { bond: rb, cell } of rightsBonds) {
+    const O = cs.get(rb.a);
+    if (!O || letAlready.has(rb.id) || s.t - rb.used < P.idle || s.t - rb.since < P.idle) continue;
+    if (!St.some((row, st) => row.sown && L.bears[cell]![st]! > 20)) continue;
+    let best: Ctx | null = null, bestN = count.get(rb.a) ?? 0;
+    for (const T of cs.values()) {
+      if (T === O || dist(s.side, T.b.home, cell) > P.reach || tie(s, O.b.id, T.b.id) < P.barAt || tie(s, T.b.id, O.b.id) < P.barAt) continue;
+      const n = count.get(T.b.id) ?? 0;
+      if (n >= P.plots * Math.max(1, T.grown) || n >= bestN || rights(L, T.b.id, cell).mine > 0) continue;
+      best = T; bestN = n;
+    }
+    if (!best) continue;
+    const depth = rb.about === 'bond' ? (L.lets.find(x => x.lease === rb)?.depth ?? 1) + 1 : 1;
+    const e = rec(s, 'promise', { a: best.b.id, b: O.b.id, cell, q2: P.rent, kind2: 2 + depth });
+    bond(s, { about: 'bond', a: best.b.id, b: O.b.id, on: rb.id, share: P.rent, due: s.t + P.lease, used: s.t, basis: 'word', rec: e.id });
+    bump(best.b.id, 1); bump(rb.a, -1); letAlready.add(rb.id);
+  }
+}
+
 export function choose(s: State): void {
-  const L: Land = { holds: holdsByCell(s), bears: s.cells.map(c => St.map((_r, k) => bear(c, k))), left: new Map(), homes: new Array<number>(s.cells.length).fill(0) };
+  const L: Land = { lets: tenancies(s), holds: holdsByCell(s), bears: s.cells.map(c => St.map((_r, k) => bear(c, k))), left: new Map(), homes: new Array<number>(s.cells.length).fill(0) };
   for (const b of s.bodies) if (b.alive) for (const cell of near(s.side, b.home, P.reach)) L.homes[cell] = L.homes[cell]! + 1;
   const cs = new Map<number, Ctx>();
   for (const b of s.bodies) {
@@ -407,5 +460,7 @@ export function choose(s: State): void {
   }
   const kin = kinOf(s);
   for (const c of cs.values()) deal(s, cs, kin, c);
+  letOut(s, L, cs);
+  L.lets = tenancies(s);
   for (const c of cs.values()) { work(s, L, c); roam(s, L, c); }
 }

@@ -5,7 +5,7 @@ import { found } from '../sim/found.ts';
 import { step } from '../sim/step.ts';
 import { KINDS, NEEDS, RECIPES, STOCKS } from '../sim/tables.ts';
 import { deflateSync } from 'node:zlib';
-import { Readers, year } from '../readers/readers.ts';
+import { Readers, form, year } from '../readers/readers.ts';
 import { askAhead, cover } from '../sim/value.ts';
 import type { State } from '../sim/types.ts';
 
@@ -16,8 +16,9 @@ function tally(s: State, c: Record<string, number>): void {
   for (const r of s.log) {
     if (r.k === 'make') add(`days ${RECIPES[r.kind2]!.id}`, r.q2);
     else if (r.k === 'die') add(r.need >= 0 ? `died for want of ${NEEDS[r.need]!.id}` : r.cause >= 0 ? 'died of blows' : r.q < 2 ? 'died in infancy' : 'died of age');
-    else if (r.k === 'take') add(r.kind2 >= 0 && r.b < 0 ? 'took from held land' : r.need < 0 ? (r.q2 ? 'seized what was owed, and fought' : 'seized what was owed') : 'took from a store, and fought');
+    else if (r.k === 'take') add(r.kind2 === -2 ? 'took pledged ground' : r.kind2 >= 0 && r.b < 0 ? 'took from held land' : r.need < 0 ? (r.q2 ? 'seized what was owed, and fought' : 'seized what was owed') : 'took from a store, and fought');
     else if (r.k === 'trade') { add('trade'); add(`  got ${KINDS[r.kind]!.id} for ${KINDS[r.kind2]!.id}`); }
+    else if (r.k === 'promise') add(r.kind2 === 1 ? 'promise of work' : r.kind2 === 2 ? 'loan against ground' : r.kind2 >= 3 ? (r.kind2 > 3 ? 'lease of a lease' : 'lease') : 'promise');
     else add(r.k);
   }
 }
@@ -75,13 +76,17 @@ if (cmd === 'chronicle') {
 if (cmd === 'measures') {
   const years = Number(a1 ?? 30), seeds = (a2 ?? '1,2,3,4').split(',').map(Number);
   const runs = seeds.map(seed => {
-    const yearText: string[] = [];
+    const yearText: string[] = [], forms = new Map<string, number>(), atEnd = new Map<string, number>();
     let buf: string[] = [];
     const out = watch(years, seed, s => {
       for (const r of s.log) if (r.k !== 'make') buf.push(`${r.k}:${r.kind}:${r.need}:${r.q2 ? 1 : 0}`);
-      if (s.t % 52 === 0) { yearText.push(buf.join(' ')); buf = []; }
+      if (s.t % 52 === 0) {
+        yearText.push(buf.join(' ')); buf = [];
+        atEnd.clear();
+        for (const b of s.bonds) { const f = form(s, b.id); if (!forms.has(f)) forms.set(f, s.t / 52); atEnd.set(f, (atEnd.get(f) ?? 0) + 1); }
+      }
     });
-    return { seed, yearText, ...out };
+    return { seed, yearText, forms, atEnd, ...out };
   });
   console.log(`Measures over ${seeds.length} realms of ${years} years\n`);
   console.log('| Seed | ms a week | Peak | Trough | Fall | Years falling | End |');
@@ -114,6 +119,11 @@ if (cmd === 'measures') {
   console.log(`\nChains of causes: ${new Set(all).size} distinct shapes; ${all.length ? Math.round((100 * lone) / all.length) : 0}% appear in only one realm.`);
   const shapes = runs.map(r => new Set(r.R.events.map(e => e.shape)));
   console.log(`Shapes of event: ${new Set(shapes.flatMap(x => [...x])).size} in all; per realm ${shapes.map(x => x.size).join(', ')}.`);
+
+  // Open-ended: forms of bond, the year each first stood at a year's end, and how many stand at the last.
+  console.log('\nForms of bond (year first seen in each realm; number standing at the end):');
+  const allForms = new Set(runs.flatMap(r => [...r.forms.keys()]));
+  for (const f of [...allForms].sort((x, y2) => x.length - y2.length)) console.log(`  ${f}: first in year ${runs.map(r => r.forms.get(f) ?? '-').join(', ')}; at the end ${runs.map(r => r.atEnd.get(f) ?? 0).join(', ')}`);
 
   // What carried each fall.
   console.log('\nWhat happened during each fall:');

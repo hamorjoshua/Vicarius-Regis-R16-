@@ -187,6 +187,10 @@ export const P = {
   premium: 0.25, term: 40, trust: 0.85,
   warm: 0.04, fade: 0.995, barAt: -0.6,
   blow: 0.12,
+  /** A lease: the share of what is gathered that goes to whoever let the ground, how long it runs, and how long ground lies unused before it is let. */
+  rent: 0.33, lease: 104, idle: 40, plots: 2,
+  /** Days owed for goods, as a multiple of the days it takes to make them. */
+  hire: 1.5,
   stay: 1.6, scout: 4,
 };
 
@@ -227,3 +231,10 @@ Kn.forEach((k, i) => { for (const a of Object.keys(k.aids)) (AIDERS[a] ??= []).p
 export const SERVING: number[][] = NEEDS.map((_, n) => Kn.map((_k, i) => i).filter(i => Kn[i]!.serves[n]! > 0).sort((a, b) => Kn[b]!.keep - Kn[a]!.keep));
 /** Needs, the most harmful first. */
 export const BY_HARM: number[] = NEEDS.map((_, n) => n).sort((a, b) => NEEDS[b]!.harm - NEEDS[a]!.harm);
+
+/** The days of work one unit of each kind takes to make, at the full rate. */
+export const TOIL: number[] = Kn.map((_k, i) => {
+  let best = Infinity;
+  for (const r of Rc) for (const [k, q] of r.out) if (k === i && q > 0) best = Math.min(best, 1 / q);
+  return best === Infinity ? 1 : best;
+});

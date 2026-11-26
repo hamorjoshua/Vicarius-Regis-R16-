@@ -108,6 +108,12 @@ export function gather(prev: State, s: State): void {
   s.bonds = s.bonds.filter(bd => {
     if (bd.about === 'person') return s.people[bd.b]!.alive && (bd.basis === 'birth' || s.people[bd.a]!.alive);
     if (bd.about === 'land') return s.bodies[bd.a]!.alive && bd.strength >= 0.05;
+    if (bd.about === 'bond') return s.bodies[bd.a]!.alive && (bd.secures >= 0 || (bd.secures === -1 && bd.due > s.t));
     return bd.q > 0.05 && bd.strength >= 0.3 && s.bodies[bd.a]!.alive && s.bodies[bd.b]!.alive;
   });
+  // A bond about a bond ends with the bond it is about, or with the debt it secured.
+  for (let pass = 0; pass < 3; pass++) {
+    const ids = new Set(s.bonds.map(b => b.id));
+    s.bonds = s.bonds.filter(bd => bd.about !== 'bond' || (ids.has(bd.on) && (bd.secures < 0 || ids.has(bd.secures))));
+  }
 }

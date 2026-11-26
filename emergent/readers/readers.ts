@@ -47,12 +47,19 @@ export class Readers {
     const kind = r.kind >= 0 ? KINDS[r.kind]!.id : 'goods', need = r.need >= 0 ? NEEDS[r.need]!.id : '';
     switch (r.k) {
       case 'take':
+        if (r.kind2 === -2) return `house ${r.a} took the ground at ${place(this, r.cell)} that house ${r.b} had pledged`;
         if (r.b < 0) return `house ${r.a} gathered ${kind} from ground others hold at ${place(this, r.cell)}`;
         if (r.need >= 0) return `house ${r.a}, in want of ${need}, took ${kind} from house ${r.b}`;
         return `house ${r.a} ${r.q2 ? 'fought house ' + r.b + ' for' : 'seized from house ' + r.b} the ${kind} it was owed`;
       case 'decay': return `cold withered the ${STOCKS[r.kind2]!.id} at ${place(this, r.cell)}`;
-      case 'break': return `house ${r.a} broke its word to repay ${kind} to house ${r.b}`;
-      case 'promise': return `house ${r.a}, in want of ${need}, borrowed ${kind} from house ${r.b}`;
+      case 'break':
+        if (r.q2) return `house ${r.a} went away still owing work to house ${r.b}`;
+        return `house ${r.a} broke its word to repay ${kind} to house ${r.b}`;
+      case 'promise':
+        if (r.kind2 === 1) return r.need >= 0 ? `house ${r.a}, in want of ${need}, promised ${Math.round(r.q2)} days of work to house ${r.b} for ${kind}` : `house ${r.a} agreed to work off what it owed house ${r.b}`;
+        if (r.kind2 >= 3) return `house ${r.a} took ground at ${place(this, r.cell)} from house ${r.b} for a share of its yield${r.kind2 > 3 ? ', ground that house ' + r.b + ' itself holds of another' : ''}`;
+        if (r.kind2 === 2) return `house ${r.a}, in want of ${need}, borrowed ${kind} from house ${r.b} against its ground at ${place(this, r.cell)}`;
+        return `house ${r.a}, in want of ${need}, borrowed ${kind} from house ${r.b}`;
       case 'give': return `house ${r.a} gave ${kind} to its kin, house ${r.b}`;
       case 'bar': return `house ${r.a} shut its door to house ${r.b}`;
       case 'move': return `house ${r.a} left for ${place(this, r.cell)}`;
@@ -189,3 +196,13 @@ export class Readers {
 }
 
 export { year, when };
+
+/** The form of a bond, without its parties: what it is about, all the way down, and on what basis. */
+export function form(s: State, id: number, depth = 0): string {
+  const b = s.bonds.find(x => x.id === id);
+  if (!b || depth > 20) return 'a bond that is gone';
+  if (b.about === 'bond') return `${b.secures >= 0 ? 'a pledge of' : 'a lease of'} ${form(s, b.on, depth + 1)}`;
+  if (b.about === 'land') return `a holding by ${b.basis}`;
+  if (b.about === 'act') return `${b.labour ? 'work' : 'goods'} owed by ${b.basis}`;
+  return `a tie of ${b.basis}`;
+}

@@ -88,7 +88,7 @@ export function holdsByCell(s: State): Map<number, Bond[]> {
 }
 
 export function bond(s: State, f: Partial<Bond> & Pick<Bond, 'about' | 'a' | 'basis'>): Bond {
-  const b: Bond = { id: s.nbond++, b: -1, cell: -1, kind: -1, q: 0, due: -1, strength: 1, since: s.t, broken: false, rec: -1, ...f };
+  const b: Bond = { id: s.nbond++, b: -1, cell: -1, kind: -1, q: 0, due: -1, labour: false, on: -1, share: 0, secures: -1, used: -999, strength: 1, since: s.t, broken: false, rec: -1, ...f };
   s.bonds.push(b);
   return b;
 }
@@ -113,4 +113,37 @@ export function struggle(s: State, kin: Map<number, Set<number>>, taker: Body, h
   for (const k of kin.get(holder.id) ?? []) warm(s, k, taker.id, -0.2);
   for (const k of kin.get(taker.id) ?? []) warm(s, k, holder.id, -0.2);
   return p;
+}
+
+/** A right to use ground through another's bond: who uses it, on which cell, and the bonds it passes through. */
+export interface Tenancy { lease: Bond; cell: number; root: Bond; depth: number }
+
+/** Every lease traced down to the holding it rests on. A lease may rest on a lease, without limit. */
+export function tenancies(s: State): Tenancy[] {
+  const byId = new Map<number, Bond>();
+  for (const b of s.bonds) byId.set(b.id, b);
+  const out: Tenancy[] = [];
+  for (const b of s.bonds) {
+    if (b.about !== 'bond' || b.secures >= 0) continue;
+    let cur = byId.get(b.on), depth = 1;
+    while (cur && cur.about === 'bond' && depth < 20) { cur = byId.get(cur.on); depth++; }
+    if (cur && cur.about === 'land') out.push({ lease: b, cell: cur.cell, root: cur, depth });
+  }
+  return out;
+}
+
+/** Pass a share of what a tenant gathered up through every bond the tenancy rests on. */
+export function payRent(s: State, lease: Bond, kind: number, amount: number): void {
+  const byId = new Map<number, Bond>();
+  for (const b of s.bonds) byId.set(b.id, b);
+  let cur: Bond | undefined = lease, payer = s.bodies[lease.a]!, due = amount;
+  while (cur && cur.about === 'bond') {
+    const over = byId.get(cur.on);
+    if (!over) return;
+    const pay = Math.min(payer.store[kind]!, due * cur.share), to = s.bodies[over.a]!;
+    if (pay <= 0 || !to.alive) return;
+    payer.store[kind] = payer.store[kind]! - pay;
+    to.store[kind] = to.store[kind]! + pay;
+    payer = to; due = pay; cur = over;
+  }
 }

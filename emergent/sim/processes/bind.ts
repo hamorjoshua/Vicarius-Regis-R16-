@@ -1,9 +1,9 @@
 // Bind. People make bonds, keep or break them, and contest them when they cannot all be met.
 // Use makes a holding; a taking makes a debt; a debt falls due; two people wed.
 
-import { Kn, NEEDS, NN, P } from '../tables.ts';
+import { Kn, NEEDS, NK, NN, P, TOIL } from '../tables.ts';
 import { askAhead, cover } from '../value.ts';
-import { bond, dist, head, holdsByCell, kinOf, might, rec, struggle, tie, warm } from '../util.ts';
+import { bond, dist, head, holdsByCell, kinOf, might, muster, rec, struggle, tie, warm } from '../util.ts';
 import type { Body, Bond, State } from '../types.ts';
 
 /** The needs a kind serves, for saying why someone's cover fell. */
@@ -36,6 +36,7 @@ export function bind(s: State): void {
     }
     const was = h.strength;
     h.strength = Math.min(4, h.strength + P.claim * u.days);
+    h.used = s.t;
     if (was < P.held && h.strength >= P.held) h.rec = rec(s, 'bind', { a: u.body, cell: u.cell }).id;
   }
   s.uses = [];
@@ -63,11 +64,47 @@ export function bind(s: State): void {
     if (bd.about !== 'act' || bd.due > s.t || bd.q <= 0) continue;
     const D = s.bodies[bd.a]!, C = s.bodies[bd.b]!;
     if (!D.alive || !C.alive) { bd.q = 0; continue; }
+    if (bd.labour) {
+      // Work owed is done a part of each week, for as long as the two live within reach.
+      if (dist(s.side, D.home, C.home) > P.dealReach) { rec(s, 'break', { a: D.id, b: C.id, q: bd.q, q2: 1, cause: bd.rec }); warm(s, C.id, D.id, -0.3); bd.q = 0; continue; }
+      const d = Math.min(bd.q, 0.5 * muster(s, D));
+      D.spent += d; C.spent -= d; bd.q -= d;
+      if (bd.q <= 0.05) { rec(s, 'keep', { a: D.id, b: C.id, q2: 1, cause: bd.rec }); warm(s, C.id, D.id, 0.2); bd.q = 0; }
+      continue;
+    }
     const hD = head(s, D), hC = head(s, C);
     if (!hD || !hC) continue;
     const have = D.store[bd.kind]!;
     if (canSpare(s, D, bd.kind, bd.q) || (!bd.broken && bd.basis === 'word' && have >= bd.q && hD.scruple > 0.8)) { pay(bd, D, C); continue; }
+    // What cannot be paid in kind may be made good in something else of the same toil, if the other can spare it.
+    let made = false;
+    for (let j = 0; j < NK && !made; j++) {
+      if (j === bd.kind || Kn[j]!.fixed) continue;
+      const qj = (bd.q * TOIL[bd.kind]!) / TOIL[j]!;
+      if (!Kn[j]!.serves.some(x => x > 0) || !canSpare(s, D, j, qj)) continue;
+      D.store[j] = D.store[j]! - qj; C.store[j] = C.store[j]! + qj;
+      rec(s, 'keep', { a: D.id, b: C.id, kind: j, q: qj, kind2: bd.kind, cause: bd.rec });
+      warm(s, C.id, D.id, 0.15);
+      bd.q = 0; made = true;
+    }
+    if (made) continue;
+    // Or worked off, if the one who owes is of a mind to, or is the weaker.
+    if (bd.broken && (hD.scruple > 0.4 || might(s, kin, C, D.id) > might(s, kin, D, C.id)) && dist(s.side, D.home, C.home) <= P.dealReach) {
+      bd.q = bd.q * TOIL[bd.kind]!; bd.labour = true; bd.broken = false; bd.strength = 1;
+      bd.rec = rec(s, 'promise', { a: D.id, b: C.id, kind: bd.kind, q2: bd.q, kind2: 1, cause: bd.rec }).id;
+      continue;
+    }
     if (!bd.broken) {
+      // A debt secured on a holding: the holding passes, and there is nothing left to fight over.
+      const pledge = s.bonds.find(x => x.about === 'bond' && x.secures === bd.id);
+      const held = pledge && s.bonds.find(x => x.id === pledge.on && x.about === 'land');
+      if (pledge && held) {
+        held.a = C.id; held.basis = 'word';
+        rec(s, 'take', { a: C.id, b: D.id, cell: held.cell, kind2: -2, cause: bd.rec });
+        warm(s, D.id, C.id, -0.2);
+        bd.q = 0; pledge.secures = -2;
+        continue;
+      }
       bd.broken = true;
       bd.due = s.t + 2;
       if (bd.basis !== 'wrong') {

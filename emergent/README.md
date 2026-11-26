@@ -2,7 +2,9 @@
 
 The build of [The Emergent Realm](../docs/living-realm-design.md), stage by stage. The current game (`../index.html`) and the first build (`../realm/`) are untouched; `realm/` stays as a reference until stage 2 replaces its harness.
 
-**Stages 1 and 2 of 9 are here.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, simple bonds, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. The prediction log is not built. Stages 3 to 9 are not started.
+**Stages 1 to 3 of 9 are here.** Stage 1 is a toy: land of 100 cells, about 200 people, fourteen kinds of matter, and no court. Stage 2 is the readers: they recognise events, write a chronicle and take the design's measures. Stage 3 is bonds on bonds. The prediction log is not built. Stages 4 to 9 are not started.
+
+**The tables and findings below "What thirty years look like" were taken before stage 3.** The section "After stage 3" has the current figures.
 
 ## Run it
 
@@ -97,10 +99,47 @@ None of these has a rule. A sample from one chronicle:
 | Novelty of each year against earlier years | About 0.8 throughout, drifting down to 0.76 | A crude measure (how badly the year's record compresses given the past); it has not been checked against a realm known to repeat |
 | Petition measures | None | There is no court until stage 8 |
 
+## After stage 3
+
+Stage 3 added, to the bond that already existed:
+
+- **A bond may be about another bond.** One body may use what another holds for a share of what it yields, and that right can itself be let, without limit. A holding may stand as surety for a debt and pass if the debt is broken.
+- **Work can be owed.** Someone short of food can take goods now against days of work, done a part of each week.
+- **A debt can be made good another way**: in other goods of the same toil, or worked off.
+- **Foresight was corrected first**: people read the cold they can feel, allow for the weeks reaping takes, and do not count on the last weeks of the season.
+
+Four realms of thirty years (`measures 30 1,2,3,4`):
+
+| Seed | Peak | Trough | Fall | End |
+| --- | --- | --- | --- | --- |
+| 1 | 395 | 47 | 88% | 122 |
+| 2 | 424 | 49 | 88% | 142 |
+| 3 | 388 | 60 | 85% | 146 |
+| 4 | 456 | 43 | 91% | 85 |
+
+| Form of bond | First seen, by realm (year) | Standing at year 30 |
+| --- | --- | --- |
+| A lease of a holding | 1, 2, 2, 1 | None |
+| A lease of a lease | 2, 2, 2, 2 | None |
+| A lease of a lease of a lease | 5, 3, 3, 3 | None |
+| Work owed by word | 1, 12, 13, 4 | None |
+| Work owed for a wrong | Seed 3 only, year 13 | None |
+| A pledge of a holding | 13, 14, never, never | None |
+
+What changed:
+
+- **Fighting fell sharply.** Feuds went from about 200 a realm to about 45, and fights over debts no longer appear in the falls. Deaths from blows in a fall went from about 145 to about 100.
+- **New arrangements arise by themselves**, three levels deep within five years.
+- **The fall got deeper, not shallower** (85 to 91%, from 72 to 84%). Realms now grow further, to about 390 to 460, before they fall, and the fall is almost all hunger: about 270 deaths for want of food each.
+- **None of the new forms survives the fall.** The design's test for this stage is arrangements standing at year thirty of a form absent at year one. That is not met: they arise, and are swept away.
+- **Realms are no less alike.** Every realm shows the same 20 shapes of event.
+
+So the fall is not caused by fighting or by the landless having nothing to offer. The land fills by about year 12, stores per head shrink for several years while numbers keep rising, and then everyone runs out at once.
+
 ## Known gaps
 
-1. **The fall is too deep**, at 70 to 85%. The readers point at late reaping first, then at the three loops above.
-2. **The landless have nothing to offer.** Nobody can work another's ground for a share. This needs a promise of labour, which is a bond about an act and belongs to stage 3.
+1. **The fall is too deep, and stage 3 made it deeper** (85 to 91%). Numbers keep rising after the land is full, because nothing slows births until stores are nearly gone. What is missing is whatever makes people hold back sooner: seeing want coming, leaving, or marrying later. That is foresight and belief (stage 5) more than bonds.
+2. **The lease and the pledge are written, not found.** The rules contain the general idea of a right in another's bond, but I chose its two uses. The design wants people to arrive at such arrangements by recombining practices, which is stage 5.
 3. **Realms are alike.** They differ in when and where, not in what kinds of thing happen. Bonds on bonds, bodies and minds are meant to change that.
 4. **The prediction log is not built**, and no predictions were written before these runs.
 5. **Six of the design's needs are missing** (health, safety, company, standing, security in what one holds, the hope of salvation), because nothing made can serve them yet.
@@ -116,4 +155,4 @@ None of these has a rule. A sample from one chronicle:
 
 ## Next
 
-Stage 3, bonds on bonds: a bond whose object is any thing, act or other bond, starting with a promise of labour.
+Decide what to do about the fall before stage 4. See gap 1.
