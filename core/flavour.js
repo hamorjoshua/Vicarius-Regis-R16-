@@ -1,4 +1,5 @@
 'use strict';
+(function () {
 // Flavour composed from the primitives. No text here belongs to a situation: every phrase belongs to a
 // primitive (a motive, a means, a payer and its relationship, an estate, a region, a season, a
 // measure, a memory), and a petition's words are assembled from the primitives that make it up.
@@ -146,3 +147,4 @@ function summarize(w, o) {
 
 const api = { compose, summarize };
 if (typeof module !== 'undefined') module.exports = api; else window.VRFlavour = api;
+})();

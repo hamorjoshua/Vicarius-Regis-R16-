@@ -7,6 +7,9 @@ A headless rebuild of the game from a closed set of interrelated primitives. No 
 | `core.js` | things, measures, relationships, bindings, tests, effects, and the week's close |
 | `generator.js` | motive → means × payer → petition (ask, alternative, deny), and the general reactions to a ruling |
 | `sim.js` | an automatic court, a reign runner, and the emergence checks |
+| `flavour.js` | each petition's title and plea, composed from its primitives; plain-words summaries of what each ruling does |
+| `play.html` | a screen to rule the realm yourself: open it in a browser |
+| `samples.js` | prints composed petitions from a simulated reign |
 
 Run the emergence checks:
 

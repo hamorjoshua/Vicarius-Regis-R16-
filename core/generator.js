@@ -1,9 +1,10 @@
 'use strict';
+(function () {
 // The generator: each household derives one motive from its state, and asks for it to be met by a
 // means (direct · shift · defer · relate) with a payer (court · duty · household · peers · estate · nobody).
 // Nothing here names a situation; situations are combinations that become possible.
 
-const K = require('./core.js');
+const K = typeof require !== 'undefined' ? require('./core.js') : window.VRCore;
 const { C } = K;
 
 // ---------------------------------------------------------------- motives
@@ -280,4 +281,6 @@ function rule(w, pet, choice) {
   K.note(w, 'ruling', `Granted: ${o.label}.`, { sig, petitioner: h.id });
 }
 
-module.exports = { motiveOf, generate, petitionFor, rule };
+const GEN = { motiveOf, generate, petitionFor, rule };
+if (typeof module !== 'undefined') module.exports = GEN; else window.VRGen = GEN;
+})();

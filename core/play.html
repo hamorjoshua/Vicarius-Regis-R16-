@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vicarius Regis · the core</title>
+<style>
+:root {
+  --baize: #1b2a22; --baize-deep: #131e17; --vellum: #ede3c9; --vellum-shade: #e2d6b6; --rule: #c4b28b;
+  --ink: #2a231a; --ink-soft: #66573f; --ink-faint: #958d7a; --wax: #8f2a1e; --brass: #c9a65c; --green: #3d5e3f; --woad: #2e5079;
+  --serif: "Iowan Old Style", Palatino, Georgia, serif; --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--baize); color: var(--ink); font: 15px/1.45 var(--sans); }
+header { position: sticky; top: 0; z-index: 2; background: var(--baize-deep); color: var(--vellum); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
+header h1 { margin: 0; font: 600 18px var(--serif); letter-spacing: .02em; }
+header .meta { font-size: 13px; color: #cdbf9c; }
+.seals { letter-spacing: 2px; color: var(--brass); }
+main { max-width: 760px; margin: 0 auto; padding: 12px 16px 120px; }
+.panel { background: var(--vellum); border-radius: 8px; padding: 12px 14px; margin: 12px 0; box-shadow: 0 2px 8px #0005; }
+.panel h2 { margin: 0 0 8px; font: 600 15px var(--serif); text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+.realm { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.region h3 { margin: 0 0 4px; font: 600 14px var(--serif); }
+.need { display: grid; grid-template-columns: 74px 1fr 30px; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-soft); }
+.bar { position: relative; height: 7px; background: var(--vellum-shade); border: 1px solid var(--rule); border-radius: 4px; }
+.bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.griev { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+.griev b { color: var(--wax); font-weight: 600; }
+.card { background: var(--vellum); border-radius: 8px; margin: 12px 0; padding: 12px 14px; box-shadow: 0 2px 8px #0005; border: 2px solid transparent; }
+.card.ruled { border-color: var(--brass); }
+.card h3 { margin: 0 0 2px; font: 600 17px var(--serif); }
+.who { font-size: 12px; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 6px; }
+.chip { border: 1px solid var(--rule); border-radius: 10px; padding: 0 7px; }
+.pips { letter-spacing: 1px; }
+.pips .on { color: var(--ink); } .pips .off { color: var(--ink-faint); } .pips .hot { color: var(--wax); }
+.plea { font: italic 16px/1.45 var(--serif); margin: 6px 0 10px; }
+.opts { display: grid; gap: 6px; }
+.opt { text-align: left; background: var(--vellum-shade); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 10px; font: inherit; color: inherit; cursor: pointer; }
+.opt b { display: block; font: 600 14px var(--serif); }
+.opt span { font-size: 12.5px; color: var(--ink-soft); }
+.opt.chosen { background: var(--brass); border-color: #8d7238; }
+.opt.deny { background: transparent; }
+.hint { font-size: 13px; color: #cdbf9c; margin: 8px 2px; }
+.close { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px; background: var(--baize-deep); display: flex; justify-content: center; gap: 12px; align-items: center; }
+.close button { font: 600 16px var(--serif); background: var(--brass); color: var(--ink); border: 0; border-radius: 6px; padding: 10px 22px; cursor: pointer; }
+.close span { color: #cdbf9c; font-size: 13px; }
+.record li { margin: 3px 0; font-size: 13.5px; }
+.record .bad { color: var(--wax); } .record .good { color: var(--green); }
+.binds li { font-size: 13px; margin: 2px 0; }
+ul { margin: 0; padding-left: 18px; }
+@media (max-width: 480px) { .realm { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Vicarius Regis</h1>
+  <span class="meta" id="when"></span>
+  <span class="meta">Standing <span class="seals" id="standing"></span></span>
+</header>
+<main>
+  <section class="panel" id="record-panel" hidden><h2>Last week</h2><ul class="record" id="record"></ul></section>
+  <section class="panel"><h2>The realm</h2><div class="realm" id="realm"></div></section>
+  <section class="panel" id="binds-panel" hidden><h2>In force</h2><ul class="binds" id="binds"></ul></section>
+  <p class="hint" id="hint"></p>
+  <div id="audience"></div>
+</main>
+<div class="close"><span id="count"></span><button id="go">Close the week</button></div>
+
+<script src="core.js"></script>
+<script src="generator.js"></script>
+<script src="flavour.js"></script>
+<script>
+const K = window.VRCore, G = window.VRGen, F = window.VRFlavour;
+const AUDIENCE = 6;
+let w = K.newWorld((Date.now() >>> 0) % 1000000), pets = [], audience = [], choices = {}, lastWeekLog = [];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pips = (p) => [...Array(8)].map((_, i) => `<span class="${i < Math.round(p) ? (p >= K.C.urgent ? 'hot' : 'on') : 'off'}">${i < Math.round(p) ? '●' : '○'}</span>`).join('');
+const sign = (n) => (n > 0 ? `+${n}` : `${n}`);
+
+function newWeek() {
+  pets = G.generate(w).sort((a, b) => b.urgency - a.urgency || w.rng() - 0.5);
+  audience = pets.slice(0, AUDIENCE);
+  choices = {};
+  render();
+}
+
+function render() {
+  document.getElementById('when').textContent = `Week ${w.week} · ${K.seasonOf(w.week)}`;
+  document.getElementById('standing').textContent = '●'.repeat(Math.max(0, w.standing)) + '○'.repeat(Math.max(0, K.C.standingMax - w.standing));
+  // the realm: each region's needs and its most aggrieved estates
+  document.getElementById('realm').innerHTML = K.REGIONS.map((r) => {
+    const needs = K.NEEDS.map((n) => {
+      const v = w.needs[K.needKey(r, n)], span = K.C.needMax - K.C.needMin, zero = (-K.C.needMin / span) * 100, x = ((v - K.C.needMin) / span) * 100;
+      const left = Math.min(zero, x), width = Math.abs(x - zero), col = v < 0 ? (v <= K.C.needDire ? 'var(--wax)' : 'var(--ink-soft)') : 'var(--green)';
+      return `<div class="need"><span>${n}</span><div class="bar"><i style="left:${left}%;width:${Math.max(2, width)}%;background:${col}"></i></div><span>${sign(v)}</span></div>`;
+    }).join('');
+    const gr = Object.entries(w.grievance).filter(([k, v]) => k.startsWith(r) && v > 0).sort((a, b) => b[1] - a[1]).slice(0, 2)
+      .map(([k, v]) => `${k.split('|')[1].toLowerCase()}s <b>${v.toFixed(2)}</b>/${K.C.grievanceLine}`).join(' · ');
+    return `<div class="region"><h3>${r}</h3>${needs}<div class="griev">${gr ? 'Grievance: ' + gr : 'No grievance'}</div></div>`;
+  }).join('');
+  // bindings in force
+  const live = w.bindings.filter((b) => b.kind !== 'rule');
+  document.getElementById('binds-panel').hidden = !live.length;
+  document.getElementById('binds').innerHTML = live.map((b) => `<li><b>${esc(b.label || b.kind)}</b>${b.until != null ? ` · until week ${b.until}` : b.kind === 'law' ? ` · ${esc(b.burdens.split('|')[1].toLowerCase())}s of the ${esc(b.region)} carry it` : ''}</li>`).join('');
+  // last week's record
+  const rec = lastWeekLog.filter((e) => !['raised', 'state', 'ruling'].includes(e.tag) && e.text);
+  document.getElementById('record-panel').hidden = !rec.length;
+  document.getElementById('record').innerHTML = rec.map((e) => `<li class="${/broken|breach|default|disaster/.test(e.tag) ? 'bad' : /kept|dividend|harvest|Retired/.test(e.tag) ? 'good' : ''}">${esc(e.text)}</li>`).join('');
+  document.getElementById('hint').textContent = `${audience.length} of ${pets.length} petitioners are in your audience this week. Hear up to ${K.C.hearings}.`;
+  // the audience
+  document.getElementById('audience').innerHTML = audience.map((p, i) => {
+    const h = K.H(w, p.petitioner), { title, plea } = F.compose(w, p), c = choices[i];
+    const opts = p.options.map((o, j) => `<button class="opt${c === j ? ' chosen' : ''}" data-p="${i}" data-c="${j}"><b>${j === 0 ? 'Grant' : 'Instead'}</b><span>${esc(F.summarize(w, o).join(' · '))}</span></button>`).join('');
+    const word = K.holdsWord(w, h.id) ? '<span class="chip">holds the court’s word</span>' : '';
+    return `<article class="card${c != null ? ' ruled' : ''}">
+      <h3>${esc(title)}</h3>
+      <div class="who"><span>${esc(h.name)} · ${h.estate} · ${h.region}</span><span class="pips">${pips(h.pressure)}</span><span>regard ${sign(h.regard)}</span><span>esteem ${sign(h.esteem)}</span><span>stores ${h.stores}</span>${word}</div>
+      <p class="plea">“${esc(plea)}”</p>
+      <div class="opts">${opts}<button class="opt deny${c === 'deny' ? ' chosen' : ''}" data-p="${i}" data-c="deny"><b>Deny</b><span>${esc(h.name)} regard −1</span></button></div>
+    </article>`;
+  }).join('');
+  const n = Object.keys(choices).length;
+  document.getElementById('count').textContent = `${n} of ${K.C.hearings} hearings used`;
+}
+
+document.getElementById('audience').addEventListener('click', (e) => {
+  const b = e.target.closest('.opt'); if (!b || w.over) return;
+  const i = +b.dataset.p, c = b.dataset.c === 'deny' ? 'deny' : +b.dataset.c;
+  if (choices[i] === c) delete choices[i];
+  else if (choices[i] != null || Object.keys(choices).length < K.C.hearings) choices[i] = c;
+  render();
+});
+
+document.getElementById('go').addEventListener('click', () => {
+  if (w.over) { w = K.newWorld((Date.now() >>> 0) % 1000000); lastWeekLog = []; document.getElementById('go').textContent = 'Close the week'; newWeek(); return; }
+  const start = w.log.length;
+  const heardPets = Object.keys(choices).map(Number).map((i) => [audience[i], choices[i]]);
+  const heard = heardPets.map(([p]) => p.petitioner);
+  for (const [p, c] of heardPets) G.rule(w, p, c);
+  K.testBindings(w, 'hearings', { heard, audience: audience.map((p) => p.petitioner) });
+  K.close(w, { heard, unheard: pets.map((p) => p.petitioner).filter((id) => !heard.includes(id)), audience: audience.map((p) => p.petitioner) });
+  lastWeekLog = w.log.slice(start);
+  if (w.standing <= 0) w.over = 'fallen';
+  else if (w.week >= K.C.weeks) w.over = 'kept';
+  if (w.over) {
+    lastWeekLog.push({ tag: w.over === 'kept' ? 'kept' : 'breach', text: w.over === 'kept' ? `The king returns at the close of the year. The realm is kept, with ${w.standing} standing.` : 'The court’s standing is spent. The reign is over.' });
+    audience = []; pets = []; choices = {};
+    document.getElementById('go').textContent = 'Begin a new reign';
+    render();
+    window.scrollTo({ top: 0 });
+    return;
+  }
+  w.week++;
+  newWeek();
+  window.scrollTo({ top: 0 });
+});
+
+newWeek();
+</script>
+</body>
+</html>

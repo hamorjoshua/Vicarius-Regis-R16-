@@ -1,4 +1,5 @@
 'use strict';
+(function () {
 // The core: things, measures, relationships, bindings, tests, effects, and the week's close.
 // Nothing here knows about any particular situation. See ../core/README.md.
 
@@ -306,7 +307,7 @@ function newWorld(seed, opts = {}) {
   return w;
 }
 
-module.exports = {
+const API = {
   C, REGIONS, ESTATES, RANK, NEEDS, clamp, round2, rngOf, pick,
   constituencyOf, needKey, alive, H, dutyById, dutiesOf, inRegion,
   addPressure, addRegard, addGrievance, addEsteem, addRivalry, rivalry, isPariah, speaksForEstate, isUrgent, isPressing,
@@ -315,3 +316,5 @@ module.exports = {
   addBinding, holds, apply, note, markSign, testBindings, bindingsOf, holdsWord,
   close, newWorld, seasonOf, isHarvest,
 };
+if (typeof module !== 'undefined') module.exports = API; else window.VRCore = API;
+})();
