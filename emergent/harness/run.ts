@@ -135,6 +135,21 @@ if (cmd === 'measures') {
   console.log('\nBeliefs (year first held in each realm; houses that came to it themselves / were told it; houses holding it at the end):');
   const allB = new Set(runs.flatMap(r => [...r.R.beliefs.keys()]));
   for (const k of [...allB].sort()) console.log(`  ${k === 'house:' ? 'that some named house brings harm' : beliefWords(k)}: first in year ${runs.map(r => (r.R.beliefs.has(k) ? year(r.R.beliefs.get(k)!.first) : '-')).join(', ')}; ${runs.map(r => { const b = r.R.beliefs.get(k); return b ? `${b.own}/${b.told}` : '0/0'; }).join(', ')}; at the end ${runs.map(r => r.s.bodies.filter(b => b.alive && Object.entries(b.lore).some(([sg, v]) => v > 0.5 && (k === 'house:' ? sg.startsWith('house:') : sg === k))).length).join(', ')}`);
+  // Customs: what half or more of a body's houses hold, at the end.
+  console.log('\nCustoms standing at the end (bodies in which half or more of the houses hold it), by realm:');
+  const customs = runs.map(r => {
+    const out = new Map<string, number>();
+    for (const c of r.s.bodies) {
+      if (!c.alive || !c.parts.length) continue;
+      const stack = [...c.parts], hearths: number[] = [];
+      while (stack.length) { const b = r.s.bodies[stack.pop()!]!; if (b.parts.length) stack.push(...b.parts); else if (b.alive) hearths.push(b.id); }
+      const held = new Map<string, number>();
+      for (const h of hearths) for (const [sg, v] of Object.entries(r.s.bodies[h]!.lore)) if (v > 0.5) { const k = sg.startsWith('house:') ? 'house:' : sg; held.set(k, (held.get(k) ?? 0) + 1); }
+      for (const [k, n] of held) if (n * 2 >= hearths.length && n >= 2) out.set(k, (out.get(k) ?? 0) + 1);
+    }
+    return out;
+  });
+  for (const k of new Set(customs.flatMap(c => [...c.keys()]))) console.log(`  ${k === 'house:' ? 'that some named house brings harm' : beliefWords(k)}: ${customs.map(c => c.get(k) ?? 0).join(', ')}`);
   console.log(`\nBodies made of bodies standing at the end, by realm: ${runs.map(r => { const c = r.s.bodies.filter(b => b.alive && b.parts.length); return `${c.length} (deepest ${Math.max(0, ...c.map(b => { let d = 0, cur = [b]; while (cur.length) { d++; cur = cur.flatMap(x => x.parts.map(p => r.s.bodies[p]!)).filter(x => x.parts.length); } return d; }))})`; }).join(', ')}`);
 
   // What carried each fall.

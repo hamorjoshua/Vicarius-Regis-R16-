@@ -4,7 +4,7 @@
 // and fade. Nothing here knows which beliefs are true.
 
 import { P } from '../tables.ts';
-import { dist, head, kinOf, rec, tie, warm } from '../util.ts';
+import { dist, head, kinOf, leaves, rec, tie, warm } from '../util.ts';
 import type { Body, State } from '../types.ts';
 
 function believe(s: State, b: Body, sign: string, strength: number, from: number): void {
@@ -45,9 +45,30 @@ export function learn(s: State): void {
     else if (r.k === 'break') harm(r.b, 0.4);
   }
 
+  // What half or more of a body holds is its way: its members take it up, and among them it does not fade.
+  const kept = new Set<string>();
+  for (const c of s.bodies) {
+    if (!c.alive || !c.parts.length) continue;
+    const members = leaves(s, c).map(i => s.bodies[i]!);
+    if (members.length < 2) continue;
+    const held = new Map<string, number>();
+    for (const m of members) for (const [sign, v] of Object.entries(m.lore)) if (v > P.heed) held.set(sign, (held.get(sign) ?? 0) + 1);
+    for (const [sign, n] of held) {
+      if (n * 2 < members.length || n < 2) continue;
+      for (const m of members) {
+        if (sign === `house:${m.id}`) continue;
+        believe(s, m, sign, P.heed + 0.1, c.id);
+        kept.add(`${m.id}|${sign}`);
+      }
+    }
+  }
   for (const b of s.bodies) {
     if (!b.alive) continue;
-    for (const k of Object.keys(b.lore)) { const v = b.lore[k]! * P.forget; if (v < 0.02) delete b.lore[k]; else b.lore[k] = v; }
+    for (const k of Object.keys(b.lore)) {
+      if (kept.has(`${b.id}|${k}`)) continue;
+      const v = b.lore[k]! * P.forget;
+      if (v < 0.02) delete b.lore[k]; else b.lore[k] = v;
+    }
   }
   if (s.t % 4 !== 0) return;
 
