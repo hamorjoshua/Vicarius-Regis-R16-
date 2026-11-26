@@ -217,9 +217,24 @@ Every command now starts from a realm that was founded thirty years back and liv
 
 So a past does what the design wants of it, an opening that differs from realm to realm. It does not cure the fall.
 
+## With customs
+
+A belief that half or more of a body's houses hold is taken up by all its members and does not fade among them. Three realms, forty years of run after the thirty-year past (`measures 40 1,2,3`):
+
+| Seed | Peak | Trough | Deepest fall | End |
+| --- | --- | --- | --- | --- |
+| 1 | 465 | 111 | 76% | 172 |
+| 2 | 359 | 57 | 84% | 126 |
+| 3 | 338 | 78 | 77% | 106 |
+
+- **Every realm falls again**, so the fall recurs about once a generation. Seeds 1 and 3, which had no fall in thirty years of run, have one within forty.
+- **Customs do form and last,** but not the one hoped for. Standing at the end: that newcomers bring harm (three bodies in seed 1), and that some named house brings harm (one to three bodies in each realm).
+- **No custom about children ever forms.** That belief arises only in a fall, when bodies are breaking apart, and never reaches half of one.
+- **In each fall, ground others hold is gathered from 1,500 to 3,000 times.** Unlike a taking from a store, this is never opposed.
+
 ## Known gaps
 
-1. **The fall is still too deep** (85% where it happens), and it recurs. Belief supplies restraint only while children are dying, and is forgotten within a few years. What is missing is belief that lasts without fresh harm: something taught to the young and held because others hold it. That is a custom, in the design's sense.
+1. **The fall is still too deep** (85% where it happens), and it recurs. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
 2. **Blame of particular houses is too catching**, and has brought feuds back up.
 3. **Realms are alike.** They differ in when and where, not in what kinds of thing happen. Bonds on bonds, bodies and minds are meant to change that.
 4. **The prediction log is not built**, and no predictions were written before these runs.
