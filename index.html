@@ -13478,6 +13478,185 @@ function recordLoadChanges(before, game, personId, R) {
   }
 }
 
+/* ==========================================================================
+   BINDINGS: one engine for every arrangement that lasts beyond a ruling.
+   A binding is plain data, so it saves with the game:
+     { id, kind, from, at | until, requires, each, test, counter, kept, broken, expired, tag, data }
+   kind     the court's word, an ordinance, a compact, a church binding...
+   from     the first week it is tested
+   at       a single test, at that week's close            (a span of one)
+   until    tested each week through that week's close     (a span of several)
+   requires tests that must hold for the binding to stand at all; if one fails it ends quietly
+   each     effects applied every week it is tested, before its test
+   test     tests that keep it; all must hold
+   counter  { n, mark, onMark }: counts kept weeks; at the mark, onMark applies and it ends
+   kept / broken / expired   effects
+   ========================================================================== */
+function addBinding(game, b) {
+  game.bindingSeq = (game.bindingSeq || 0) + 1;
+  game.bindings = [...(game.bindings || []), { id: game.bindingSeq, from: game.week, ...b }];
+  return game.bindings.at(-1);
+}
+function bindingsWhere(game, pred) {
+  return (game.bindings || []).filter(pred);
+}
+// The tests a binding can set, all read at the week's close.
+const BINDING_TESTS = {
+  notUrgent: (game, t) => (t.ids || []).every((id) => !game.people[id] || game.people[id].pressure < CONFIG.urgent),
+  attends: (game, t) => (game.audience || []).includes(t.id),
+  needMet: (game, t) => { const [r, need] = t.key.split("|"); return needMet(game, r, need); },
+  dutyMet: (game, t) => { const law = lawById(game, t.lawId); return !!(law?.active && epMet(game, law)); },
+  entailed: (game, t) => { const law = lawById(game, t.lawId); return !!(law?.active && epEntailed(law)); },
+  lawActive: (game, t) => !!lawById(game, t.lawId)?.active,
+  present: (game, t) => (t.ids || []).every((id) => !!game.people[id]),
+  flag: (game, t) => !!t.value,
+};
+const bindingHolds = (game, tests) => (tests || []).every((t) => (BINDING_TESTS[t.test] || (() => true))(game, t));
+// The effects a binding can apply.
+function applyBindingEffects(game, R, effects) {
+  for (const e of effects || []) {
+    const p = e.id != null ? game.people[e.id] : null;
+    switch (e.type) {
+      case "pressure": if (p && !(e.n < 0 && p.pressure <= 0)) addPressure(p, e.n); break;
+      case "regard": if (p) addRegard(p, e.n); break;
+      case "standing": { const got = e.n > 0 ? gainStanding(game, e.n) : (spendStanding(game, -e.n), e.n); if (e.text) epEvent(R, e.text.replace("{n}", got || 0), e.ids || []); continue; }
+      case "grievance": addGrievance(game, e.key, e.n); break;
+      case "need": if (game.needBar?.[e.key] !== undefined) game.needBar[e.key] = Math.max(CONFIG.needBarMin, Math.min(CONFIG.needBarMax, game.needBar[e.key] + e.n)); break;
+      case "requirement": {
+        const law = lawById(game, e.lawId);
+        const cut = law ? Math.min(-e.n, law.requirement - 2) : 0;
+        if (law && cut > 0) { law.requirement -= cut; recordRetiredUnits(law, cut); resetAllocCache(game); }
+        break;
+      }
+      // a compact's members share their pressure, all ending at the same level
+      case "pool": {
+        const ps = (e.ids || []).map((id) => game.people[id]).filter(Boolean);
+        if (ps.length) { const mean = Math.round((ps.reduce((a, x) => a + x.pressure, 0) / ps.length) * 100) / 100; for (const x of ps) x.pressure = mean; }
+        break;
+      }
+      // an entail broken: the charter falls, and every signer who carried a share takes 1 pressure
+      case "breakEntail": {
+        const law = lawById(game, e.lawId);
+        if (!law) break;
+        const contributors = (law.charter || []).map((id) => game.people[id]).filter((x) => x && paidShare(game, x, law) > 1e-9);
+        delete law.entailed; delete law.entailedBonus; law.binding = "live"; resetAllocCache(game);
+        for (const x of contributors) addPressure(x, 1);
+        epEvent(R, `${dutyTitleOf(law)}: the charter falls short and breaks.${contributors.length ? ` ${contributors.map(hallName).join(", ")} take 1 pressure.` : ""}`, contributors.map((x) => x.id));
+        continue;
+      }
+      // the bishop's heavier shares lifted
+      case "liftSeeWeights": {
+        const law = lawById(game, e.lawId);
+        if (law?.seeWeights) {
+          const personal = { ...law.personal };
+          for (const [id, w] of Object.entries(law.seeWeights)) { if (w == null) delete personal[id]; else personal[id] = w; }
+          law.personal = personal; delete law.seeWeights; delete law.seeLaxDone; resetAllocCache(game);
+        }
+        break;
+      }
+    }
+    if (e.text) epEvent(R, e.text, e.ids || (e.id != null ? [e.id] : []));
+  }
+}
+// Every binding due this week is tested at the close, in the order it was made.
+function testBindings(game, R) {
+  if (!game.bindings?.length) return;
+  const still = [];
+  for (const b of game.bindings) {
+    const due = game.week >= b.from && (b.at != null ? game.week === b.at : game.week <= b.until);
+    if (!due) { if (b.at != null ? game.week < b.at : game.week < b.until) still.push(b); continue; }
+    if (!bindingHolds(game, b.requires)) continue;
+    applyBindingEffects(game, R, b.each);
+    const ok = bindingHolds(game, b.test);
+    if (b.at != null) { applyBindingEffects(game, R, ok ? b.kept : b.broken); continue; }
+    if (!ok) { applyBindingEffects(game, R, b.broken); continue; }
+    if (b.counter) {
+      b.counter.n = (b.counter.n || 0) + 1;
+      if (b.counter.n >= b.counter.mark) { applyBindingEffects(game, R, b.counter.onMark); continue; }
+    }
+    if (game.week >= b.until) { applyBindingEffects(game, R, b.expired); continue; }
+    still.push(b);
+  }
+  game.bindings = still;
+}
+// Arrangements kept in older saves, each in its own field, become bindings when the game loads.
+function migrateBindings(game) {
+  if (!game?.people) return game;
+  const w = game.week;
+  if (game.kingDinner) { const kd = game.kingDinner; delete game.kingDinner; if (kd.week >= w) supperBinding(game, kd.hostId, kd.week); }
+  for (const law of game.laws || []) if (law.charterHeldWeek != null) { const wk = law.charterHeldWeek; delete law.charterHeldWeek; if (wk >= w) charterBinding(game, law, wk); }
+  if (game.breadAssize) { const ba = game.breadAssize; delete game.breadAssize; if (ba.until >= w) assizeBinding(game, ba.region, ba.until); }
+  if (game.slateCheck) { const sc = game.slateCheck; delete game.slateCheck; if (sc.week >= w) slatesBinding(game, sc.a, sc.b, sc.week); }
+  if (game.lordSummons) { const ls = game.lordSummons; delete game.lordSummons; if (ls.week >= w) summonsBinding(game, ls.id, ls.week); }
+  if (game.fastWeek) { const fw = game.fastWeek; delete game.fastWeek; if (fw.week >= w) fastBinding(game, fw.key, fw.week); }
+  if (game.titheAudit) { const ta = game.titheAudit; delete game.titheAudit; if (ta.week >= w) auditBinding(game, ta.lawId, ta.bishopId, ta.honest, ta.week); }
+  if (game.neighbourCompacts) { for (const nc of game.neighbourCompacts) neighboursBinding(game, nc.a, nc.b, nc.lawId, nc.since ?? w, nc.kept || 0); delete game.neighbourCompacts; }
+  return game;
+}
+// ---- the bindings themselves, one maker for each arrangement ----
+// The court's supper: if the host ends the week short of urgent, the Crown gains standing.
+function supperBinding(game, hostId, week = game.week) {
+  const name = hallName(game.people[hostId]);
+  return addBinding(game, { kind: "condition", tag: "supper", at: week, requires: [{ test: "present", ids: [hostId] }],
+    test: [{ test: "notUrgent", ids: [hostId] }],
+    kept: [{ type: "standing", n: 1, text: `${name} carried the court’s supper without breaking: the Crown gains 1 standing.`, ids: [hostId] }],
+    broken: [{ type: "note", text: `The court’s supper pushed ${name} to urgency; the house looks for respite from its largest duty.`, ids: [hostId] }] });
+}
+// The sealed charter held to its signers for the week.
+function charterBinding(game, law, week = game.week) {
+  return addBinding(game, { kind: "ordinance", tag: "charter", at: week, lawId: law.id, requires: [{ test: "entailed", lawId: law.id }],
+    test: [{ test: "dutyMet", lawId: law.id }],
+    kept: [{ type: "note", text: `${dutyTitleOf(law)}: the signers meet the charter in full; the entail holds.` }],
+    broken: [{ type: "breakEntail", lawId: law.id }] });
+}
+// A bread assize: each week it stands, the region's commoners' need eases.
+function assizeBinding(game, region, until) {
+  return addBinding(game, { kind: "ordinance", tag: "assize", region, until,
+    each: [{ type: "need", key: `${region}|commoners`, n: 1, text: `${region}: bread sells at the assize; the commoners’ need eases.` }] });
+}
+// Slates paid for by the Crown: if neither house breaks this week, the court gains standing.
+function slatesBinding(game, a, b, week = game.week) {
+  const A = game.people[a], B = game.people[b];
+  return addBinding(game, { kind: "condition", tag: "slates", at: week, requires: [{ test: "present", ids: [a, b] }],
+    test: [{ test: "notUrgent", ids: [a, b] }],
+    kept: [{ type: "standing", n: 1, text: `${hallName(A)} and ${hallName(B)} come through the week together; the court gains {n} standing.`, ids: [a, b] }] });
+}
+// A lord summoned to the next audience.
+function summonsBinding(game, id, week) {
+  const name = hallName(game.people[id]);
+  return addBinding(game, { kind: "ordinance", tag: "summons", at: week, requires: [{ test: "present", ids: [id] }],
+    test: [{ test: "attends", id }],
+    kept: [{ type: "regard", id, n: 1, text: `${name} answers the summons and comes to court.` }],
+    broken: [{ type: "grievance", key: "Realm|Noble", n: 1, text: `${name} ignores the summons; the nobles take the court’s weakness ill.`, ids: [id] }] });
+}
+// A fast proclaimed: kept if the need's duty is met, and the need eases.
+function fastBinding(game, key, week = game.week) {
+  const [r, need] = key.split("|");
+  return addBinding(game, { kind: "compact", tag: "fast", at: week,
+    test: [{ test: "needMet", key }],
+    kept: [{ type: "need", key, n: 2, text: `${r}: the fast is kept, and the ${need} need eases.` }] });
+}
+// The tithe audit, its finding already fixed when it was ordered.
+function auditBinding(game, lawId, bishopId, honest, week = game.week) {
+  return addBinding(game, { kind: "inquest", tag: "tithe", at: week,
+    test: [{ test: "flag", value: !!honest }],
+    kept: [{ type: "regard", id: bishopId, n: 1, text: "The tithe audit finds the bishop’s barn honest." }],
+    broken: [{ type: "liftSeeWeights", lawId }, { type: "regard", id: bishopId, n: -1, text: "The tithe audit finds the barn padded; the heavier shares are lifted." }] });
+}
+// Two neighbours share their load for three weeks; kept, the duty is lightened and both gain regard.
+function neighboursBinding(game, a, b, lawId, from = game.week, kept = 0) {
+  const A = game.people[a], B = game.people[b], law = lawById(game, lawId);
+  return addBinding(game, { kind: "compact", tag: "neighbours", from, until: from + 2, parties: [a, b], lawId,
+    requires: [{ test: "present", ids: [a, b] }, { test: "lawActive", lawId }],
+    each: [{ type: "pool", ids: [a, b] }],
+    test: [{ test: "notUrgent", ids: [a, b] }],
+    counter: { n: kept, mark: 3, onMark: [
+      { type: "requirement", lawId, n: -CONFIG.stintDividendUnits },
+      { type: "regard", id: a, n: 1 }, { type: "regard", id: b, n: 1,
+        text: `${hallName(A)} and ${hallName(B)} keep their compact${law ? `; ${dutyNameOf(law)} requires less` : ""}.`, ids: [a, b] }] },
+    broken: [{ type: "note", text: `${hallName(A)} and ${hallName(B)}: the compact breaks under the load.`, ids: [a, b] }] });
+}
+
 function epWeekly(game, R) {
   for (const law of epActive(game)) {
     if (law.bulwark) {
@@ -13609,27 +13788,6 @@ function epWeekly(game, R) {
     }
   if (game.penance && (game.grievance?.["Realm|Cleric"] || 0) >= CONFIG.penanceQuietLine)
     game.penance.failed = true;
-  for (const law of epActive(game).filter((l) => l.charterHeldWeek === game.week)) {
-    delete law.charterHeldWeek;
-    if (!epEntailed(law)) continue;
-    if (epMet(game, law)) {
-      epEvent(R, `${dutyTitleOf(law)}: the signers meet the charter in full; the entail holds.`);
-    } else {
-      const contributors = (law.charter || [])
-        .map((id) => game.people[id])
-        .filter((p) => p && paidShare(game, p, law) > 1e-9);
-      delete law.entailed;
-      delete law.entailedBonus;
-      law.binding = "live";
-      resetAllocCache(game);
-      for (const p of contributors) addPressure(p, 1);
-      epEvent(
-        R,
-        `${dutyTitleOf(law)}: the charter falls short and breaks.${contributors.length ? ` ${contributors.map(hallName).join(", ")} take 1 pressure.` : ""}`,
-        contributors.map((p) => p.id),
-      );
-    }
-  }
   for (const p of game.people.filter((x) => x.auditStrictWeek === game.week)) {
     const breached = p.auditBreachedWeek === game.week;
     const law = lawById(game, p.auditStrictLawId);
@@ -13683,87 +13841,8 @@ function epWeekly(game, R) {
       epEvent(R, `The writ inquest voids both impressions of the chipped seal: both grants fall.`, [sq.nobleId, sq.targetId]);
     }
   }
-  // the tithe audit falls one way or the other
-  if (game.titheAudit && game.titheAudit.week === game.week) {
-    const ta = game.titheAudit, bishop = game.people[ta.bishopId], law = lawById(game, ta.lawId);
-    delete game.titheAudit;
-    if (ta.honest) { if (bishop) addRegard(bishop, 1); epEvent(R, `The tithe audit finds the bishop’s barn honest.`, bishop ? [bishop.id] : []); }
-    else {
-      if (law?.seeWeights) {
-        const personal = { ...law.personal };
-        for (const [id, w] of Object.entries(law.seeWeights)) { if (w == null) delete personal[id]; else personal[id] = w; }
-        law.personal = personal; delete law.seeWeights; delete law.seeLaxDone; resetAllocCache(game);
-      }
-      if (bishop) addRegard(bishop, -1);
-      epEvent(R, `The tithe audit finds the barn padded; the heavier shares are lifted.`, bishop ? [bishop.id] : []);
-    }
-  }
-  // slates paid for by the Crown: if neither house breaks, the court is thought the better of
-  if (game.slateCheck && game.slateCheck.week === game.week) {
-    const sc = game.slateCheck, A = game.people[sc.a], B = game.people[sc.b];
-    delete game.slateCheck;
-    if (A && B && A.pressure < CONFIG.urgent && B.pressure < CONFIG.urgent) {
-      const got = gainStanding(game, 1);
-      epEvent(R, `${hallName(A)} and ${hallName(B)} come through the week together${got ? `; the court gains ${got} standing` : ""}.`, [A.id, B.id]);
-    }
-  }
-  // a summoned lord: thought the better of the court if it came, the nobles aggrieved if not
-  if (game.lordSummons && game.lordSummons.week === game.week) {
-    const ls = game.lordSummons, lord = game.people[ls.id];
-    delete game.lordSummons;
-    if (lord && (game.audience || []).includes(lord.id)) { addRegard(lord, 1); epEvent(R, `${hallName(lord)} answers the summons and comes to court.`, [lord.id]); }
-    else if (lord) { addGrievance(game, "Realm|Noble", 1); epEvent(R, `${hallName(lord)} ignores the summons; the nobles take the court’s weakness ill.`, [lord.id]); }
-  }
-  // a proclaimed fast: kept if the need's duty is met, and the need eases
-  if (game.fastWeek && game.fastWeek.week === game.week) {
-    const fw = game.fastWeek, [r, need] = fw.key.split("|");
-    delete game.fastWeek;
-    if (needMet(game, r, need) && game.needBar?.[fw.key] !== undefined) {
-      game.needBar[fw.key] = Math.min(CONFIG.needBarMax, game.needBar[fw.key] + 2);
-      epEvent(R, `${r}: the fast is kept, and the ${need === "works" ? "works" : need} need eases.`);
-    }
-  }
-  // the bread assize: each week it stands, the commoners' need is eased
-  if (game.breadAssize && game.week <= game.breadAssize.until) {
-    const key = game.breadAssize.region + "|commoners";
-    if (game.needBar?.[key] !== undefined) game.needBar[key] = Math.min(CONFIG.needBarMax, game.needBar[key] + 1);
-    epEvent(R, `${game.breadAssize.region}: bread sells at the assize; the commoners’ need eases.`);
-    if (game.week >= game.breadAssize.until) delete game.breadAssize;
-  }
-  // neighbours' compacts: their pressure is shared; three weeks with neither urgent lighten the duty
-  if (game.neighbourCompacts?.length) {
-    const still = [];
-    for (const nc of game.neighbourCompacts) {
-      const A = game.people[nc.a], B = game.people[nc.b], law = lawById(game, nc.lawId);
-      if (!A || !B || !law?.active) continue;
-      const mean = Math.round(((A.pressure + B.pressure) / 2) * 100) / 100;
-      A.pressure = B.pressure = mean;
-      if (mean >= CONFIG.urgent) { epEvent(R, `${hallName(A)} and ${hallName(B)}: the compact breaks under the load.`, [A.id, B.id]); continue; }
-      nc.kept = (nc.kept || 0) + 1;
-      if (nc.kept >= 3) {
-        const cut = Math.min(CONFIG.stintDividendUnits, law.requirement - 2);
-        if (cut > 0) { law.requirement -= cut; recordRetiredUnits(law, cut); }
-        addRegard(A, 1); addRegard(B, 1);
-        epEvent(R, `${hallName(A)} and ${hallName(B)} keep their compact${cut > 0 ? `; ${dutyNameOf(law)} requires ${fmtNum(cut)} unit less` : ""}.`, [A.id, B.id]);
-        continue;
-      }
-      still.push(nc);
-    }
-    game.neighbourCompacts = still;
-  }
-  if (game.kingDinner && game.kingDinner.week === game.week) {
-    const kd = game.kingDinner;
-    delete game.kingDinner;
-    const host = game.people[kd.hostId];
-    if (host) {
-      if (host.pressure < CONFIG.urgent) {
-        gainStanding(game, 1);
-        epEvent(R, `${hallName(host)} carried the court’s supper without breaking: the Crown gains 1 standing.`, [host.id]);
-      } else {
-        epEvent(R, `The court’s supper pushed ${hallName(host)} to urgency; the house looks for respite from its largest duty.`, [host.id]);
-      }
-    }
-  }
+  // every binding due this week: the court's supper, held charters, assizes, compacts, summonses...
+  testBindings(game, R);
 }
 
 function hearingReliefFor(game, personId, before, pet, flip, loads, R, cost = 1) {
@@ -36969,7 +37048,7 @@ function Court() {
   const sealGuard = useRef(null);
   const A = useMemo(() => loadSaved(SAVE_KEY), []),
     [game2, e] = useState(() => {
-      const g = syncGarrisons(A?.game?.people ? A.game : newReign());
+      const g = migrateBindings(syncGarrisons(A?.game?.people ? A.game : newReign()));
       for (const law of g.laws || []) {
         if (law.key === "Capital|calamity-fire" && law.title === "Bucket brigade") law.title = "Market lodging service";
       }
@@ -39752,7 +39831,6 @@ function soloShareDeltas(beforeGame, afterGame, lawId) {
 function soloReopenAndAdmit(g, law, helper) {
   delete law.entailed;
   delete law.entailedBonus;
-  delete law.charterHeldWeek;
   law.binding = "live";
   epJoin(g, law, helper, 2);
   resetAllocCache(g);
@@ -39793,7 +39871,6 @@ function soloBumpWeightForUnit(game, law, person) {
 function soloReleaseDischarged(g, law, veteran) {
   delete law.entailed;
   delete law.entailedBonus;
-  delete law.charterHeldWeek;
   law.binding = "live";
   if (!law.exclude.includes(veteran.id)) law.exclude = [...law.exclude, veteran.id];
   if (law.personal && veteran.id in law.personal) {
@@ -40518,7 +40595,7 @@ const SOLO_MATTERS = {
         addGrievance(g, "Realm|Noble", 1);
         return `The seal on ${duty} is broken and ${hallName(helper)} is admitted to the roll. The nobility gain 1 grievance, and the entail’s quarter-day shield is lifted.`;
       }
-      if (law) law.charterHeldWeek = g.week;
+      if (law) charterBinding(g, law);
       return `The charter on ${duty} stays sealed. The signers have until the close of this week to carry the duty in full or see the charter break.`;
     },
   },
@@ -43022,7 +43099,7 @@ const SOLO_MATTERS = {
     draw(game) {
       for (const [i, region] of REGIONS.entries()) {
         const bar = game.needBar?.[`${region}|commoners`];
-        if (bar == null || bar > -3 || game.breadAssize?.region === region) continue;
+        if (bar == null || bar > -3 || bindingsWhere(game, (b) => b.tag === "assize" && b.region === region).length) continue;
         const merchant = game.people.find((p) => p.type === "Merchant" && p.region === region && !p.charge && p.pressure < CONFIG.pressing);
         const commoner = game.people.filter((p) => p.type === "Commoner" && p.region === region && !p.charge).sort((a, b) => b.pressure - a.pressure || a.id - b.id)[0];
         if (!merchant || !commoner) continue;
@@ -43055,7 +43132,7 @@ const SOLO_MATTERS = {
     apply(g, m, choice) {
       const commoner = g.people[m.a], merchant = g.people[m.b], r = m.region, key = `${r}|commoners`;
       if (choice === 0) {
-        g.breadAssize = { region: r, until: g.week + 1 };
+        assizeBinding(g, r, g.week + 1);
         addGrievance(g, constituencyOf(merchant), 1);
         return `The court sets an assize of bread in the ${r} for two weeks. ${hallName(merchant)} bakes at the fixed price, and the merchants grumble.`;
       }
@@ -43076,7 +43153,7 @@ const SOLO_MATTERS = {
     lapseChoice: 1,
     lapseNote: () => "Left unanswered, each keeps to its own share.",
     draw(game) {
-      const busy = new Set((game.neighbourCompacts || []).flatMap((nc) => [nc.a, nc.b]));
+      const busy = new Set(bindingsWhere(game, (b) => b.tag === "neighbours").flatMap((b) => b.parties));
       for (const law of epActive(game)) {
         const on = qRaw(game, law).filter((p) => !p.charge && !busy.has(p.id) && p.region === law.region && p.pressure >= CONFIG.pressing && p.pressure < CONFIG.urgent && paidShare(game, p, law) > 0);
         for (const A of on) {
@@ -43116,7 +43193,7 @@ const SOLO_MATTERS = {
     apply(g, m, choice) {
       const A = g.people[m.a], B = g.people[m.b], law = lawById(g, m.from.lawId);
       if (choice === 0) {
-        g.neighbourCompacts = [...(g.neighbourCompacts || []), { a: A.id, b: B.id, lawId: law.id, kept: 0, since: g.week }];
+        neighboursBinding(g, A.id, B.id, law.id);
         return `${hallName(A)} and ${hallName(B)} join their households to ${dutyNameInSentence(dutyTitleOf(law))} for three weeks.`;
       }
       addRegard(A, -1);
@@ -43282,7 +43359,7 @@ const SOLO_MATTERS = {
         addRegard(bishop, -1);
         return `The barn doors are opened to the poor of the ${law.region}. ${hallName(bishop)} does not thank the court for it.`;
       }
-      g.titheAudit = { week: g.week, lawId: law.id, bishopId: bishop.id, honest: !!m.from.honest };
+      auditBinding(g, law.id, bishop.id, !!m.from.honest);
       return `The court sends clerks to count the tithe against the barn of ${hallName(bishop)}.`;
     },
   },
@@ -43324,7 +43401,7 @@ const SOLO_MATTERS = {
     apply(g, m, choice) {
       const A = g.people[m.a], B = g.people[m.b];
       if (choice === 2) return `${hallName(A)} goes home, and the grudge goes home with ${prn(A).obj}.`;
-      if (choice === 1) { trySpendStanding(g, 1); g.slateCheck = { week: g.week, a: A.id, b: B.id }; }
+      if (choice === 1) { trySpendStanding(g, 1); slatesBinding(g, A.id, B.id); }
       A.grudge = null;
       if (B.pressure > 0) addPressure(B, -1);
       addRegard(A, 1);
@@ -43369,7 +43446,7 @@ const SOLO_MATTERS = {
     },
     apply(g, m, choice) {
       const lord = g.people[m.b], name = hallName(lord);
-      if (choice === 0) { g.lordSummons = { id: lord.id, week: g.week + 1 }; return `The court summons ${name} to the next audience.`; }
+      if (choice === 0) { summonsBinding(g, lord.id, g.week + 1); return `The court summons ${name} to the next audience.`; }
       if (choice === 1) {
         const law = dutiesPaidBy(g, lord).sort((a, b) => paidShare(g, lord, b) - paidShare(g, lord, a))[0];
         if (law) { law.personal = { ...law.personal, [lord.id]: 0 }; resetAllocCache(g); }
@@ -43422,7 +43499,7 @@ const SOLO_MATTERS = {
       const r = m.region, key = m.from.key;
       if (choice === 0) {
         for (const p of g.people.filter((x) => x.region === r && x.pressure > 0)) addPressure(p, -1);
-        g.fastWeek = { week: g.week, key };
+        fastBinding(g, key);
         return `A fast is proclaimed in the ${r}, and every house sets its hand to the work.`;
       }
       if (choice === 1) {
@@ -43501,7 +43578,7 @@ const SOLO_MATTERS = {
       if (choice === 0) {
         addPressure(sponsor, 2);
         addRegard(sponsor, 1);
-        g.kingDinner = { week: g.week, hostId: sponsor.id };
+        supperBinding(g, sponsor.id);
         return `${hallName(sponsor)} prepares the table at its own expense (+2 pressure, +1 regard). If it holds below urgent through the reckoning, the Crown will gain 1 standing.`;
       }
       if (choice === 1) {
