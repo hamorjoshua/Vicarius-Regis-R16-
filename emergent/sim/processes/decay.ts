@@ -4,7 +4,7 @@
 import { exp } from '../math.ts';
 import { BY_HARM, Kn, NEEDS, NK, NN, P, SERVING } from '../tables.ts';
 import { ask } from '../value.ts';
-import { living, rec } from '../util.ts';
+import { bond, living, rec } from '../util.ts';
 import type { State } from '../types.ts';
 
 export function decay(s: State): void {
@@ -46,7 +46,9 @@ export function decay(s: State): void {
       p.alive = false;
       const struck = s.t - p.blowAt <= 3;
       const need = !struck && P.hurt * lackHarm > years ? worst : -1;
-      rec(s, 'die', { a: p.id, b: b.id, cell: b.home, need, q: age, cause: struck ? p.blow : need >= 0 ? b.why[need]! : -1 });
+      const death = rec(s, 'die', { a: p.id, b: b.id, cell: b.home, need, q: age, cause: struck ? p.blow : need >= 0 ? b.why[need]! : -1 });
+      // One killed by another's blows leaves their house owed for it.
+      if (struck && p.blowBy >= 0 && p.blowBy !== b.id && s.bodies[p.blowBy]!.alive) bond(s, { about: 'act', a: p.blowBy, b: b.id, kind: -1, q: P.bloodPrice, due: s.t, labour: true, basis: 'wrong', way: 'blood', rec: death.id, doer: p.blowBy });
       if (p.spouse >= 0) s.people[p.spouse]!.spouse = -1;
     }
   }

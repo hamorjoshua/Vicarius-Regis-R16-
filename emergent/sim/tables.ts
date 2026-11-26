@@ -203,6 +203,8 @@ export const P = {
   premium: 0.25, term: 40, trust: 0.85,
   warm: 0.04, fade: 0.995, barAt: -0.6,
   blow: 0.12,
+  /** Days of work owed to a house for one of its people killed. */
+  bloodPrice: 60,
   /** The regard at which those who deal together become a body, how many it takes, and the share of plenty each puts in common. */
   band: 0.15, bandOf: 3, common: 0.03,
   /** A lease: the share of what is gathered that goes to whoever let the ground, how long it runs, and how long ground lies unused before it is let. */

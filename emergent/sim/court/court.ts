@@ -57,7 +57,7 @@ const FAVOUR: Record<string, Record<string, number>> = {
   owed: { enforce: 1, redeem: 1, part: 0.5, stay: 0.2, strike: 0 },
   owes: { strike: 1, redeem: 1, stay: 0.7, part: 0.5, enforce: 0 },
   outside: { turn: 1, part: 0.6, strike: 0.4, enforce: 0 },
-  bare: { give: 1, levy: 1, promise: 0.8, dismiss: 0 },
+  bare: { give: 1, vouch: 1, levy: 1, promise: 0.8, dismiss: 0 },
 };
 
 /** A house that has been before the court, and those who live near enough to see, change what they expect of it. */
@@ -104,11 +104,12 @@ const other = (bd: Bond, by: number): number => (bd.a === by ? bd.b : bd.a);
 export function cuts(s: State, p: Petition): string[] {
   if (p.reason === 'challenge') return ['uphold', 'strike'];
   const bd = s.bonds.find(b => b.id === p.bond);
-  if (!bd) return ['give', 'levy', 'promise', 'dismiss'];
+  if (!bd) return p.shape.includes('shunned') ? ['vouch', 'give', 'levy', 'promise', 'dismiss'] : ['give', 'levy', 'promise', 'dismiss'];
   if (bd.about === 'land') return ['enforce', 'part', 'strike', 'turn'];
   const c = ['enforce', 'part', 'strike', 'stay'];
   if (bd.about === 'act' && !bd.labour) c.push('redeem');
-  if (bd.about === 'act' && bd.basis === 'wrong' && bd.doer >= 0 && bd.doer !== bd.a) c.push('inquire');
+  // Whoever is said to have done a wrong may or may not have. An inquest can be held on any of them, once.
+  if (bd.about === 'act' && bd.basis === 'wrong' && bd.doer >= 0) c.push('inquire');
   return c;
 }
 
@@ -127,6 +128,18 @@ function carry(s: State, c: Court, p: Petition, cut: string): boolean {
     // A want with nothing standing in its way that the court can cut: it can be laid on those nearby who have most.
     // Out of the Crown's own store, now; or the regent's word that it will come.
     if (cut === 'give') { const q = relieve(s, c, by, p.need); if (q <= 0) return false; rec(s, 'judge', { a: p.by, q, need: p.need, cause: p.rec, way: `give ${p.shape}` }); return true; }
+    if (cut === 'vouch') {
+      // The regent vouches for a house its neighbours will not deal with. They defer, and hold it against him.
+      for (const x of around(hearthIndex(s), s.side, by.home, P.dealReach)) {
+        if (x === by || (x.lore.new ?? 0) <= P.heed) continue;
+        x.lore.new = x.lore.new! * 0.3;
+        for (const m of grown(s, x)) if (m.lore.new) m.lore.new *= 0.3;
+        grieve(c, x.id, P.harmUnheard);
+      }
+      by.since = -1e6;
+      rec(s, 'judge', { a: p.by, need: p.need, cause: p.rec, way: `vouch ${p.shape}` });
+      return true;
+    }
     if (cut === 'promise') { c.words.push({ to: p.by, need: p.need, due: s.t + P.wordWeeks }); rec(s, 'judge', { a: p.by, need: p.need, cause: p.rec, way: `promise ${p.shape}` }); return true; }
     if (cut !== 'levy') { grieve(c, p.by, P.harmUnheard * 2); rec(s, 'judge', { a: p.by, q2: 0, need: p.need, way: `dismiss ${p.shape}` }); return true; }
     let best: Body | undefined, bestK = -1, most = 0;
@@ -149,7 +162,14 @@ function carry(s: State, c: Court, p: Petition, cut: string): boolean {
   const e = rec(s, 'judge', { a: p.by, b: p.against, kind: bd.kind, q: bd.q, cell: bd.cell, need: p.need, cause: bd.rec, way: `${cut} ${p.shape}` });
   if (cut === 'inquire') {
     // An inquest shows what the ledger knows: who truly did it.
-    if (bd.doer >= 0 && bd.doer !== bd.a && s.bodies[bd.doer]!.alive) { grieve(c, bd.a, -P.harmPaid); bd.a = bd.doer; p.against = p.side === 'owed' ? bd.doer : p.against; }
+    e.b = bd.doer; e.q2 = bd.doer !== bd.a ? 1 : 0;
+    if (bd.doer !== bd.a && s.bodies[bd.doer]!.alive) {
+      // The one wrongly held to it is cleared; the debt falls on the one who did it. If it was the accused who asked, their matter is done.
+      grieve(c, bd.a, -P.harmLost);
+      if (p.side === 'owes') { bd.a = bd.doer; bd.doer = -1; return false; }
+      bd.a = bd.doer; p.against = bd.doer;
+    }
+    bd.doer = -1;
     return true;
   }
   if (cut === 'redeem') {
@@ -276,7 +296,9 @@ export function audience(s: State): Petition[] {
     if (bd.about === 'act') {
       if (bd.q <= 0.05 || !B) continue;
       // Owed on and not met: the one owed asks. Owing and in want: the one who owes asks.
-      if (!bd.labour && (bd.broken || bd.basis === 'wrong')) add(bd.b, bd.a, bd, 'owed', lack.get(bd.b) ?? -1, bd.rec);
+      if ((!bd.labour && bd.broken) || bd.basis === 'wrong') add(bd.b, bd.a, bd, 'owed', lack.get(bd.b) ?? -1, bd.rec);
+      // One held to a wrong they did not do asks to be cleared of it.
+      if (bd.basis === 'wrong' && bd.doer >= 0 && bd.doer !== bd.a) add(bd.a, bd.b, bd, 'owes', lack.get(bd.a) ?? -1, bd.rec);
       if (lack.has(bd.a) && (bd.labour || bd.due - s.t < 13)) add(bd.a, bd.b, bd, 'owes', lack.get(bd.a)!, bd.rec);
     } else if (bd.about === 'bond' && B) {
       // A surety or a letting weighs on one side of it when that side is in want.
@@ -296,7 +318,12 @@ export function audience(s: State): Petition[] {
   // A dire want with nothing the court can cut.
   for (const [id, n] of lack) {
     const b = s.bodies[id]!;
-    if (cover(b.store, askAhead(s, b))[n]! < P.dire && !fresh.some(f => f.by === id)) add(id, -1, undefined, 'bare', n, b.why[n]!, b.why[n]! >= 0 ? 'after a loss' : 'with nothing behind it');
+    if (fresh.some(f => f.by === id)) continue;
+    // A house lately come, in want, whose neighbours hold that newcomers bring harm and will not deal with it.
+    let shut = 0;
+    if (b.since > -1e5 && s.t - b.since < 52) for (const x of around(idx, s.side, b.home, P.dealReach)) if (x !== b && (x.lore.new ?? 0) > P.heed) shut++;
+    if (shut >= 2) add(id, -1, undefined, 'bare', n, b.why[n]!, 'and shunned as a newcomer');
+    else if (cover(b.store, askAhead(s, b))[n]! < P.dire) add(id, -1, undefined, 'bare', n, b.why[n]!, b.why[n]! >= 0 ? 'after a loss' : 'with nothing behind it');
   }
 
   // Settle below what a rule covers; what two bodies' rules answer differently goes up.

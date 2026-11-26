@@ -28,6 +28,8 @@ export interface Person {
   bore: number;
   /** The record of the last blow taken, and when. */
   blow: number; blowAt: number;
+  /** The body whose people struck that blow. */
+  blowBy: number;
   /** How far each need was met last week. */
   fed: number[];
   /** A mind: what this person believes brings harm, the ways of dealing they know, and how good they are at each kind of work. */

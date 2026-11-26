@@ -110,8 +110,8 @@ export function might(s: State, kin: Map<number, Set<number>>, b: Body, against:
 export function struggle(s: State, kin: Map<number, Set<number>>, taker: Body, holder: Body, at: number): number {
   const mT = might(s, kin, taker, holder.id), mH = might(s, kin, holder, taker.id);
   const p = mT + mH > 0 ? mT / (mT + mH) : 0.5;
-  for (const x of grown(s, holder)) { x.wear += P.blow * p; x.blow = at; x.blowAt = s.t; }
-  for (const x of grown(s, taker)) { x.wear += P.blow * (1 - p); x.blow = at; x.blowAt = s.t; }
+  for (const x of grown(s, holder)) { x.wear += P.blow * p; x.blow = at; x.blowAt = s.t; x.blowBy = taker.id; }
+  for (const x of grown(s, taker)) { x.wear += P.blow * (1 - p); x.blow = at; x.blowAt = s.t; x.blowBy = holder.id; }
   warm(s, holder.id, taker.id, -0.6); warm(s, taker.id, holder.id, -0.3);
   for (const k of kin.get(holder.id) ?? []) warm(s, k, taker.id, -0.2);
   for (const k of kin.get(taker.id) ?? []) warm(s, k, holder.id, -0.2);
