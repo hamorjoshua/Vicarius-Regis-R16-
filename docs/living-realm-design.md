@@ -18,11 +18,44 @@ What carries over is the player's loop (audience, three hearings, rulings, stand
 
 The design is deliberately open. Whatever completeness or historical precedent warrants can be added later through one admission test, without rebuilding what exists.
 
+Above all of it sits one principle: the goals outrank this design. Any part of it, from a formula to a pillar, gives way to a version that serves them better.
+
 The rule for the whole project: nothing happens because it was scheduled; everything happens because something else did.
+
+## The goals, and the principle above everything
+
+This document is one attempt at a set of goals. If a better version would serve them better, the better version wins, even where it contradicts everything written here.
+
+### The goals
+
+1. **A living realm.** The realm is simulated deeply enough to feel alive, in the spirit of Dwarf Fortress: weather, harvests, trade, sickness, faith, kinship, unrest and politics.
+2. **Mutual determination.** Its systems are interrelated and determine one another. No system stands alone, and the player can feel the web.
+3. **Chance at the edges.** Randomness decides little, and only at designated points.
+4. **Decisions that echo.** The player's rulings feed back into the realm and shape what it later produces, down to the odds of its draws.
+5. **The court.** The player governs only through a weekly docket of hearings, three as now, and the rulings given there, with the court's standing at stake.
+6. **Nothing authored.** Events and their flavour arise from the machinery, never from scripts or situations written in advance.
+7. **Never bland.** Life is not bland, so the realm should not be. Where it is, something is missing.
+8. **Texture and truth.** Belief, superstition, kinship and custom give the realm its texture, grounded in how medieval life actually worked.
+
+### The principle
+
+Everything beneath the goals is provisional. That covers the pillars, systems, formulas, numbers, the week's order, the vocabulary, the architecture and the build plan.
+
+Each is the current best guess at serving the goals, and none should be defended for its own sake. When a better way appears, take it: name the goal it serves better, check it against the goals as a whole, then change this document to match.
+
+The goals themselves change only when the designer decides they should.
+
+### Reading this document
+
+- Treat the specifics as a worked example of the goals, not a contract.
+- Prefer a simpler mechanism that produces the same emergence over a complicated one written here.
+- If something here works against a goal, the goal wins at once.
+- If two goals pull against each other, say so and choose openly, rather than letting this document choose silently.
+- When in doubt, build the smallest version that shows whether the goals are being met, and let what it shows decide.
 
 ## Pillars
 
-Nine rules govern every system. When a design question is unclear, these decide it.
+Nine rules are the current best reading of the goals. When a design question is unclear, they decide it, until something serves the goals better.
 
 1. **Everything is caused.** Every change of state traces to something else in the simulation: a frost, a price, a death, a ruling. There is no event table, no scheduled crisis and no weekly roll for "something happens".
 2. **Chance enters only at the boundary.** Randomness lives only where the world beyond the realm touches it: the weather, sickness from abroad, raiders. Every draw is seeded and logged, and its odds are shaped by the realm's own state.
@@ -899,7 +932,7 @@ realm/
 
 ## Extending the realm
 
-The realm is never finished. Anything that completeness or historical precedent warrants can be added, as long as it joins the causal web the way everything else does.
+The realm is never finished. Anything that completeness or historical precedent warrants can be added, as long as it joins the causal web the way everything else does. Anything here may also be replaced by something that serves the goals better.
 
 ### When to add something
 
