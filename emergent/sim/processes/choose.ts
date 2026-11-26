@@ -187,6 +187,8 @@ function context(s: State, L: Land, b: Body): Ctx | null {
       for (const [k, q] of r.inp) extra[k] = Math.max(extra[k]!, (P.inputShare * w) / q / r.inp.length - direct[k]!);
     }
   }
+  // A thing it has set itself to make for another is worth what it will fetch.
+  if (b.aim && b.store[b.aim.kind]! < b.aim.q) extra[b.aim.kind] = Math.max(extra[b.aim.kind]!, b.aim.worth);
   const v = direct.map((d, k) => d + extra[k]!);
   const days = muster(s, b);
   const rush = St.map((row, st) => row.reap >= 0 && standing[st]! > 0 && standing[st]! / Math.max(1, 0.5 * Rc[row.reap]!.from[0]![1] * days) >= soon[st]! - 1);
@@ -255,7 +257,9 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
   if (surety) haves.push('LS', 'DS');
   if (myIdle.length) haves.push('U');
 
+  if (a.aim && (s.t - a.aim.since > P.resolve || !s.bodies[a.aim.for]!.alive)) { rec(s, 'plan', { a: a.id, b: a.aim.for, kind: a.aim.kind, q2: -1 }); a.aim = null; }
   let best: { B: Ctx; way: string; get: Item; give: Item; gainA: number; share: number } | null = null;
+  let far: { B: Ctx; recvA: number; costB: number; want: Side } | null = null;
   for (const B of cs.values()) {
     if (B === A || dist(s.side, a.home, B.b.home) > P.dealReach || tie(s, a.id, B.b.id) < P.barAt || tie(s, B.b.id, a.id) < P.barAt) continue;
     if (shuns(s, a, B.b) || shuns(s, B.b, a)) continue;
@@ -280,6 +284,7 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
         }
       }
       if (!get || recvA <= 0) continue;
+      if (!far || recvA > far.recvA) far = { B, recvA, costB, want };
       for (const have of haves) {
         if (have === want && have !== 'G') continue;
         if (have === 'G' && want === 'G') continue;
@@ -326,7 +331,27 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
       }
     }
   }
-  if (!best) { a.stuck++; return false; }
+  if (!best) {
+    a.stuck++;
+    // Nothing it can offer today will do. It looks a step further: what does the one who has what it lacks
+    // most want, that it could make? It sets itself to make that, and holds to it.
+    if (far && !a.aim && a.stuck >= P.stuck) {
+      let kind = -1, rate = 0;
+      for (let k = 0; k < NK; k++) {
+        if (Kn[k]!.fixed || far.B.v[k]! <= 1e-6) continue;
+        if (!A.opts.some(o => !o.take && Rc[o.r]!.out.some(([x]) => x === k))) continue;
+        const r = far.B.v[k]! / TOIL[k]!;
+        if (r > rate) { rate = r; kind = k; }
+      }
+      if (kind >= 0) {
+        const q = Math.max(P.margin * far.costB, P.concede * far.recvA) / far.B.v[kind]!;
+        a.aim = { kind, q, for: far.B.b.id, worth: (0.8 * far.recvA) / q, since: s.t, want: far.want };
+        rec(s, 'plan', { a: a.id, b: far.B.b.id, kind, q, need, way: `G>${far.want}` });
+      }
+    }
+    return false;
+  }
+  if (a.aim) { if (best.B.b.id === a.aim.for) rec(s, 'plan', { a: a.id, b: a.aim.for, kind: a.aim.kind, q2: 1 }); a.aim = null; }
   a.stuck = 0;
   const { B, way, get, give, share } = best, b = B.b;
   const e = rec(s, 'promise', { a: a.id, b: b.id, kind: get.kind >= 0 ? get.kind : give.kind, q: get.t === 'G' ? get.q : give.q, q2: give.t === 'Y' ? share : give.q, need, cell: get.cell >= 0 ? get.cell : give.cell, cause: need >= 0 ? a.why[need]! : -1, way });
@@ -359,7 +384,7 @@ function deal(s: State, L: Land, cs: Map<number, Ctx>, kin: Map<number, Set<numb
   if (!partners.length) return;
   const kinds = Kn.map((_k, i) => i).filter(k => !Kn[k]!.fixed);
   const wants = kinds.slice().sort((x, y) => A.v[y]! - A.v[x]! || x - y).slice(0, 3).filter(k => A.v[k]! > 1e-6);
-  const offers = kinds.filter(k => a.store[k]! > 0.01).sort((x, y) => A.v[x]! - A.v[y]! || x - y).slice(0, 3);
+  const offers = kinds.filter(k => a.store[k]! > 0.01 && k !== a.aim?.kind).sort((x, y) => A.v[x]! - A.v[y]! || x - y).slice(0, 3);
 
   // Trade: each gives what it values less for what it values more.
   let best: { B: Ctx; k: number; j: number; ra: number; rb: number } | null = null, bestEst = 0;

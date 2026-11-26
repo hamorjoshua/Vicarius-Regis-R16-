@@ -211,6 +211,8 @@ export const P = {
   /** Skill: what a day of a kind of work adds, the most it reaches, what it slips back to unused, and what a child starts with. */
   practise: 0.004, mastery: 1.6, rust: 0.002, green: 0.6,
   blame: 0.5, forget: 0.995, tell: 0.2, heed: 0.5, mind: 12,
+  /** Weeks a plan is held before it is given up as hopeless. */
+  resolve: 26,
   patience: 0.9, margin: 1.05, concede: 0.33, stuck: 4,
   stay: 1.6, scout: 4,
 };

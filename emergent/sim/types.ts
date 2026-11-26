@@ -65,6 +65,8 @@ export interface Body {
   recent: [string, number][];
   /** How good its grown members are, together, at each kind of work. */
   skill: number[];
+  /** A plan held over weeks: to make enough of a thing another wants, so as to get from them what it lacks. */
+  aim: { kind: number; q: number; for: number; worth: number; since: number; want: string } | null;
 }
 
 export type Basis = 'birth' | 'word' | 'use' | 'grant' | 'wrong';
