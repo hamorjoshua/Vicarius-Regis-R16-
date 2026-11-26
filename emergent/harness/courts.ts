@@ -15,22 +15,14 @@ function judge(s: State, p: Petition): string {
   const c = cuts(s, p);
   if (p.reason === 'challenge') { const r = s.court!.rules.find(x => x.id === p.bond); return r && r.uses > 5 ? 'uphold' : 'strike'; }
   if (c.includes('inquire')) return 'inquire';
-  // Relief out of the store only for the dire, and only while the store is not run low; otherwise it is laid on neighbours.
-  if (c.includes('levy')) { const b = s.bodies[p.by]!, left = s.court!.store.reduce((x, y) => x + y, 0); return cover(b.store, askAhead(s, b))[p.need]! < P.dire && left > 200 ? 'give' : 'levy'; }
   const pressed = (id: number): boolean => { const b = s.bodies[id]; if (!b || !b.alive) return false; const cov = cover(b.store, askAhead(s, b)); return cov.some((x, n) => NEEDS[n]!.harm >= 0.5 && x < P.short); };
-  if (p.side === 'owed') return pressed(p.against) ? 'part' : 'enforce';
-  if (p.side === 'owes') return pressed(p.against) ? 'part' : 'stay';
-  return 'part';
+  if (p.bond < 0) return c.includes('vouch') ? 'vouch' : pressed(p.by) && s.court!.store.reduce((x, y) => x + y, 0) > 100 ? 'give' : 'dismiss';
+  if (c.includes('turn')) return 'turn';
+  if (p.side === 'owed') return pressed(p.against) ? 'stay' : 'enforce';
+  return pressed(p.against) ? 'enforce' : 'stay';
 }
 /** What favours whoever asks. */
-const grant = (s: State, p: Petition): string => {
-  if (p.reason === 'challenge') return 'strike';
-  const left = s.court!.store.reduce((x, y) => x + y, 0);
-  if (p.bond < 0) return left > 20 ? 'give' : 'promise';
-  if (p.side === 'owed') return 'enforce';
-  if (p.side === 'owes') return cuts(s, p).includes('redeem') && left > 20 ? 'redeem' : 'strike';
-  return 'turn';
-};
+const grant = (s: State, p: Petition): string => (p.reason === 'challenge' ? 'strike' : p.bond < 0 ? 'give' : cuts(s, p).includes('turn') ? 'turn' : p.side === 'owed' ? 'enforce' : 'strike');
 
 const COURTS: Record<string, () => Script> = {
   'hears nobody': () => () => [],

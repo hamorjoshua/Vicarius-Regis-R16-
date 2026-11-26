@@ -105,10 +105,12 @@ const other = (bd: Bond, by: number): number => (bd.a === by ? bd.b : bd.a);
 export function cuts(s: State, p: Petition): string[] {
   if (p.reason === 'challenge') return ['uphold', 'strike'];
   const bd = s.bonds.find(b => b.id === p.bond);
-  if (!bd) return p.shape.includes('shunned') ? ['vouch', 'give', 'levy', 'promise', 'dismiss'] : ['give', 'levy', 'promise', 'dismiss'];
-  if (bd.about === 'land') return ['enforce', 'part', 'strike', 'turn'];
-  const c = ['enforce', 'part', 'strike', 'stay'];
-  if (bd.about === 'act' && !bd.labour) c.push('redeem');
+  // A want with nothing behind it: relief, or none. One shunned may also be vouched for.
+  if (!bd) return p.shape.includes('shunned') ? ['vouch', 'give', 'dismiss'] : ['give', 'dismiss'];
+  // Ground: it stays with its holder or goes to the one who asks.
+  if (bd.about === 'land') return ['enforce', 'turn'];
+  // Anything owed: held to, let go, or put off a year.
+  const c = ['enforce', 'strike', 'stay'];
   // Whoever is said to have done a wrong may or may not have. An inquest can be held on any of them, once.
   if (bd.about === 'act' && bd.basis === 'wrong' && bd.doer >= 0) c.push('inquire');
   return c;

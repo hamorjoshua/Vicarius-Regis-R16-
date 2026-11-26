@@ -165,7 +165,7 @@ function tally(): string {
   return `<div class="tally"><div class="in">
     <span class="when">${seasonOf(s.t)}, year ${Math.floor(s.t / 52) + 1}, week ${(s.t % 52) + 1}</span>
     <span class="stat"><span class="label">Standing</span><span class="seals" title="${c.standing.toFixed(1)} of 5">${seals}</span></span>
-    <span class="stat"><span class="label">Crown’s store</span><span class="gilt">${store}</span></span>
+    <span class="stat" title="What you can give in relief. A tenth of what you enforce and the Crown’s share of every harvest come into it."><span class="label">Crown’s store</span><span class="gilt">${store}</span></span>
     <span class="stat"><span class="label">Souls</span><span>${alive}</span></span>
     <span class="stat"><span class="label">Weeks left</span><span>${Math.max(0, P.reign - s.t)}</span></span>
   </div></div>`;
