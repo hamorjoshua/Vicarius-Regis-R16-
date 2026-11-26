@@ -2021,7 +2021,7 @@ function officialCommissions(game, personId) {
 function officialCommissions__u(game, personId) {
   const person = game.people[personId];
   if (!person || person.type !== "Official" || person.pressure >= CONFIG.urgent) return [];
-  if (Object.keys(game.undertakings || {}).length) return [];
+  if (courtWordsGiven(game).length) return [];
   if (person.vouchedWeek !== void 0 && game.week - person.vouchedWeek < CONFIG.vouchCooldown) return [];
   if (!canSpendStanding(game, CONFIG.wordStanding)) return [];
   const t = constituencyPetition(game, personId);
@@ -2045,7 +2045,7 @@ function constituencyPetition(game, personId) {
           person2.id !== personId &&
           person2.unanswered &&
           constituencyOf(person2) !== key &&
-          !game.undertakings?.[person2.id],
+          !courtWordOf(game, person2.id),
       );
   return (
     i.sort((a, o) => {
@@ -4107,7 +4107,7 @@ function unheardNote(game, person) {
         ? `${P.Pos} regard is high, so if ${P.sub} is left unheard again ${P.sub} waits patiently once: ${P.pos} regard falls to 1, but ${P.sub} gains no pressure.`
         : `If ${P.sub} is left unheard again, ${P.sub} gains ${CONFIG.repeatSnubCost} pressure and loses 1 regard.`,
     );
-  else if (game.undertakings?.[person.id])
+  else if (courtWordOf(game, person.id))
     lines.push(`${P.Sub} is urgent, but ${P.sub} holds the court’s word: left unheard, ${P.sub} waits without a breach.`);
   else if (person.region === "Highlands" && epWork(game, "Highlands", "commoners"))
     lines.push(`${P.Sub} is urgent. Left unheard, ${P.sub} loses 1 regard, but the hospitals tend ${P.obj}, and ${P.pos} estate grows no more aggrieved.`);
@@ -5277,7 +5277,7 @@ SA.consolidate = (game, n, e, t) => {
     (personId) =>
       !(
         t.includes(personId) &&
-        (game.undertakings?.[personId] ||
+        (courtWordOf(game, personId) ||
           game.seatRemedy?.id === personId ||
           game.rateOfficial?.id === personId)
       ) &&
@@ -6455,8 +6455,8 @@ function planAudience(game, shuffled, summon) {
       );
     // Promises and the player's third-slot summons are genuine commitments.
     const promised2 = shuffled
-      .filter((id2) => game.undertakings?.[id2])
-      .sort((a5, b5) => (game.undertakings[a5].due ?? game.week) - (game.undertakings[b5].due ?? game.week));
+      .filter((id2) => courtWordOf(game, id2))
+      .sort((a5, b5) => (courtWordOf(game, a5).due ?? game.week) - (courtWordOf(game, b5).due ?? game.week));
     for (const id3 of promised2.slice(0, 3)) take2(normal2(id3), "undertaking");
     if (summon && selected2.length < 4) take2(normal2(summon.id), "summons");
     const rfBacks2 = {};
@@ -6754,7 +6754,7 @@ function planAudience(game, shuffled, summon) {
               !c.backers.length &&
               !c.pet.joint &&
               c.pet.kind !== "loyalty" &&
-              !game.undertakings?.[c.id] &&
+              !courtWordOf(game, c.id) &&
               !game.concessions?.[constituencyOf(p)] &&
               // a requisition is never an answer to the household's own lodged plea on that duty
               p.unanswered?.lawId !== cr.law.id &&
@@ -6871,7 +6871,7 @@ function drawAudience(game) {
   game.audiencePlan = {};
   game.monoJoint = {};
   game.jointStatus = null;
-  const promised = shuffled.filter((id) => game.undertakings?.[id]);
+  const promised = shuffled.filter((id) => courtWordOf(game, id));
   const summon = game.summoner != null ? summonTarget(game, game.summoner, shuffled, promised) : null;
   game.summoned = summon
     ? {
@@ -7158,7 +7158,7 @@ function monoDraw(game, candidates, shuffled, promised) {
     }
     const fix = (personId) =>
       !!(
-        game.undertakings?.[personId] ||
+        courtWordOf(game, personId) ||
         game.summoned?.id === personId ||
         game.seatRemedy?.id === personId ||
         game.rateOfficial?.id === personId ||
@@ -7228,7 +7228,7 @@ function monoDraw(game, candidates, shuffled, promised) {
       let sp = hm.length ? hm[0] : off ? off.id : null;
       sp != null &&
         !m.includes(sp) &&
-        (hard(sp) || locked(sp) || game.undertakings?.[sp] || game.monoJoint[sp] || keep.has(sp)) &&
+        (hard(sp) || locked(sp) || courtWordOf(game, sp) || game.monoJoint[sp] || keep.has(sp)) &&
         (sp = null);
       const byP = [...m].sort(
         (personId, personId2) =>
@@ -7277,7 +7277,7 @@ function monoDraw(game, candidates, shuffled, promised) {
         ban.add(i);
         keep.delete(i);
       }
-      m.some((i) => game.undertakings?.[i] || promised.includes(i)) && keep.add(sp);
+      m.some((i) => courtWordOf(game, i) || promised.includes(i)) && keep.add(sp);
       game.monoJoint[sp] = {
         key: `xt|${lid}`,
         joint: "xt",
@@ -7322,7 +7322,7 @@ function monoDraw(game, candidates, shuffled, promised) {
       };
     const hk = (i) =>
       !!(
-        game.undertakings?.[i] ||
+        courtWordOf(game, i) ||
         game.summoned?.id === i ||
         game.seatRemedy?.id === i ||
         game.rateOfficial?.id === i ||
@@ -7401,7 +7401,7 @@ function monoBack(game2, game, personId, pet, r) {
       ((law.personal[personId2] = pet.tw?.[personId2] ?? 1), addWrit(person, law.id, "a lighter share"));
     person.unanswered = null;
     pet.joint === "xt" &&
-      (game.undertakings?.[personId2] && (game.undertakings[personId2].answered = !0),
+      (courtWordOf(game, personId2) && (courtWordOf(game, personId2).answered = !0),
       law &&
         pet.bw?.[personId2] &&
         paidShare(game, person, law) > 0 &&
@@ -7604,15 +7604,14 @@ function transferShare(game, personId, personId2, t, r) {
     law = dutiesPaidBy(game, person)[0];
   ((person2.vouchedWeek = game.week),
     (person.lastWordWeek = game.week),
-    (game.undertakings = game.undertakings || {}),
-    (game.undertakings[person.id] = {
+    (giveCourtWord(game, person.id, {
       by: personId,
       week: game.week,
       due: game.week + CONFIG.undertakingWeeks,
       dutyId: law?.id,
       share: law ? paidShare(game, person, law) : 0,
       ask: foundingClaim(game, currentPetition(game, person.id)),
-    }),
+    })),
     r && addPressure(person2, r),
     logEvent(
       t,
@@ -7647,7 +7646,7 @@ const stateSignature = (game) =>
       game.government ?? null,
       game.policies ?? null,
     game.policyStays ?? null,
-      game.undertakings ?? null,
+      game.bindings ?? null,
       game.incidents ?? null,
       game.standing ?? null,
       game.reserve ?? null,
@@ -7683,7 +7682,7 @@ const stateSignature = (game) =>
     game.government ?? null,
     game.policies ?? null,
     game.policyStays ?? null,
-    game.undertakings ?? null,
+    game.bindings ?? null,
     game.incidents ?? null,
     game.standing ?? null,
     game.reserve ?? null,
@@ -7828,7 +7827,8 @@ function hearPetition(game, personId, shownPetition = null) {
     "estateRecord",
     "policies",
     "policyStays",
-    "undertakings",
+    "bindings",
+    "bindingSeq",
     "incidents",
     "standing",
     "reserve",
@@ -8377,7 +8377,7 @@ function magistrateHearings(game, heard, e, t, r) {
           !e.has(personId) &&
           game.people[personId].region === a &&
           personId !== o.id &&
-          !game.undertakings?.[personId],
+          !courtWordOf(game, personId),
       )
       .map((personId) => game.people[personId])
       .sort((person3, person4) => person4.pressure - person3.pressure || person3.id - person4.id)[0];
@@ -9860,7 +9860,7 @@ function addUnheardGrievance(game, heard, R, before) {
         ));
       continue;
     }
-    if (game.undertakings?.[personId5]) {
+    if (courtWordOf(game, personId5)) {
       logEvent(
         R,
         `${person32.name} is urgent, but holds the court’s word; ${prn(person32).sub} waits without a breach.`,
@@ -10046,53 +10046,8 @@ function addUnheardGrievance(game, heard, R, before) {
   if (CONFIG.neglectOn) advanceNeeds(game, R, o2, l2, before);
   closeCalamity(game, R);
   epLateFailures(game, R);
-  if (game.undertakings)
-    for (const [s3, d8] of Object.entries(game.undertakings)) {
-      const personId7 = Number(s3),
-        person52 = game.people[personId7],
-        law23 = d8.dutyId !== void 0 ? game.laws.find((law3) => law3.id === d8.dutyId) : void 0;
-      law23 && law23.active && paidShare(game, person52, law23);
-      const f5 = heard.includes(personId7) || !!d8.answered,
-        person11 = game.people[d8.by];
-      if (f5) {
-        // a word given again, after one was broken, earns back more regard
-        if (d8.again) addRegard(person52, 2);
-        (delete game.undertakings[personId7],
-          !d8.again && person11.pressure > 0 && addPressure(person11, -1),
-          logEvent(
-            R,
-            `The court keeps its word to ${person52.name}; ${person11.name} is relieved 1.`,
-            "wordKept",
-            [personId7, d8.by],
-            {
-              by: d8.by,
-            },
-          ));
-        const gained = gainStanding(game, 1);
-        gained &&
-          logEvent(R, `Keeping its word restores the court’s standing (+${gained}).`, "standing", [], {
-            amount: gained,
-            why: "word",
-          });
-      } else
-        game.week >= d8.due &&
-          (delete game.undertakings[personId7],
-          breachConfidence(game, CONFIG.brokenWordBreaches),
-          // the household remembers, and may come back about it
-          (game.brokenWords = [...(game.brokenWords || []), { id: personId7, week: game.week, regard: person52.regard ?? 0 }].slice(-6)),
-          (person52.regard = -2),
-          d8.again ? addGrievance(game, constituencyOf(person52), 1) : addPressure(person11, CONFIG.accusedCost),
-          logEvent(
-            R,
-            `The court breaks its word to ${person52.name}: ${CONFIG.brokenWordBreaches} breaches of confidence, and ${person11.name} answers for it.`,
-            "wordBroken",
-            [personId7, d8.by],
-            {
-              by: d8.by,
-              breaches: CONFIG.brokenWordBreaches,
-            },
-          ));
-    }
+  // the court's word: kept once its household is heard, broken if its day comes first
+  testBindings(game, R, "hearings", { heard });
   // (The quiet season's standing was retired with the old eight-week clock.)
   if (growthDue(game)) epGrowth(game, R);
   ((game.gameOver = reignLost(game)), game.gameOver || game.weeksSurvived++);
@@ -11471,7 +11426,7 @@ function applyRulingCore(game, personId, pet, report) {
   if (
     (pet.kind === "undertake" &&
       pet.accused !== void 0 &&
-      !game.undertakings?.[pet.accused] &&
+      !courtWordOf(game, pet.accused) &&
       transferShare(game, personId, pet.accused, report, 0),
     pet.kind === "defend" && person2.charge)
   ) {
@@ -11842,7 +11797,7 @@ function applyRulingCore(game, personId, pet, report) {
         (person.unanswered = null),
         person.pressure > 0 && addPressure(person, -2),
         addRegard(person, 1),
-        game.undertakings?.[personId2] && (game.undertakings[personId2].answered = !0),
+        courtWordOf(game, personId2) && (courtWordOf(game, personId2).answered = !0),
         game.answerStandingWeek !== game.week)
       ) {
         const gained = gainStanding(game, 1);
@@ -13502,6 +13457,8 @@ function bindingsWhere(game, pred) {
 }
 // The tests a binding can set, all read at the week's close.
 const BINDING_TESTS = {
+  // the court's word is kept once its household has been heard
+  heard: (game, t, ctx, b) => !!(ctx?.heard?.includes(t.id) || b?.answered),
   notUrgent: (game, t) => (t.ids || []).every((id) => !game.people[id] || game.people[id].pressure < CONFIG.urgent),
   attends: (game, t) => (game.audience || []).includes(t.id),
   needMet: (game, t) => { const [r, need] = t.key.split("|"); return needMet(game, r, need); },
@@ -13511,7 +13468,7 @@ const BINDING_TESTS = {
   present: (game, t) => (t.ids || []).every((id) => !!game.people[id]),
   flag: (game, t) => !!t.value,
 };
-const bindingHolds = (game, tests) => (tests || []).every((t) => (BINDING_TESTS[t.test] || (() => true))(game, t));
+const bindingHolds = (game, tests, ctx, b) => (tests || []).every((t) => (BINDING_TESTS[t.test] || (() => true))(game, t, ctx, b));
 // The effects a binding can apply.
 function applyBindingEffects(game, R, effects) {
   for (const e of effects || []) {
@@ -13544,6 +13501,26 @@ function applyBindingEffects(game, R, effects) {
         epEvent(R, `${dutyTitleOf(law)}: the charter falls short and breaks.${contributors.length ? ` ${contributors.map(hallName).join(", ")} take 1 pressure.` : ""}`, contributors.map((x) => x.id));
         continue;
       }
+      // the court's word kept: whoever stood for it is relieved, and the court's standing restored
+      case "wordKept": {
+        const by = game.people[e.by];
+        if (e.again && p) addRegard(p, 2);
+        if (!e.again && by && by.pressure > 0) addPressure(by, -1);
+        logEvent(R, `The court keeps its word to ${p?.name}; ${by?.name} is relieved 1.`, "wordKept", [e.id, e.by], { by: e.by });
+        const gained = gainStanding(game, 1);
+        gained && logEvent(R, `Keeping its word restores the court’s standing (+${gained}).`, "standing", [], { amount: gained, why: "word" });
+        continue;
+      }
+      // the court's word broken: breaches of confidence, the household's regard lost, and it remembers
+      case "wordBroken": {
+        const by = game.people[e.by];
+        breachConfidence(game, CONFIG.brokenWordBreaches);
+        game.brokenWords = [...(game.brokenWords || []), { id: e.id, week: game.week, regard: p?.regard ?? 0 }].slice(-6);
+        if (p) p.regard = -2;
+        if (e.again) { if (p) addGrievance(game, constituencyOf(p), 1); } else if (by) addPressure(by, CONFIG.accusedCost);
+        logEvent(R, `The court breaks its word to ${p?.name}: ${CONFIG.brokenWordBreaches} breaches of confidence, and ${by?.name} answers for it.`, "wordBroken", [e.id, e.by], { by: e.by, breaches: CONFIG.brokenWordBreaches });
+        continue;
+      }
       // the bishop's heavier shares lifted
       case "liftSeeWeights": {
         const law = lawById(game, e.lawId);
@@ -13558,17 +13535,26 @@ function applyBindingEffects(game, R, effects) {
     if (e.text) epEvent(R, e.text, e.ids || (e.id != null ? [e.id] : []));
   }
 }
-// Every binding due this week is tested at the close, in the order it was made.
-function testBindings(game, R) {
+// Every binding due this week is tested, in the order it was made. Most are tested at the week's
+// close; the court's word is tested after the hearings, which it turns on.
+//   mode "await": kept the first week its test holds, broken if its last week passes first
+function testBindings(game, R, phase = "close", ctx = {}) {
   if (!game.bindings?.length) return;
   const still = [];
   for (const b of game.bindings) {
+    if ((b.phase || "close") !== phase) { still.push(b); continue; }
     const due = game.week >= b.from && (b.at != null ? game.week === b.at : game.week <= b.until);
     if (!due) { if (b.at != null ? game.week < b.at : game.week < b.until) still.push(b); continue; }
-    if (!bindingHolds(game, b.requires)) continue;
+    if (!bindingHolds(game, b.requires, ctx, b)) continue;
     applyBindingEffects(game, R, b.each);
-    const ok = bindingHolds(game, b.test);
+    const ok = bindingHolds(game, b.test, ctx, b);
     if (b.at != null) { applyBindingEffects(game, R, ok ? b.kept : b.broken); continue; }
+    if (b.mode === "await") {
+      if (ok) applyBindingEffects(game, R, b.kept);
+      else if (game.week >= b.until) applyBindingEffects(game, R, b.broken);
+      else still.push(b);
+      continue;
+    }
     if (!ok) { applyBindingEffects(game, R, b.broken); continue; }
     if (b.counter) {
       b.counter.n = (b.counter.n || 0) + 1;
@@ -13590,10 +13576,26 @@ function migrateBindings(game) {
   if (game.lordSummons) { const ls = game.lordSummons; delete game.lordSummons; if (ls.week >= w) summonsBinding(game, ls.id, ls.week); }
   if (game.fastWeek) { const fw = game.fastWeek; delete game.fastWeek; if (fw.week >= w) fastBinding(game, fw.key, fw.week); }
   if (game.titheAudit) { const ta = game.titheAudit; delete game.titheAudit; if (ta.week >= w) auditBinding(game, ta.lawId, ta.bishopId, ta.honest, ta.week); }
+  if (game.undertakings) {
+    for (const [id, u] of Object.entries(game.undertakings)) giveCourtWord(game, Number(id), { ...u, due: u.due ?? w });
+    delete game.undertakings;
+  }
   if (game.neighbourCompacts) { for (const nc of game.neighbourCompacts) neighboursBinding(game, nc.a, nc.b, nc.lawId, nc.since ?? w, nc.kept || 0); delete game.neighbourCompacts; }
   return game;
 }
 // ---- the bindings themselves, one maker for each arrangement ----
+// The court's word to a household: it attends every audience and causes no breach while waiting;
+// the court must hear it, or settle its grievance, by the day given.
+function giveCourtWord(game, id, terms) {
+  const t = { due: game.week + CONFIG.undertakingWeeks, ...terms };
+  return addBinding(game, { kind: "word", tag: "word", phase: "hearings", mode: "await", party: id, until: t.due, ...t,
+    test: [{ test: "heard", id }],
+    kept: [{ type: "wordKept", id, by: t.by, again: !!t.again }],
+    broken: [{ type: "wordBroken", id, by: t.by, again: !!t.again }] });
+}
+const courtWordsGiven = (game) => (game.bindings || []).filter((b) => b.tag === "word");
+const courtWordOf = (game, id) => courtWordsGiven(game).find((b) => b.party === Number(id)) || null;
+const courtWordMap = (game) => Object.fromEntries(courtWordsGiven(game).map((b) => [b.party, b]));
 // The court's supper: if the host ends the week short of urgent, the Crown gains standing.
 function supperBinding(game, hostId, week = game.week) {
   const name = hallName(game.people[hostId]);
@@ -16073,7 +16075,7 @@ function setViewRunWeek(game, n, e, t, r, result) {
 
 function pressureGainAtClose(game, personId) {
   const person = game.people[personId];
-  if (game.undertakings?.[personId]) return 0;
+  if (courtWordOf(game, personId)) return 0;
   if (game.laws.some((law) => law.active && law.issuer === personId && !epMet(game, law)))
     return 2 + CONFIG.drift;
   const stint = game.compacts[person.region + "|Commoner"]?.stint,
@@ -22874,7 +22876,7 @@ function weekSummaryStandard(before, game, events) {
     });
   const d = [];
   for (const c of i("summons")) d.push(`${t(c.ids[1])} summons ${t(c.ids[0])} to the audience.`);
-  for (const [c, u] of Object.entries(game.undertakings || {}))
+  for (const [c, u] of Object.entries(courtWordMap(game)))
     u.due <= game.week &&
       d.push(
         `The court’s promise to ${t(Number(c))} must be fulfilled this week. The seal will wait no longer.`,
@@ -24422,12 +24424,12 @@ function audienceViewUnwrapped(game, n, e = {}) {
         changedBy: H,
         chainLine: _,
         atRisk:
-          !game.undertakings?.[personId] &&
+          !courtWordOf(game, personId) &&
           (k
             ? k.includes(personId)
             : Q < 0 && pressureState(G.state, personId).level === 2 && !game.gameOver),
         spared: M.includes(personId),
-        wordDue: game.undertakings?.[personId]?.due ?? null,
+        wordDue: courtWordOf(game, personId)?.due ?? null,
         slighted: !!(v ? v.state : game).people[personId].slighted,
         // Unheard as the docket leaves it: a docketed household that is answered loses the mark, and once
         // the docket is full, one left off it this week gains it.
@@ -26359,7 +26361,7 @@ function RealmContributionButton({ game, onOpen, projected = false, full = null,
   if (!F)
     for (const id of game.audience || []) {
       const person = game.people[id];
-      if (order.includes(id) || !person || person.pressure < CONFIG.urgent || game.undertakings?.[id])
+      if (order.includes(id) || !person || person.pressure < CONFIG.urgent || courtWordOf(game, id))
         continue;
       const key = constituencyOf(person);
       const n = epUnheardN(game, person);
@@ -29865,7 +29867,7 @@ function PetitionCard({
                 move: !!moveNow && !view.mobilityNotice,
                 obj: objNow > 0 && objFut === 0,
                 claim: !!claimNow && !claimInfo,
-                word: !futGame.undertakings?.[view.id],
+                word: !courtWordOf(futGame, view.id),
               },
               SOLVED_LINE = {
                 ear: c ? "On the docket as it stands, it is heard this week." : "Another ruling on the docket as it stands answers its claim, though it is not heard itself.",
@@ -32373,7 +32375,7 @@ function buildVisualReckoning(before, after, report, hearings, snapshots) {
       related: [],
     });
   }
-  for (const [id, promise] of Object.entries(after.undertakings || {}))
+  for (const [id, promise] of Object.entries(courtWordMap(after)))
     if (!after.gameOver && after.people[id])
       next.push({
         kind: "promise",
@@ -40878,7 +40880,7 @@ const SOLO_MATTERS = {
     lapseChoice: 1,
     lapseNote: () => "Without your word, the page would withdraw the promise in person.",
     draw(game) {
-      if (Object.keys(game.undertakings || {}).length) return null;
+      if (courtWordsGiven(game).length) return null;
       const sponsors = game.people.filter(
         (p) => !p.charge && p.rites?.court_place != null && game.week - p.rites.court_place >= 2 && p.rites.heirSuretyWeek == null,
       );
@@ -40890,7 +40892,7 @@ const SOLO_MATTERS = {
               p.id !== sponsor.id &&
               !p.charge &&
               p.pressure >= CONFIG.pressing &&
-              !game.undertakings?.[p.id] &&
+              !courtWordOf(game, p.id) &&
               (p.lastWordWeek == null || game.week - p.lastWordWeek >= CONFIG.undertakingWeeks + 1),
           )
           .sort((a, b) => b.pressure - a.pressure || a.id - b.id)[0];
@@ -40906,7 +40908,7 @@ const SOLO_MATTERS = {
     },
     valid(game, h) {
       const sponsor = game.people[h.a], waiting = game.people[h.b];
-      return !!(sponsor && !sponsor.charge && waiting && !waiting.charge && !Object.keys(game.undertakings || {}).length);
+      return !!(sponsor && !sponsor.charge && waiting && !waiting.charge && !courtWordsGiven(game).length);
     },
     view(game, h) {
       const sponsor = game.people[h.a], waiting = game.people[h.b];
@@ -40962,14 +40964,13 @@ const SOLO_MATTERS = {
         const law = dutiesPaidBy(g, waiting)[0];
         sponsor.vouchedWeek = g.week;
         waiting.lastWordWeek = g.week;
-        g.undertakings ||= {};
-        g.undertakings[waiting.id] = {
+        giveCourtWord(g, waiting.id, {
           by: sponsor.id,
           week: g.week,
           due: g.week + CONFIG.undertakingWeeks,
           dutyId: law?.id,
           share: law ? paidShare(g, waiting, law) : 0,
-        };
+        });
         return `${hallName(sponsor)} stands surety for ${hallName(waiting)}, who now holds the court’s word until ${stewardWeek(g.week + CONFIG.undertakingWeeks)}.`;
       }
       addRegard(waiting, -1);
@@ -41642,7 +41643,7 @@ const SOLO_MATTERS = {
           consequence: `Revokes ${reducedLaw ? `the reduced share on ${dutyTitleOf(reducedLaw)}` : "one disputed writ"} without charging ${hallName(suspect)}. Other writs stand.`, rows: [],
         });
       }
-      const busyUndertaking = Object.keys(game.undertakings || {}).length > 0;
+      const busyUndertaking = courtWordsGiven(game).length > 0;
       opts.push({
         label: "Bring the two official weights before the court", note: "Grant an Undertaking to the regional official.",
         disabled: busyUndertaking,
@@ -41679,18 +41680,17 @@ const SOLO_MATTERS = {
         }
         return `Restitution is ordered on ${hallName(suspect)}’s disputed concession without bringing a charge. Other writs stand.`;
       }
-      if (!Object.keys(g.undertakings || {}).length) {
+      if (!courtWordsGiven(g).length) {
         const law = dutiesPaidBy(g, official)[0];
         witness.vouchedWeek = g.week;
         official.lastWordWeek = g.week;
-        g.undertakings ||= {};
-        g.undertakings[official.id] = {
+        giveCourtWord(g, official.id, {
           by: witness.id,
           week: g.week,
           due: g.week + CONFIG.undertakingWeeks,
           dutyId: law?.id,
           share: law ? paidShare(g, official, law) : 0,
-        };
+        });
         return `Both standard weights are called before the court. ${hallName(official)} holds an undertaking until ${stewardWeek(g.week + CONFIG.undertakingWeeks)}, and ${hallName(suspect)} keeps its writs meanwhile.`;
       }
       return `The inquiry into the two official weights is noted on the roll, and ${hallName(suspect)} keeps its writs meanwhile.`;
@@ -42360,7 +42360,7 @@ const SOLO_MATTERS = {
     },
     view(game, h) {
       const watchman = game.people[h.a], absent = game.people[h.b];
-      const busyUndertaking = Object.keys(game.undertakings || {}).length > 0;
+      const busyUndertaking = courtWordsGiven(game).length > 0;
       return {
         title: "The watchman found the missing purse",
         lede: `${hallName(watchman)}, who stood the bench while ${hallName(absent)} was on respite, found a purse beneath it containing the exact sum missing from ${hallName(absent)}’s last watch.`,
@@ -42401,14 +42401,13 @@ const SOLO_MATTERS = {
       const law = dutiesPaidBy(g, absent)[0];
       watchman.vouchedWeek = g.week;
       absent.lastWordWeek = g.week;
-      g.undertakings ||= {};
-      g.undertakings[absent.id] = {
+      giveCourtWord(g, absent.id, {
         by: watchman.id,
         week: g.week,
         due: g.week + CONFIG.undertakingWeeks,
         dutyId: law?.id,
         share: law ? paidShare(g, absent, law) : 0,
-      };
+      });
       return `The court gives ${hallName(absent)} its word until ${stewardWeek(g.week + CONFIG.undertakingWeeks)} to clear its name formally on the docket.`;
     },
   },
@@ -42662,7 +42661,7 @@ const SOLO_MATTERS = {
     view(game, h) {
       const intercessor = game.people[h.a], accused = game.people[h.b];
       const hasOwnGrudge = !!(intercessor.grudge && intercessor.grudge.until > game.week && intercessor.grudge.c === constituencyOf(accused));
-      const busyUndertaking = Object.keys(game.undertakings || {}).length > 0;
+      const busyUndertaking = courtWordsGiven(game).length > 0;
       const opts = [
         {
           label: "Accept intercession", note: "Clear the charge immediately.",
@@ -42700,18 +42699,17 @@ const SOLO_MATTERS = {
         addPressure(intercessor, 1);
         return `The court accepts ${hallName(intercessor)}’s intercession (+1 pressure). The charge against ${hallName(accused)} is cleared (+1 regard), and ${hallName(accused)} remembers who answered for it.`;
       }
-      if (choice === 1 && !Object.keys(g.undertakings || {}).length) {
+      if (choice === 1 && !courtWordsGiven(g).length) {
         const law = dutiesPaidBy(g, accused)[0];
         intercessor.vouchedWeek = g.week;
         accused.lastWordWeek = g.week;
-        g.undertakings ||= {};
-        g.undertakings[accused.id] = {
+        giveCourtWord(g, accused.id, {
           by: intercessor.id,
           week: g.week,
           due: g.week + CONFIG.undertakingWeeks,
           dutyId: law?.id,
           share: law ? paidShare(g, accused, law) : 0,
-        };
+        });
         return `${hallName(intercessor)} stands surety for ${hallName(accused)}, who holds the court’s word until ${stewardWeek(g.week + CONFIG.undertakingWeeks)}.`;
       }
       intercessor.grudge = null;
@@ -42752,7 +42750,7 @@ const SOLO_MATTERS = {
       const accLaw = dutiesPaidBy(game, accused)[0], usrLaw = dutiesPaidBy(game, accuser)[0];
       const accInfo = accLaw ? `${unitsLabel(paidShare(game, accused, accLaw))} on ${dutyTitleOf(accLaw)}` : "no current units";
       const usrInfo = usrLaw ? `${unitsLabel(paidShare(game, accuser, usrLaw))} on ${dutyTitleOf(usrLaw)}` : "no current units";
-      const busyUndertaking = Object.keys(game.undertakings || {}).length > 0;
+      const busyUndertaking = courtWordsGiven(game).length > 0;
       return {
         title: "The accused throws down a glove",
         lede: `${hallName(accused)} has thrown down a glove, demanding trial by combat against ${hallName(accuser)}.`,
@@ -42793,18 +42791,17 @@ const SOLO_MATTERS = {
         }
         return `${hallName(accuser)} prevails in the yard. The forfeiture stands without restoration, and ${hallName(accused)}’s injury removes ${prn(accused).obj} from ${accLaw ? dutyTitleOf(accLaw) : "service"} this week.`;
       }
-      if (!Object.keys(g.undertakings || {}).length) {
+      if (!courtWordsGiven(g).length) {
         const law = dutiesPaidBy(g, accused)[0];
         accuser.vouchedWeek = g.week;
         accused.lastWordWeek = g.week;
-        g.undertakings ||= {};
-        g.undertakings[accused.id] = {
+        giveCourtWord(g, accused.id, {
           by: accuser.id,
           week: g.week,
           due: g.week + CONFIG.undertakingWeeks,
           dutyId: law?.id,
           share: law ? paidShare(g, accused, law) : 0,
-        };
+        });
         return `The glove is refused. ${hallName(accused)} holds the court’s word until ${stewardWeek(g.week + CONFIG.undertakingWeeks)} to answer under oath.`;
       }
       return `The glove is refused; ${hallName(accused)} awaits an ordinary defence hearing.`;
@@ -43209,7 +43206,7 @@ const SOLO_MATTERS = {
     lapseNote: () => "Left unanswered, the household goes home with nothing.",
     draw(game) {
       const rec = (game.brokenWords || []).find((r) => game.week - r.week >= 2 && game.week - r.week <= 3 && !r.answered
-        && game.people[r.id] && !game.people[r.id].charge && !game.undertakings?.[r.id]);
+        && game.people[r.id] && !game.people[r.id].charge && !courtWordOf(game, r.id));
       if (!rec || hallHash(game, 2351) >= 0.5) return null;
       return { matter: "wordRemembered", ruled: null, week: game.week, a: rec.id, b: rec.id, region: game.people[rec.id].region, from: { kind: "word", week: rec.week } };
     },
@@ -43217,7 +43214,7 @@ const SOLO_MATTERS = {
       return !!game.people[h.a];
     },
     view(game, h) {
-      const p = game.people[h.a], name = hallName(p), busy = Object.keys(game.undertakings || {}).length > 0;
+      const p = game.people[h.a], name = hallName(p), busy = courtWordsGiven(game).length > 0;
       const word = undertakingParts(game, p, null, busy);
       const again = busy ? { terms: word.terms } : {
         scopes: undertakingScopes(p, 1),
@@ -43247,8 +43244,7 @@ const SOLO_MATTERS = {
       }
       if (choice === 1) {
         const law = dutiesPaidBy(g, p)[0];
-        g.undertakings ||= {};
-        g.undertakings[p.id] = { by: p.id, week: g.week, due: g.week + 1, dutyId: law?.id, share: law ? paidShare(g, p, law) : 0, again: true };
+        giveCourtWord(g, p.id, { by: p.id, week: g.week, due: g.week + 1, dutyId: law?.id, share: law ? paidShare(g, p, law) : 0, again: true });
         return `The court gives ${name} its word again, for one week this time.`;
       }
       addRegard(p, -1);
@@ -43790,7 +43786,7 @@ const SOLO_MATTERS = {
       resetAllocCache(t0);
       const { rises } = soloShareDeltas(game, t0, law.id);
       const shift = rises.length ? ` Resuming the difference: ${rises.join(", ")}.` : "";
-      const busyUndertaking = Object.keys(game.undertakings || {}).length > 0;
+      const busyUndertaking = courtWordsGiven(game).length > 0;
       return {
         title: "The accused invokes your own precedent",
         lede: `${hallName(accused)}, charged with abusing a privilege on ${duty}, has produced your earlier writ granting ${hallName(precedent)} the very same lighter share on ${duty}.`,
@@ -43834,17 +43830,16 @@ const SOLO_MATTERS = {
         }
         return `Both privileges on ${duty} are called in. ${hallName(accused)}’s charge clears, and ${hallName(precedent)} loses its lighter share too.`;
       }
-      if (!Object.keys(g.undertakings || {}).length) {
+      if (!courtWordsGiven(g).length) {
         accused.vouchedWeek = g.week;
         precedent.lastWordWeek = g.week;
-        g.undertakings ||= {};
-        g.undertakings[precedent.id] = {
+        giveCourtWord(g, precedent.id, {
           by: accused.id,
           week: g.week,
           due: g.week + CONFIG.undertakingWeeks,
           dutyId: law?.id,
           share: law ? paidShare(g, precedent, law) : 0,
-        };
+        });
         return `Both ${hallName(accused)} and ${hallName(precedent)} are called to audience; ${hallName(precedent)} holds an undertaking while ${hallName(accused)} stays under charge.`;
       }
       return `The matter of the two writs awaits a hearing; ${hallName(accused)} remains under charge.`;
@@ -44034,7 +44029,7 @@ const SOLO_MATTERS = {
     view(game, h) {
       const accuser = game.people[h.a], accused = game.people[h.b];
       const dispLaw = h.from.dispLawId != null ? lawById(game, h.from.dispLawId) : null;
-      const busyUndertaking = Object.keys(game.undertakings || {}).length > 0;
+      const busyUndertaking = courtWordsGiven(game).length > 0;
       return {
         title: "The accuser offers to bail out the accused",
         lede: `${hallName(accuser)} has returned, Vicar. ${hallName(accused)}, whom ${hallName(accuser)} accused, is close to breaking under the charge, and ${hallName(accuser)} offers to stand surety until the defence is heard.`,
@@ -44063,18 +44058,17 @@ const SOLO_MATTERS = {
     apply(g, m, choice) {
       const accuser = g.people[m.a], accused = g.people[m.b];
       const dispLaw = m.from.dispLawId != null ? lawById(g, m.from.dispLawId) : null;
-      if (choice === 0 && !Object.keys(g.undertakings || {}).length) {
+      if (choice === 0 && !courtWordsGiven(g).length) {
         const law = dutiesPaidBy(g, accused)[0];
         accuser.vouchedWeek = g.week;
         accused.lastWordWeek = g.week;
-        g.undertakings ||= {};
-        g.undertakings[accused.id] = {
+        giveCourtWord(g, accused.id, {
           by: accuser.id,
           week: g.week,
           due: g.week + CONFIG.undertakingWeeks,
           dutyId: law?.id,
           share: law ? paidShare(g, accused, law) : 0,
-        };
+        });
         return `${hallName(accuser)} stands surety for ${hallName(accused)} until ${stewardWeek(g.week + CONFIG.undertakingWeeks)}; the charge stays open meanwhile.`;
       }
       if (choice === 1) {
