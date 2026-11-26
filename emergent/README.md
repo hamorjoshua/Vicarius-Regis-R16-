@@ -82,7 +82,7 @@ None of these has a rule. A sample from one chronicle:
 
 ## What the readers showed about the fall
 
-- **It starts with a crop left in the field.** In 148 of 180 realm-years the cold takes a tenth or more of the standing crop, and the fall follows a year when it takes most of it. People reap too late or too slowly.
+- **It starts with a crop left in the field.** In 148 of 180 realm-years the cold takes a tenth or more of the standing crop. In the one realm read closely (seed 3), the fall follows a year when the cold took 5,129 against 7,205 brought in. People reap too late or too slowly. Whether every fall starts this way is not yet checked.
 - **Blows kill about as many as hunger.** In the six falls, 865 died of blows and 924 for want of food.
 - **Three loops run at once:** gathering from ground others hold (about 1,800 times a fall), taking from stores (about 1,200), and fighting over debts (about 1,100).
 - **Trouble comes at every scale**, as the design wants: many small feuds and a few very long ones; many hungry seasons and a few famines.
