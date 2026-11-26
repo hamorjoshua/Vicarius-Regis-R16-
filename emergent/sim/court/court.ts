@@ -14,7 +14,30 @@ import type { Body, Bond, Court, Petition, Rule, State } from '../types.ts';
 export type Width = 'case' | 'body' | 'realm';
 export interface Ruling { petition: number; cut: string; width: Width }
 
-export const openCourt = (s: State): Court => (s.court = { standing: 5, docket: [], rules: [], grief: {}, seen: {}, next: 0, quiet: 0, declined: 0, chilled: 0 });
+export function openCourt(s: State): Court {
+  // The Crown's store: for each pressing need, what would see the whole realm through a week or so, in the thing that keeps best.
+  const store = new Array<number>(NK).fill(0);
+  let heads = 0;
+  for (const p of s.people) if (p.alive) heads++;
+  for (let n = 0; n < NN; n++) {
+    if (NEEDS[n]!.harm < 0.25) continue;
+    let k = -1;
+    for (let j = 0; j < NK; j++) if (!Kn[j]!.fixed && Kn[j]!.serves[n]! > 0 && (k < 0 || Kn[j]!.keep < Kn[k]!.keep)) k = j;
+    if (k >= 0) store[k] = Math.max(store[k]!, (heads * P.crownWeeks * (NEEDS[n]!.per + NEEDS[n]!.cold * 5) * Kn[k]!.use) / Kn[k]!.serves[n]!);
+  }
+  return (s.court = { standing: 5, docket: [], rules: [], grief: {}, seen: {}, next: 0, quiet: 0, declined: 0, chilled: 0, store, words: [], wordsKept: 0, wordsBroken: 0 });
+}
+
+/** Give a house three weeks of what it needs out of the Crown's store. False if the store has not got it. */
+function relieve(s: State, c: Court, to: Body, need: number): number {
+  let k = -1;
+  for (let j = 0; j < NK; j++) if (Kn[j]!.serves[need]! > 0 && c.store[j]! > (k < 0 ? 0.05 : c.store[k]!)) k = j;
+  if (k < 0) return 0;
+  const q = Math.min(c.store[k]!, (3 * askAhead(s, to)[need]! * Kn[k]!.use) / Kn[k]!.serves[need]!);
+  if (q < 0.05) return 0;
+  c.store[k] = c.store[k]! - q; to.store[k] = to.store[k]! + q;
+  return q;
+}
 
 const grieve = (c: Court, id: number, by: number): void => { if (id >= 0) c.grief[id] = Math.max(0, (c.grief[id] ?? 0) + by); };
 const scopeOf = (s: State, id: number): number => { const t = top(s, s.bodies[id]!); return t.id === id ? -2 : t.id; };
@@ -31,10 +54,10 @@ export function formOf(byId: Map<number, Bond>, b: Bond | undefined, depth = 0):
 export const SIDES = ['owed', 'owes', 'outside', 'bare'] as const;
 /** How far a cut finds for the one who asked, by how they stood. */
 const FAVOUR: Record<string, Record<string, number>> = {
-  owed: { enforce: 1, part: 0.5, stay: 0.2, strike: 0 },
-  owes: { strike: 1, stay: 0.7, part: 0.5, enforce: 0 },
+  owed: { enforce: 1, redeem: 1, part: 0.5, stay: 0.2, strike: 0 },
+  owes: { strike: 1, redeem: 1, stay: 0.7, part: 0.5, enforce: 0 },
   outside: { turn: 1, part: 0.6, strike: 0.4, enforce: 0 },
-  bare: { levy: 1, dismiss: 0 },
+  bare: { give: 1, levy: 1, promise: 0.8, dismiss: 0 },
 };
 
 /** A house that has been before the court, and those who live near enough to see, change what they expect of it. */
@@ -81,9 +104,10 @@ const other = (bd: Bond, by: number): number => (bd.a === by ? bd.b : bd.a);
 export function cuts(s: State, p: Petition): string[] {
   if (p.reason === 'challenge') return ['uphold', 'strike'];
   const bd = s.bonds.find(b => b.id === p.bond);
-  if (!bd) return ['levy', 'dismiss'];
+  if (!bd) return ['give', 'levy', 'promise', 'dismiss'];
   if (bd.about === 'land') return ['enforce', 'part', 'strike', 'turn'];
   const c = ['enforce', 'part', 'strike', 'stay'];
+  if (bd.about === 'act' && !bd.labour) c.push('redeem');
   if (bd.about === 'act' && bd.basis === 'wrong' && bd.doer >= 0 && bd.doer !== bd.a) c.push('inquire');
   return c;
 }
@@ -101,6 +125,9 @@ function carry(s: State, c: Court, p: Petition, cut: string): boolean {
   const bd = s.bonds.find(b => b.id === p.bond);
   if (!bd) {
     // A want with nothing standing in its way that the court can cut: it can be laid on those nearby who have most.
+    // Out of the Crown's own store, now; or the regent's word that it will come.
+    if (cut === 'give') { const q = relieve(s, c, by, p.need); if (q <= 0) return false; rec(s, 'judge', { a: p.by, q, need: p.need, cause: p.rec, way: `give ${p.shape}` }); return true; }
+    if (cut === 'promise') { c.words.push({ to: p.by, need: p.need, due: s.t + P.wordWeeks }); rec(s, 'judge', { a: p.by, need: p.need, cause: p.rec, way: `promise ${p.shape}` }); return true; }
     if (cut !== 'levy') { grieve(c, p.by, P.harmUnheard * 2); rec(s, 'judge', { a: p.by, q2: 0, need: p.need, way: `dismiss ${p.shape}` }); return true; }
     let best: Body | undefined, bestK = -1, most = 0;
     for (const x of around(hearthIndex(s), s.side, by.home, P.dealReach)) {
@@ -125,6 +152,14 @@ function carry(s: State, c: Court, p: Petition, cut: string): boolean {
     if (bd.doer >= 0 && bd.doer !== bd.a && s.bodies[bd.doer]!.alive) { grieve(c, bd.a, -P.harmPaid); bd.a = bd.doer; p.against = p.side === 'owed' ? bd.doer : p.against; }
     return true;
   }
+  if (cut === 'redeem') {
+    // The Crown pays what is owed, as far as its store goes, and the rest is let go.
+    const pay = Math.min(bd.q, c.store[bd.kind]!);
+    if (pay < 0.5 * bd.q) return false;
+    c.store[bd.kind] = c.store[bd.kind]! - pay; s.bodies[bd.b]!.store[bd.kind] = s.bodies[bd.b]!.store[bd.kind]! + pay;
+    bd.q = 0;
+    return true;
+  }
   if (cut === 'stay') { bd.due = Math.max(bd.due, s.t) + 52; bd.broken = false; grieve(c, gains, P.harmUnheard); return true; }
   const share = cut === 'enforce' ? 1 : cut === 'part' ? 0.5 : 0;
   if (bd.about === 'act') {
@@ -134,7 +169,8 @@ function carry(s: State, c: Court, p: Petition, cut: string): boolean {
     if (owed > 0 && !bd.labour) {
       // What is enforced is paid now as far as it can be, and the rest is worked off.
       const pay = Math.min(owed, D.store[bd.kind]!);
-      D.store[bd.kind] = D.store[bd.kind]! - pay; C.store[bd.kind] = C.store[bd.kind]! + pay;
+      // The court keeps a share of what it enforces.
+      D.store[bd.kind] = D.store[bd.kind]! - pay; C.store[bd.kind] = C.store[bd.kind]! + pay * (1 - P.crownFee); c.store[bd.kind] = c.store[bd.kind]! + pay * P.crownFee;
       if (owed - pay > 0.05) bond(s, { about: 'act', a: D.id, b: C.id, kind: bd.kind, q: (owed - pay) * TOIL[bd.kind]!, due: s.t, labour: true, basis: 'grant', rec: e.id, way: bd.way });
       const after = cover(D.store, askAhead(s, D));
       grieve(c, D.id, P.harmPaid + (after.some((x, n) => NEEDS[n]!.harm >= 0.5 && x < P.dire) ? P.harmLost : 0));
@@ -318,6 +354,21 @@ export function hear(s: State, rulings: Ruling[]): void {
       if (scope === -1) grieve(c, r.cut === 'enforce' ? (q.side === 'owed' ? q.against : q.by) : q.side === 'owed' ? q.by : q.against, P.harmReversed);
     }
   }
+  // What the Crown has laid by spoils like anything else. The regent's word falls due: kept out of the store, or broken before everyone.
+  for (let k = 0; k < NK; k++) c.store[k] = c.store[k]! * (1 - Kn[k]!.keep);
+  const idx = hearthIndex(s);
+  c.words = c.words.filter(w => {
+    if (w.due > s.t) return true;
+    const to = s.bodies[w.to]!;
+    if (!to.alive) return false;
+    if (relieve(s, c, to, w.need) > 0) { c.wordsKept++; rec(s, 'keep', { b: w.to, need: w.need, q2: 9 }); teach(s, idx, w.to, 'bare', 1, P.pleaOwn); return false; }
+    c.wordsBroken++;
+    rec(s, 'break', { b: w.to, need: w.need, q2: 9 });
+    grieve(c, w.to, P.harmWord);
+    for (const b of around(idx, s.side, to.home, P.reach)) if (b.id !== w.to) grieve(c, b.id, P.harmWord / 5);
+    teach(s, idx, w.to, 'bare', 0, P.pleaOwn);
+    return false;
+  });
   // Those still waiting in want hold it against the court.
   for (const p of c.docket) { p.waited++; if (p.urgency > 3) grieve(c, p.by, P.harmUnheard); }
   // Enough houses with enough grievance withdraw their confidence.

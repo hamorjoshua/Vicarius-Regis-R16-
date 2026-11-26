@@ -125,7 +125,9 @@ export interface Wrong { by: number; to: number; kind: number; q: number; rec: n
 export interface Petition { id: number; t: number; by: number; against: number; bond: number; need: number; rec: number; shape: string; side: 'owed' | 'owes' | 'outside' | 'bare'; reason: 'none' | 'clash' | 'challenge'; speaksFor: number; waited: number; urgency: number }
 /** A rule: a bond that binds every member of a body, or the whole realm (scope -1). */
 export interface Rule { id: number; scope: number; shape: string; cut: string; since: number; uses: number }
-export interface Court { standing: number; docket: Petition[]; rules: Rule[]; grief: Record<number, number>; seen: Record<string, number>; next: number; quiet: number; declined: number; chilled: number }
+export interface Court { standing: number; docket: Petition[]; rules: Rule[]; grief: Record<number, number>; seen: Record<string, number>; next: number; quiet: number; declined: number; chilled: number;
+  /** What the Crown has laid by, kind by kind; and the regent's word, given and not yet made good. */
+  store: number[]; words: { to: number; need: number; due: number }[]; wordsKept: number; wordsBroken: number }
 export interface Use { body: number; cell: number; days: number }
 
 export interface State {

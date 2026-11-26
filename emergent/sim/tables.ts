@@ -217,6 +217,8 @@ export const P = {
   /** The court: hearings a week, seats at the audience, weeks a matter waits before it is dropped, weeks a reign lasts. */
   hearings: 3, seats: 6, wait: 13, reign: 156,
   /** Going to court: what it costs beside what is hoped for, the days it takes, and how far one ruling moves what a house expects (its own; its neighbours'). */
+  /** The Crown's store at the start, in weeks of each pressing need for the whole realm; the share of what it enforces that it keeps; weeks the regent's word runs; the harm of breaking it. */
+  crownWeeks: 1, crownFee: 0.1, wordWeeks: 13, harmWord: 50,
   /** Harm laid to the court by one who could find no one to deal with because of what the law now says. */
   harmChilled: 3,
   pleaCost: 0.15, pleaDays: 3, pleaOwn: 0.5, pleaSeen: 0.15,
