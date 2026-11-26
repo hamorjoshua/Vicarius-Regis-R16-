@@ -8,6 +8,7 @@ import { askAhead, cover } from '../sim/value.ts';
 import { KINDS, NEEDS, P } from '../sim/tables.ts';
 import { grown, top } from '../sim/util.ts';
 import { Readers, wayWords } from '../readers/readers.ts';
+import { placeName } from '../readers/names.ts';
 import type { Bond, Petition, State } from '../sim/types.ts';
 
 const app = document.getElementById('app')!;
@@ -31,7 +32,7 @@ const HE = ['Aldred', 'Osric', 'Godwin', 'Leofric', 'Wulfstan', 'Edric', 'Thurst
 const SHE = ['Aldith', 'Edith', 'Godgifu', 'Leofrun', 'Wulfhild', 'Mildred', 'Hilda', 'Eadgyth', 'Sunniva', 'Aelfwen', 'Osburh', 'Cwen', 'Beatrix', 'Maud', 'Agnes', 'Emma', 'Avice', 'Juliana', 'Isolde', 'Cecily', 'Golda', 'Ragnhild', 'Thora', 'Estrild'];
 const nameOf = (id: number): string => { const p = s.people[id]!; const l = p.sex ? SHE : HE; return l[(id * 7 + (p.born & 1023)) % l.length]!; };
 const ageOf = (id: number): number => Math.floor((s.t - s.people[id]!.born) / 52);
-const cellWords = (c: number): string => `(${c % s.side}, ${Math.floor(c / s.side)})`;
+const cellWords = (c: number): string => placeName(s, c);
 /** The one who speaks for a house: the eldest of its grown people. */
 function speaker(id: number): number {
   const b = s.bodies[id]!, g = grown(s, b);
@@ -44,9 +45,9 @@ function house(id: number): string {
   if (id < 0) return 'nobody';
   const b = s.bodies[id]!;
   const h = speaker(id);
-  if (h >= 0 && b.rank === 'lord') return `Lord ${nameOf(h)}`;
-  if (h >= 0 && b.rank === 'priest') return `Father ${nameOf(h)}`;
-  if (h >= 0 && b.rank === 'bailiff') return `${nameOf(h)}, the king’s bailiff`;
+  if (h >= 0 && b.rank === 'lord') return `Lord ${nameOf(h)} of ${cellWords(b.home)}`;
+  if (h >= 0 && b.rank === 'priest') return `Father ${nameOf(h)} of ${cellWords(b.home)}`;
+  if (h >= 0 && b.rank === 'bailiff') return `${nameOf(h)}, the king’s bailiff at ${cellWords(b.home)}`;
   return h < 0 ? `house ${id}` : `${nameOf(h)}’s house`;
 }
 /** Who they are: the speaker, and who is in the house. */
@@ -55,13 +56,13 @@ function who(id: number): string {
   if (h < 0) return '';
   const p = s.people[h]!, alive = b.members.map(i => s.people[i]!).filter(x => x.alive), young = alive.filter(x => (s.t - x.born) / 52 < 14).length;
   const lone = p.spouse < 0 && young > 0 ? (p.sex ? 'a widow' : 'a widower') : p.spouse < 0 && alive.length === 1 ? 'alone' : '';
-  return `${nameOf(h)}, ${ageOf(h)}${lone ? ', ' + lone : ''}, with ${alive.length} in the house${young ? ` (${young} of them children)` : ''}`;
+  return `${nameOf(h)} of ${cellWords(b.home)}, ${ageOf(h)}${lone ? ', ' + lone : ''}, with ${alive.length} in the house${young ? ` (${young} of them children)` : ''}`;
 }
 const owedWords = (bd: Bond): string => (bd.labour ? `${Math.round(bd.q)} days of work` : `${bd.q < 10 ? bd.q.toFixed(1) : Math.round(bd.q)} of ${KINDS[bd.kind]?.id ?? 'goods'}`);
 const Cap = (x: string): string => x.charAt(0).toUpperCase() + x.slice(1);
 
 /** A line from the record, with houses called by name. */
-const named = (x: string): string => x.replace(/house (\d+)/g, (_m, n: string) => house(Number(n)));
+const named = (x: string): string => x.replace(/house (\d+)/g, (_m, n: string) => house(Number(n))).replace(/\((\d+), ?(\d+)\)/g, (_m, cx: string, cy: string) => placeName(s, Number(cy) * s.side + Number(cx)));
 
 /** One thing that weighs on a house, as a clause. */
 function burdenWords(bd: Bond, by: number): string {
@@ -239,6 +240,11 @@ function realmPanel(): string {
     ${cell('Aggrieved houses', String(sore), sore >= P.faction * hs.length * 0.7 ? 'bad' : '')}${cell('Needed to withdraw confidence', String(Math.ceil(P.faction * hs.length)))}
     ${cell('Grain laid by', String(sum(0)))}${cell('Word given, not yet made good', String(c.words.length))}${cell('Word kept / broken', `${c.wordsKept} / ${c.wordsBroken}`, c.wordsBroken ? 'bad' : '')}
   </div></section>
+  <section><h3>Places</h3><div class="tbl"><table><thead><tr><th>Place</th><th>Houses</th><th>Souls</th><th>Who is there</th></tr></thead><tbody>${(() => {
+    const at = new Map<number, typeof hs>();
+    for (const b of hs) { const l = at.get(b.home); if (l) l.push(b); else at.set(b.home, [b]); }
+    return [...at].sort((x, y) => y[1].length - x[1].length).slice(0, 30).map(([cell, l]) => `<tr><td>${esc(cellWords(cell))}</td><td>${l.length}</td><td>${l.reduce((x, b) => x + b.members.filter(i => s.people[i]!.alive).length, 0)}</td><td>${esc(l.filter(b => b.rank).map(b => Cap(house(b.id)).replace(/ (of|at) [A-Z][a-z]+$/, '')).join('; '))}</td></tr>`).join('');
+  })()}</tbody></table></div></section>
   <section><h3>What houses expect of your court</h3><p class="soft small">How likely they think you are to find for the one who asks. It decides who comes.</p><div class="tbl"><table><tbody>${expect}</tbody></table></div></section>
   <section><h3>Ways of dealing known in the realm</h3><ul class="list">${[...ways].sort().map(w => `<li>${esc(wayWords(w))}</li>`).join('') || '<li class="soft">Only goods for goods.</li>'}</ul></section>`;
 }
