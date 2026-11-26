@@ -9,13 +9,20 @@ const C = {
   grievanceLine: 3,
   standingMax: 5,
   needMin: -8, needMax: 6, needWorsening: -3, needDire: -6,
-  capacity: 2.4, pressureRate: 0.4, dutyBase: 5, dutySpread: 2, ease: 0.25, urgentDelivers: 0.5,
+  capacity: 2.2, pressureRate: 0.4, dutyBase: 5, dutySpread: 2, ease: 0.25, urgentDelivers: 0.5,
   unmetNeedPressure: 0.25,
   hearings: 3, weeks: 52, quarter: 13,
   wordWeeks: 2, compactWeeks: 3, timeWeeks: 3, vowWeeks: 3,
   unheardGrievance: 0.25, urgentGrievance: 0.5,
   chargeWeekly: 0.25, grudgeWeeks: 8,
+  // seasons: what a household can carry, and how hard unmet needs bite, by season
+  seasons: { spring: { capacity: 0, needFall: 1 }, summer: { capacity: 0.3, needFall: 1 }, autumn: { capacity: 0, needFall: 1 }, winter: { capacity: -0.5, needFall: 2, drift: { commoners: -1, works: -1 } } },
+  // stores: each household's reserve absorbs excess load before pressure rises; harvest refills it
+  storesMax: 4, harvestYield: { Noble: 4, Merchant: 4, Cleric: 3, Official: 3, Soldier: 2, Commoner: 2 },
 };
+// The year begins in spring; each quarter is a season, and harvest falls at the end of summer.
+const seasonOf = (week) => ['spring', 'summer', 'autumn', 'winter'][Math.floor(((week - 1) % 52) / 13)];
+const isHarvest = (week) => (week - 1) % 52 === 25;
 
 const REGIONS = ['Capital', 'Highlands', 'Riverlands'];
 const ESTATES = ['Noble', 'Cleric', 'Official', 'Merchant', 'Soldier', 'Commoner'];
@@ -133,6 +140,7 @@ function apply(w, effects, ctx = {}) {
       case 'pressure': addPressure(w, h, e.n); break;
       case 'regard': addRegard(w, h, e.n); break;
       case 'esteem': addEsteem(w, h, e.n); break;
+      case 'stores': if (h) h.stores = round2(clamp(h.stores + e.n, 0, C.storesMax)); break;
       case 'rivalry': addRivalry(w, e.a, e.b, e.n); break;
       case 'unbind': w.bindings = w.bindings.filter((b) => b.id !== e.binding); break;
       case 'devotion': if (h) h.devotion = clamp(h.devotion + e.n, 0, C.devotionMax); break;
@@ -194,9 +202,22 @@ function close(w, ctx) {
   // shares become pressure
   const load = {};
   for (const d of w.duties) for (const [id, sh] of Object.entries(shares(w, d))) load[id] = (load[id] || 0) + sh;
+  const season = C.seasons[seasonOf(w.week)], cap = C.capacity + season.capacity;
   for (const h of alive(w)) {
     const l = load[h.id] || 0;
-    addPressure(w, h, l > C.capacity ? C.pressureRate * (l - C.capacity) : -C.ease);
+    if (l > cap) {
+      // what stores can absorb, they absorb; the rest becomes pressure
+      const excess = l - cap, drawn = Math.min(h.stores, excess);
+      h.stores = round2(h.stores - drawn);
+      if (excess - drawn > 1e-9) addPressure(w, h, C.pressureRate * (excess - drawn));
+    } else {
+      addPressure(w, h, -C.ease);
+      h.stores = round2(Math.min(C.storesMax, h.stores + (cap - l) * 0.25));
+    }
+  }
+  if (isHarvest(w.week)) {
+    for (const h of alive(w)) h.stores = Math.min(C.storesMax, h.stores + C.harvestYield[h.estate]);
+    note(w, 'harvest', 'The harvest is in; the stores are filled.');
   }
   // charges weigh on the accused while unheard
   for (const r of rels(w, (x) => x.kind === 'charge')) addPressure(w, H(w, r.to), C.chargeWeekly);
@@ -205,9 +226,11 @@ function close(w, ctx) {
   // needs: met rise, unmet fall and press on those they would serve
   for (const key of Object.keys(w.needs)) {
     const [region, need] = key.split('|');
+    // the season presses on some needs whether or not their duty is kept: winter hunger, winter damage
+    w.needs[key] = Math.max(C.needMin, w.needs[key] + ((season.drift || {})[need] || 0));
     if (needMet(w, key)) w.needs[key] = Math.min(C.needMax, w.needs[key] + 1);
     else {
-      w.needs[key] -= 1;
+      w.needs[key] -= season.needFall;
       const served = inRegion(w, region).filter((h) => need === 'works' || (need === 'soldiers' ? h.estate === 'Soldier' : h.estate === 'Commoner'));
       for (const h of served) addPressure(w, h, need === 'works' ? C.unmetNeedPressure / 2 : C.unmetNeedPressure);
     }
@@ -257,7 +280,7 @@ function newWorld(seed, opts = {}) {
     for (const estate of estates) {
       w.households.push({
         id: w.households.length, name: names.pop() || `House ${w.households.length}`, estate, region,
-        pressure: Math.floor(rng() * 3), regard: 0, esteem: 0,
+        pressure: Math.floor(rng() * 3), regard: 0, esteem: 0, stores: 1 + Math.floor(rng() * 3),
         devotion: Math.floor(rng() * 4), superstition: Math.floor(rng() * 4),
       });
     }
@@ -290,5 +313,5 @@ module.exports = {
   relate, unrelate, rels, kinOf, grudgesOf, chargesAgainst, debtsOf, creditsOf,
   shares, delivered, dutyMet, needMet,
   addBinding, holds, apply, note, markSign, testBindings, bindingsOf, holdsWord,
-  close, newWorld,
+  close, newWorld, seasonOf, isHarvest,
 };

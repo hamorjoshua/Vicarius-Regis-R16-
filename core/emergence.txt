@@ -1,34 +1,34 @@
-300 reigns · kept to week 52: 239 (80%) · mean length 44.2 weeks
+300 reigns · kept to week 52: 233 (78%) · mean length 43.5 weeks
 mean urgent households per week 0.2 of 24
-mean breaches 6.9 · mean disasters 0.3
+mean breaches 6.8 · mean disasters 0.2
 
 situation                                            reigns seen   per reign
-Surety (a household stands surety for another)        100%         9.22
-  …by kin                                              92%         3.46
-  …surety kept                                         98%         9.86
-Debt deferred under bond                               98%         6.40
-  …then default                                        29%         0.52
-Debt called in                                         83%         2.95
-Pooling (peers share their load)                       21%         0.32
-  …compact pays its dividend                           21%         0.31
-The court gives its word                              100%         9.93
-  …and breaks it                                       62%         1.10
-A broken promise remembered (amends sought)            60%         3.53
-Peace made with an adversary                           26%         0.30
-A charge brought                                       81%        12.57
-Kin intercedes for the accused                         79%        13.70
-A region rallies before disaster                        1%         0.02
-A sign seized                                          35%         0.64
-A sign decried                                         32%         0.48
-A law laid on another estate                           99%         6.21
-  …and repealed                                        57%         1.17
-Precedent followed                                    100%        34.43
-Precedent broken                                       99%        16.73
-A marriage across estates                              83%         3.56
-A vow before the church                                77%         1.87
-The lax brought to the church                          78%         2.53
-A pariah emerges (esteem −2)                           85%         0.85
-A leader emerges (esteem +2)                           91%         0.91
-A rivalry hardens (−2)                                 99%         0.99
-An alliance forms (+1)                                 15%         0.15
-Disaster                                               10%         0.28
+Surety (a household stands surety for another)        100%         9.53
+  …by kin                                              93%         3.66
+  …surety kept                                         98%         9.77
+Debt deferred under bond                               99%         6.64
+  …then default                                        35%         0.65
+Debt called in                                         81%         2.84
+Pooling (peers share their load)                       17%         0.25
+  …compact pays its dividend                           16%         0.24
+The court gives its word                               99%         9.57
+  …and breaks it                                       62%         1.06
+A broken promise remembered (amends sought)            59%         3.23
+Peace made with an adversary                           23%         0.29
+A charge brought                                       81%        11.59
+Kin intercedes for the accused                         79%        12.84
+A region rallies before disaster                        6%         0.07
+A sign seized                                          36%         0.78
+A sign decried                                         32%         0.57
+A law laid on another estate                           99%         6.54
+  …and repealed                                        62%         1.22
+Precedent followed                                    100%        33.32
+Precedent broken                                      100%        16.70
+A marriage across estates                              83%         3.50
+A vow before the church                                76%         1.75
+The lax brought to the church                          83%         2.62
+A pariah emerges (esteem −2)                           84%         0.84
+A leader emerges (esteem +2)                           90%         0.90
+A rivalry hardens (−2)                                 98%         0.98
+An alliance forms (+1)                                 18%         0.18
+Disaster                                               11%         0.22

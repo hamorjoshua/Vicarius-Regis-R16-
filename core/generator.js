@@ -174,9 +174,9 @@ function needOptions(w, h, m) {
   const d = w.duties.find((x) => x.region === region && x.need === need);
   if (!d) return out;
   const able = K.inRegion(w, region).filter((x) => !K.isUrgent(x));
-  if (w.needs[m.key] <= C.needDire && able.length >= 3) {
+  if (able.length >= 3) {
     const ids = able.map((x) => x.id);
-    out.push(opt({ means: 'defer', payer: { kind: 'peers' }, score: 5, tags: ['rally'], label: `${h.name} calls the ${region} to keep ${d.name} together`,
+    out.push(opt({ means: 'defer', payer: { kind: 'peers' }, score: w.needs[m.key] <= C.needDire ? 5 : 2.5, tags: ['rally'], label: `${h.name} calls the ${region} to keep ${d.name} together`,
       effects: [...ids.map((id) => ({ type: 'weight', duty: d.id, id, n: 1 })), { type: 'bind', binding: { kind: 'compact', bound: ids, region, until: w.week + 1, label: 'a rally', sig: 'rally',
         test: [{ test: 'dutyMet', duty: d.id }],
         kept: [{ type: 'need', key: m.key, n: 2 }, ...ids.map((id) => ({ type: 'weight', duty: d.id, id, n: -1 }))],
