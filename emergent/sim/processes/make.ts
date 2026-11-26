@@ -54,7 +54,8 @@ export function make(s: State): void {
     for (const [st, q] of r.from) c.stock[st] = Math.max(0, c.stock[st]! - q * m);
     for (const [k, q] of r.inp) b.store[k] = Math.max(0, b.store[k]! - q * m);
     for (const [k, q] of r.out) b.store[k] = b.store[k]! + q * m;
-    for (const [st, q] of r.to) c.stock[st] = c.stock[st]! + q * m;
+    for (const [st, q] of r.to) { c.stock[st] = c.stock[st]! + q * m; b.put[st] = (b.put[st] ?? 0) + q * m; }
+    for (const [st, q] of r.from) if (St[st]!.sown) b.got[st] = (b.got[st] ?? 0) + q * m;
     if (j.aid >= 0) b.store[j.aid] = Math.max(0, b.store[j.aid]! - (Kn[j.aid]!.use * j.w.days) / P.days);
     const first = r.out[0];
     const e = rec(s, 'make', { a: b.id, cell: j.w.cell, kind: first ? first[0] : -1, q: first ? first[1] * m : 0, kind2: j.w.r, q2: j.w.days });

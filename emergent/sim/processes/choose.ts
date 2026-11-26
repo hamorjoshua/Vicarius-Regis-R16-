@@ -115,7 +115,8 @@ function options(s: State, L: Land, b: Body): Opt[] {
         if (K < 20) continue;
         const T = weeksLeft(s, L, cell, st), x = c.stock[st]!;
         if (T < 6) continue;
-        score = ((ripen(x + 10, K, St[st]!.r, T) - ripen(x, K, St[st]!.r, T)) / 10) * far;
+        // What is put onto the land is expected to return what this hearth believes it returns, up to what the ground has room for.
+        score = Math.min((K - x) / 10, b.hope[st] ?? 6) * far;
         if (score < 1.2) continue;
       }
       const rt = rights(L, b.id, cell);
@@ -521,7 +522,7 @@ function work(s: State, L: Land, c: Ctx): void {
       for (const [st, q] of r.to) {
         const key = o.cell * NS + st, K = L.bears[o.cell]![st]!, T = weeksLeft(s, L, o.cell, st);
         const x = cell.stock[st]! + (sown.get(key) ?? 0);
-        const more = (ripen(x + q * m, K, St[st]!.r, T) - ripen(x, K, St[st]!.r, T)) * (1 - o.rent);
+        const more = Math.min(Math.max(0, K - x), q * m * (b.hope[st] ?? 6)) * (1 - o.rent);
         const after = pend.slice();
         for (const [k, per] of gathered(st)) after[k] = after[k]! + more * per;
         g += P.later * (welfareLater(proj, after, c.ahead, T) - welfareLater(proj, pend, c.ahead, T));
@@ -536,7 +537,7 @@ function work(s: State, L: Land, c: Ctx): void {
     for (const [st, q] of r.to) {
       const key = best.cell * NS + st, K = L.bears[best.cell]![st]!, T = weeksLeft(s, L, best.cell, st);
       const x = s.cells[best.cell]!.stock[st]! + (sown.get(key) ?? 0);
-      const more = ripen(x + q * bestM, K, St[st]!.r, T) - ripen(x, K, St[st]!.r, T);
+      const more = Math.min(Math.max(0, K - x), q * bestM * (b.hope[st] ?? 6));
       for (const [k, per] of gathered(st)) pend[k] = pend[k]! + more * per;
       sown.set(key, (sown.get(key) ?? 0) + q * bestM);
     }

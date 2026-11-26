@@ -301,6 +301,27 @@ Three realms, forty years of run after the past, measured three times as these w
 
 Not yet built of stage 5: beliefs about facts (who holds what, who did what), and foresight about crops that is learned and not given.
 
+## A baseline of twelve
+
+Twelve realms with minds and plans, forty years of run after the past, four at a time on four cores:
+
+| Seed | Peak | Trough | Deepest fall | End |
+| --- | --- | --- | --- | --- |
+| 1 | 371 | 43 | 88% | 56 |
+| 2 | 146 | 129 | 12% | 149 |
+| 3 | 316 | 79 | 75% | 81 |
+| 4 | 62 | 52 | 16% | 176 |
+| 5 | 33 | 32 | 3% | 57 |
+| 6 | 284 | 36 | 87% | 134 |
+| 7 | 92 | 86 | 7% | 138 |
+| 8 | 37 | 31 | 16% | 140 |
+| 9 | 103 | 85 | 17% | 156 |
+| 10 | 216 | 25 | 88% | 73 |
+| 11 | 110 | 87 | 21% | 247 |
+| 12 | 54 | 50 | 7% | 99 |
+
+A third of the realms (4 of 12) suffer a fall of 75% or more within forty years of run. The other eight open small, having fallen in their past, and spend the run regrowing.
+
 ## Known gaps
 
 1. **The fall is still too deep** (64 to 87% where it happens), and it recurs about once a generation. Foresight, a past, customs and defended fields have each been tried; the last helped most and none cured it. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.

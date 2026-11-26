@@ -2,7 +2,8 @@
 // for it knows; its grown members teach one another as far as each is ready to believe; and what a
 // person knows goes with them when they leave, and is lost to the hearth when they die.
 
-import { P, Rc } from '../tables.ts';
+import { NS, P, Rc } from '../tables.ts';
+import { weekOf } from '../types.ts';
 import { grown, head } from '../util.ts';
 import type { Body, Person, State } from '../types.ts';
 
@@ -17,6 +18,7 @@ export function attend(s: State): void {
     b.lore = { ...h.lore };
     b.ways = structuredClone(h.ways);
     const g = grown(s, b);
+    b.hope = h.hope.slice();
     b.skill = Rc.map((_r, i) => (g.length ? g.reduce((x, p) => x + p.skill[i]!, 0) / g.length : P.green));
   }
 }
@@ -34,6 +36,15 @@ export function settle(s: State): void {
     for (const k of Object.keys(h.ways)) if (!b.ways[k]) for (const m of g) delete m.ways[k];
     h.lore = { ...b.lore };
     h.ways = structuredClone(b.ways);
+    // At midwinter each looks at what the year's putting-in returned, and believes a little more nearly that.
+    if (weekOf(s.t) === 0) {
+      for (let st = 0; st < NS; st++) {
+        const put = b.put[st] ?? 0;
+        if (put > 1) { const back = Math.max(0.5, Math.min(60, (b.got[st] ?? 0) / put)); for (const m of g) m.hope[st] = 0.7 * m.hope[st]! + 0.3 * back; }
+      }
+      b.put = []; b.got = [];
+    }
+    for (const m of g) if (m !== h) for (let st = 0; st < NS; st++) m.hope[st] = m.hope[st]! + 0.05 * (h.hope[st]! - m.hope[st]!);
     const d = days.get(b.id);
     for (const m of g) {
       if (m !== h) {

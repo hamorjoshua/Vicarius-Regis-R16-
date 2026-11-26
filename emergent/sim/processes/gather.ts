@@ -7,7 +7,7 @@ import { bond, dist, head, kinOf, leaves, living, rec, regard } from '../util.ts
 import type { Body, Person, State } from '../types.ts';
 
 export function body(s: State, home: number): Body {
-  const b: Body = { id: s.bodies.length, home, store: new Array<number>(NK).fill(0), members: [], parts: [], of: -1, alive: true, since: s.t, plan: [], spent: 0, goto: -1, why: new Array<number>(NN).fill(-1), ways: {}, stuck: 0, pressed: false, lore: {}, recent: [], skill: [], aim: null };
+  const b: Body = { id: s.bodies.length, home, store: new Array<number>(NK).fill(0), members: [], parts: [], of: -1, alive: true, since: s.t, plan: [], spent: 0, goto: -1, why: new Array<number>(NN).fill(-1), ways: {}, stuck: 0, pressed: false, lore: {}, recent: [], skill: [], aim: null, hope: [], put: [], got: [] };
   s.bodies.push(b);
   return b;
 }

@@ -34,6 +34,8 @@ export interface Person {
   lore: Record<string, number>;
   ways: Record<string, { w: number; p: number }>;
   skill: number[];
+  /** How much they believe a unit put onto the land returns, for each thing that can be sown. */
+  hope: number[];
 }
 
 export interface Work { r: number; cell: number; days: number }
@@ -66,6 +68,8 @@ export interface Body {
   /** How good its grown members are, together, at each kind of work. */
   skill: number[];
   /** A plan held over weeks: to make enough of a thing another wants, so as to get from them what it lacks. */
+  /** What its speaker believes the land returns; and what it has put on and brought in since midwinter. */
+  hope: number[]; put: number[]; got: number[];
   aim: { kind: number; q: number; for: number; worth: number; since: number; want: string } | null;
 }
 

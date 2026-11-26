@@ -148,6 +148,8 @@ if (cmd === 'measures') {
 
   console.log(`\nPlans held over weeks (made / fulfilled / given up), by realm: ${runs.map(r => `${r.R.plans.made}/${r.R.plans.done}/${r.R.plans.dropped}`).join(', ')}`);
 
+  console.log(`\nWhat hearths believe a unit of seed returns at the end (least / mean / most), by realm: ${runs.map(r => { const hs = r.s.bodies.filter(b => b.alive && !b.parts.length && b.hope.length).map(b => b.hope[STOCKS.findIndex(k => k.id === 'corn')]!); return hs.length ? `${Math.min(...hs).toFixed(1)}/${(hs.reduce((x, y2) => x + y2, 0) / hs.length).toFixed(1)}/${Math.max(...hs).toFixed(1)}` : '-'; }).join(', ')}`);
+
   // Skill: how good the hearths are at each kind of work at the end, and how far the best stands above the rest.
   console.log('\nSkill at each kind of work at the end (mean of hearths / best hearth), by realm:');
   RECIPES.forEach((rc, i) => console.log(`  ${rc.id}: ${runs.map(r => { const hs = r.s.bodies.filter(b => b.alive && !b.parts.length && b.skill.length); return hs.length ? `${(hs.reduce((x, b) => x + b.skill[i]!, 0) / hs.length).toFixed(2)}/${Math.max(...hs.map(b => b.skill[i]!)).toFixed(2)}` : '-'; }).join(', ')}`));

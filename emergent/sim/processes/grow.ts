@@ -34,6 +34,7 @@ export function person(s: State, mother: Person | null, father: Person | null, b
     credulous: clamp(mid(x => x.credulous, 0.5) + 0.2 * u(5) - 0.1 + 0.15 * z(6), 0.1, 0.9), omen: -1,
     bore: s.t - 999, blow: -1, blowAt: s.t - 999, fed: new Array<number>(NN).fill(1),
     lore: {}, ways: {}, skill: Rc.map(() => (mother ? P.green : 1)),
+    hope: St.map(() => clamp(mid(x => x.hope[0] ?? 6, 6) + 2 * z(7), 2, 14)),
   };
   s.people.push(p);
   return p;
