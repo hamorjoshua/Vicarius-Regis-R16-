@@ -418,6 +418,46 @@ Five scripted courts on eight full-size realms, a reign of three years each (mea
 - **Matters are far too alike.** A realm yields 6 to 12 shapes and the five commonest are 84 to 100% of what is heard; the design wants under 15%. A shape here is only what is owed, on what basis, by what way of dealing and for what need.
 - **People at the end are 105 to 110% of those at the start whatever the court does,** so in three years the court has not yet been shown to change the realm.
 
+## The court reworked against repetition
+
+The first court let only a broken debt or a bare want become a matter, and repetition was 80 to 93% whatever the regent did. It was reworked:
+
+- **A matter is any bond that stands in someone's way:** one they are owed on and cannot get, one they owe on and cannot bear, or one that shuts them out. That covers debts, work owed, sureties, lettings and ground held idle, with no list of kinds of case.
+- **The court can do five things to any bond:** enforce it, part it, strike it, stay it, or turn it over to the one who asks.
+- **A matter's shape is read off the form of the bond, the need at stake, and how the parties stand to one another.**
+- **A rule answers at once everyone waiting with a like matter,** is made even when the case in hand had nothing left to cut, and cannot be challenged again once upheld. Only one matter of a shape is seated in a week.
+
+Five scripted courts on eight full-size realms, a three-year reign each (means):
+
+| Court | Reigns kept | Standing at end | Heard | Settled below | Heard matters repeating a shape of the last half year | Five commonest shapes | Shapes heard |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Hears nobody | 3 of 8 | 0.6 | 0 | 0 | | | |
+| Grants everything | 5 of 8 | 1.9 | 210 | 0 | 71% | 56% | 40 |
+| Rules at random | 7 of 8 | 3.5 | 120 | 258 | 36% | 31% | 60 |
+| This case only | 5 of 8 | 3.0 | 270 | 0 | 77% | 55% | 37 |
+| A rule for the realm each time | 8 of 8 | 4.5 | 86 | 470 | 15% | 26% | 58 |
+
+- **Repetition is now the regent's choice.** One who rules for the realm hears a repeat 15% of the time, inside the design's target of under 20%. One who settles each case alone hears 77% repeats, which is the cost the design gives that choice.
+- **The careful court that makes rules keeps every reign; granting everything keeps five of eight and ends with the least standing of any court that hears.** That is the order the design asks for.
+- **About 40 to 60 shapes are heard in a reign,** up from 6 to 9.
+- **Still short:** the five commonest shapes are 26% of what the rule-making court hears, against a target of under 15%.
+
+## Going to court is a choice
+
+Each person holds an expectation of the court for each way of standing before it (owed on a bond, bound by one, shut out by one, in bare want). A house goes only if what it expects, less the trouble of going, beats its own way: what its might would win in a struggle, or what dealing may yet bring. Going costs three days, and one who is owed holds their hand while the matter waits. A ruling, a rule applied below, or being left unheard changes what that house and its neighbours expect.
+
+Three small realms, a three-year reign each:
+
+| Court | Kept their own counsel | Expect, if owed | If bound | If shut out | If in bare want |
+| --- | --- | --- | --- | --- | --- |
+| Hears nobody | 34 | 0.48 | 0.40 | 0.49 | 0.28 |
+| Grants everything | 12 | 0.56 | 0.93 | 0.55 | 0.84 |
+| Rules at random | 62 | 0.47 | 0.54 | 0.50 | 0.41 |
+| This case only | 14 | 0.61 | 0.66 | 0.52 | 0.84 |
+| A rule for the realm each time | 17 | 0.63 | 0.67 | 0.53 | 0.84 |
+
+The court shapes its own docket: those bound by a debt flock to a court that grants everything, those in want give up on one that hears nobody, and an unpredictable court is the most avoided. Not yet measured at full size. Still missing: a body's own custom as a step between a house's own way and the regent, the two sides' pleas, the regent's word, the Crown's store, and the screen.
+
 ## Known gaps
 
 1. **The fall was largely a matter of size.** On 100 cells it took 64 to 87% where it happened and nothing cured it. On 400 cells it is 18 to 54% in seven realms of eight. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
