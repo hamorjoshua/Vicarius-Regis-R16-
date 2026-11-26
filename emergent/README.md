@@ -200,9 +200,26 @@ What this shows:
 
 Not yet built of stage 5: a mind for each person (a hearth still chooses as one), plans of several steps, practices of work that are copied imperfectly and recombined, beliefs about facts (who holds what, who did what), and crop foresight that is learned and not given.
 
+## With a past
+
+Every command now starts from a realm that was founded thirty years back and lived through to week 0 (`inherit` in `sim/found.ts`; `P.past`). Year 1 of a run is year 31 of the realm. Three realms, thirty years of run after that past:
+
+| Seed | Start | Peak | Trough | Deepest fall | End |
+| --- | --- | --- | --- | --- | --- |
+| 1 | About 70 | 173 | 68 | 4% | 173 |
+| 2 | About 120 | 414 | 61 | 85%, around year 22 | 80 |
+| 3 | About 250 | 290 | 232 | 9% | 290 |
+
+- **The run opens on a realm with a history:** people already know five or six ways of dealing, hold ill opinions of particular houses, and belong to bodies.
+- **Two of three runs have no fall.** But that is because their fall happened in the past, off stage, and they have not yet regrown to the land's limit.
+- **Seed 2 falls a second time,** as deep as the first (85%), about 22 years into the run. Its people had lived through one fall a generation before and it did not help.
+- **Why memory fails:** a belief halves in under three years unless harm renews it. The belief that children born in want come to harm had vanished long before numbers pressed on the land again.
+
+So a past does what the design wants of it, an opening that differs from realm to realm. It does not cure the fall.
+
 ## Known gaps
 
-1. **The fall is still too deep** (81 to 91%). Numbers keep rising after the land is full. Belief now supplies restraint, but only once children have been seen to die, which is too late for the first fall. The first generation has no memory to draw on; a history before the run begins (stage 7) would give it one.
+1. **The fall is still too deep** (85% where it happens), and it recurs. Belief supplies restraint only while children are dying, and is forgotten within a few years. What is missing is belief that lasts without fresh harm: something taught to the young and held because others hold it. That is a custom, in the design's sense.
 2. **Blame of particular houses is too catching**, and has brought feuds back up.
 3. **Realms are alike.** They differ in when and where, not in what kinds of thing happen. Bonds on bonds, bodies and minds are meant to change that.
 4. **The prediction log is not built**, and no predictions were written before these runs.
