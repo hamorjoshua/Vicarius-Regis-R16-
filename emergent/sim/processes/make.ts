@@ -33,7 +33,7 @@ export function make(s: State): void {
   const kin = kinOf(s);
   const hearths = hearthIndex(s);
   const dues = new Map<number, Bond[]>();
-  for (const bd of s.bonds) if (bd.about === 'yield' && bd.due <= s.t) { const l = dues.get(bd.a); if (l) l.push(bd); else dues.set(bd.a, [bd]); }
+  for (const bd of s.bonds) if (bd.about === 'yield' && bd.due <= s.t && bd.easedTo <= s.t) { const l = dues.get(bd.a); if (l) l.push(bd); else dues.set(bd.a, [bd]); }
   for (const j of jobs) {
     const r = Rc[j.w.r]!, c = s.cells[j.w.cell]!, b = j.b;
     let m = j.m;

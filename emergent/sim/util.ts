@@ -89,7 +89,7 @@ export function holdsByCell(s: State): Map<number, Bond[]> {
 }
 
 export function bond(s: State, f: Partial<Bond> & Pick<Bond, 'about' | 'a' | 'basis'>): Bond {
-  const b: Bond = { id: s.nbond++, b: -1, cell: -1, kind: -1, q: 0, due: -1, labour: false, on: -1, share: 0, secures: -1, used: s.t - 999, strength: 1, since: s.t, broken: false, rec: -1, way: '', doer: -1, ...f };
+  const b: Bond = { id: s.nbond++, b: -1, cell: -1, kind: -1, q: 0, due: -1, labour: false, on: -1, share: 0, secures: -1, used: s.t - 999, strength: 1, since: s.t, broken: false, rec: -1, way: '', doer: -1, easedTo: -1, ...f };
   s.bonds.push(b);
   return b;
 }
@@ -143,6 +143,7 @@ export function payRent(s: State, lease: Bond, kind: number, amount: number): vo
   while (cur && cur.about === 'bond') {
     const over = byId.get(cur.on);
     if (!over) return;
+    if (cur.easedTo > s.t) return;
     const pay = Math.min(payer.store[kind]!, due * cur.share), to = s.bodies[over.a]!;
     if (pay <= 0 || !to.alive) return;
     payer.store[kind] = payer.store[kind]! - pay;

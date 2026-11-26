@@ -43,10 +43,10 @@ function speaker(id: number): number {
 function house(id: number): string {
   if (id < 0) return 'nobody';
   const b = s.bodies[id]!;
-  if (b.rank === 'lord') return `the lord at ${cellWords(b.home)}`;
-  if (b.rank === 'priest') return `the priest at ${cellWords(b.home)}`;
-  if (b.rank === 'bailiff') return `the king’s bailiff at ${cellWords(b.home)}`;
   const h = speaker(id);
+  if (h >= 0 && b.rank === 'lord') return `Lord ${nameOf(h)}`;
+  if (h >= 0 && b.rank === 'priest') return `Father ${nameOf(h)}`;
+  if (h >= 0 && b.rank === 'bailiff') return `${nameOf(h)}, the king’s bailiff`;
   return h < 0 ? `house ${id}` : `${nameOf(h)}’s house`;
 }
 /** Who they are: the speaker, and who is in the house. */
@@ -55,9 +55,7 @@ function who(id: number): string {
   if (h < 0) return '';
   const p = s.people[h]!, alive = b.members.map(i => s.people[i]!).filter(x => x.alive), young = alive.filter(x => (s.t - x.born) / 52 < 14).length;
   const lone = p.spouse < 0 && young > 0 ? (p.sex ? 'a widow' : 'a widower') : p.spouse < 0 && alive.length === 1 ? 'alone' : '';
-  const manor = s.bonds.find(x => x.about === 'bond' && x.a === id && x.way === 'manor');
-  const of = manor ? `, holding of ${house(manor.b)}` : '';
-  return `${nameOf(h)}, ${ageOf(h)}${lone ? ', ' + lone : ''}, with ${alive.length} in the house${young ? ` (${young} of them children)` : ''}${of}`;
+  return `${nameOf(h)}, ${ageOf(h)}${lone ? ', ' + lone : ''}, with ${alive.length} in the house${young ? ` (${young} of them children)` : ''}`;
 }
 const owedWords = (bd: Bond): string => (bd.labour ? `${Math.round(bd.q)} days of work` : `${bd.q < 10 ? bd.q.toFixed(1) : Math.round(bd.q)} of ${KINDS[bd.kind]?.id ?? 'goods'}`);
 const Cap = (x: string): string => x.charAt(0).toUpperCase() + x.slice(1);
@@ -65,8 +63,20 @@ const Cap = (x: string): string => x.charAt(0).toUpperCase() + x.slice(1);
 /** A line from the record, with houses called by name. */
 const named = (x: string): string => x.replace(/house (\d+)/g, (_m, n: string) => house(Number(n)));
 
+/** One thing that weighs on a house, as a clause. */
+function burdenWords(bd: Bond, by: number): string {
+  const B = house(bd.a === by ? bd.b : bd.a);
+  if (bd.about === 'yield') return bd.way === 'tithe' ? `it owes ${B} a tenth of all it gathers` : `it owes ${B} the Crown’s twentieth of all it gathers`;
+  if (bd.about === 'bond') return bd.secures >= 0 ? `it has pledged its ground to ${B} against a debt` : bd.way === 'manor' ? `it holds its ground of ${B} by birth, for ${Math.round(bd.share * 100)} parts in a hundred of the yield` : `it has ground from ${B} for ${Math.round(bd.share * 100)} parts in a hundred of the yield`;
+  return `it owes ${B} ${owedWords(bd)}${bd.way === 'blood' ? ' as the price of blood' : ''}`;
+}
+
 function matterWords(p: Petition): string {
   const A = Cap(house(p.by)), B = house(p.against);
+  if (p.burdens.length) {
+    const bs = p.burdens.map(id => s.bonds.find(b => b.id === id)).filter((b): b is Bond => !!b);
+    return `${A} is in want of ${NEEDS[p.need]!.id}. ${bs.length > 1 ? `${['', 'One thing weighs', 'Two things weigh', 'Three things weigh'][bs.length]} on it` : 'One thing weighs on it'}: ${bs.map(b => burdenWords(b, p.by)).join('; ')}.`;
+  }
   if (p.reason === 'challenge') { const r = s.court!.rules.find(x => x.id === p.bond); return `${A} has been hurt by a rule of yours and asks that it be struck. The rule: ${r ? esc(plain(r.cut + ' when ' + r.shape)) : 'one now gone'}.`; }
   const bd = s.bonds.find(b => b.id === p.bond);
   if (!bd) return p.shape.includes('shunned') ? `${A} came here within the year and is in want of ${NEEDS[p.need]!.id}. Its neighbours hold that newcomers bring harm, and will not deal with it.` : `${A} is in dire want of ${NEEDS[p.need]!.id}, and nobody stands between it and what it needs.`;
@@ -91,6 +101,13 @@ function matterWords(p: Petition): string {
 }
 
 /** What each side says. Each speaks from what it holds true, or wants believed. */
+/** What the one on the other side of a burden says of it. */
+function holderSays(bd: Bond): string {
+  if (bd.about === 'yield') return bd.way === 'tithe' ? '“The tenth is God’s, and was granted before any of us was born.”' : '“It is the king’s due, and I must answer for it.”';
+  if (bd.about === 'bond') return bd.way === 'manor' ? '“They hold of me by birth, as their fathers held of mine.”' : bd.secures >= 0 ? '“We lent on that ground. Without it we lent on nothing.”' : '“We agreed the share between us.”';
+  return bd.way === 'blood' ? '“A life was taken. Let them pay for it.”' : '“A debt is a debt.”';
+}
+
 function pleas(p: Petition): [string, string] {
   if (p.reason === 'challenge') return ['“Your rule has ruined us.”', ''];
   const weeks = (id: number, n: number): number => cover(s.bodies[id]!.store, askAhead(s, s.bodies[id]!))[n]!;
@@ -120,7 +137,12 @@ function cutWords(p: Petition, cut: string): [string, string] {
   const bd = s.bonds.find(b => b.id === p.bond), B = house(p.against), A = house(p.by);
   const storeOf = (k: number): number => Math.round(s.court!.store[k] ?? 0);
   if (p.reason === 'challenge') return cut === 'uphold' ? ['Uphold the rule', 'It stands, and cannot be challenged again.'] : ['Strike the rule', 'Like cases will come to you again.'];
-  if (!bd) return ({
+  if (cut.startsWith('ease:')) {
+    const eb = s.bonds.find(b => b.id === Number(cut.slice(5)))!, E = house(eb.a === p.by ? eb.b : eb.a);
+    const what = eb.about === 'yield' ? (eb.way === 'tithe' ? 'the tithe' : 'the Crown’s share') : eb.about === 'bond' ? (eb.secures >= 0 ? 'the pledge' : `${E}’s share`) : `what it owes ${E}`;
+    return [`Lift ${what} for a year`, eb.way === 'crown' ? 'Your own store goes without it.' : `${Cap(E)} goes without it, and will hold it against you.`];
+  }
+  if (!bd || cut === 'give' || cut === 'dismiss' || cut === 'vouch') return ({
     vouch: ['Vouch for them', 'Their neighbours must deal with them, and will hold it against you.'],
     give: ['Relief from the Crown’s store', `Three weeks of ${NEEDS[p.need]!.id}, now.`],
     levy: ['Lay it on the neighbours', 'Whoever nearby has most must give, and is owed it back.'],
@@ -178,15 +200,15 @@ function matterCard(p: Petition): string {
   const inBody = top(s, b).id !== b.id;
   const widths: [Width, string][] = [['case', 'This case only'], ...(inBody && p.reason !== 'challenge' ? [['body', 'A rule for their body'] as [Width, string]] : []), ...(p.reason !== 'challenge' ? [['realm', 'A rule for the realm'] as [Width, string]] : [])];
   return `<article class="matter${pick ? ' chosen' : ''}">
-    <header><h3>${esc(cap(house(p.by)))}${p.reason === 'challenge' ? ' against a rule' : p.against >= 0 ? ' against ' + esc(house(p.against)) : ''}</h3>
+    <header><h3>${esc(cap(house(p.by)))}${p.reason === 'challenge' ? ' against a rule' : p.burdens.length ? ', in want' : p.against >= 0 ? ' against ' + esc(house(p.against)) : ''}</h3>
       <span class="small soft">${p.speaksFor > 1 ? `one of a body of ${p.speaksFor} houses · ` : ''}${p.waited ? `waited ${p.waited} week${p.waited > 1 ? 's' : ''}` : 'new this week'}${p.reason === 'clash' ? ' · two bodies’ rules disagree' : ''}</span></header>
     <p>${matterWords(p)}</p>
-    <p class="small soft">${esc(who(p.by))}${p.against >= 0 && !s.bodies[p.against]!.rank ? ' — against ' + esc(who(p.against)) : ''}</p>
-    ${(() => { const [a, b] = pleas(p); return `<p>${esc(Cap(house(p.by)))}: ${a}</p>${b ? `<p>${esc(Cap(house(p.against)))}: ${b}</p>` : ''}`; })()}
+    <p class="small soft">${esc(who(p.by))}${!p.burdens.length && p.against >= 0 && !s.bodies[p.against]!.rank ? ' — against ' + esc(who(p.against)) : ''}</p>
+    ${(() => { const [a, b] = pleas(p); if (!p.burdens.length) return `<p>${esc(Cap(house(p.by)))}: ${a}</p>${b ? `<p>${esc(Cap(house(p.against)))}: ${b}</p>` : ''}`; return `<p>${esc(Cap(house(p.by)))}: ${a}</p>` + p.burdens.map(id => s.bonds.find(x => x.id === id)).filter((x): x is Bond => !!x).map(x => `<p>${esc(Cap(house(x.a === p.by ? x.b : x.a)))}: ${holderSays(x)}</p>`).join(''); })()}
     ${chain.length ? `<div><span class="label">How it came about</span><ol class="chain">${chain.map(c => `<li>${esc(c)}</li>`).join('')}</ol></div>` : ''}
     <div class="cuts">${cuts(s, p).map(c => { const [t, d] = cutWords(p, c); return `<button data-cut="${p.id}:${c}" aria-pressed="${pick?.cut === c}">${esc(t)}<span>${esc(d)}</span></button>`; }).join('')}</div>
-    ${pick && pick.cut !== 'inquire' && widths.length > 1 ? `<div><span class="label">How far it reaches</span><div class="widths">${widths.map(([w, t]) => `<button data-width="${p.id}:${w}" aria-pressed="${pick.width === w}">${t}</button>`).join('')}</div></div>` : ''}
-    ${p.reason === 'challenge' ? '' : `<p class="shape">A rule here would cover: ${esc(plain(p.shape))}</p>`}
+    ${pick && pick.cut !== 'inquire' && !(p.burdens.length && !pick.cut.startsWith('ease:')) && widths.length > 1 ? `<div><span class="label">How far it reaches</span><div class="widths">${widths.map(([w, t]) => `<button data-width="${p.id}:${w}" aria-pressed="${pick.width === w}">${t}</button>`).join('')}</div></div>` : ''}
+    ${p.reason === 'challenge' || p.burdens.length ? '' : `<p class="shape">A rule here would cover: ${esc(plain(p.shape))}</p>`}
   </article>`;
 }
 
@@ -302,7 +324,7 @@ app.addEventListener('click', ev => {
   if (b.id === 'pass') { passWeek(); render(); window.scrollTo(0, 0); return; }
   if (b.dataset.tab) { tab = b.dataset.tab as typeof tab; render(); return; }
   if (b.dataset.cut) {
-    const [id, cut] = b.dataset.cut.split(':'), pid = Number(id), had = chosen.get(pid);
+    const at = b.dataset.cut.indexOf(':'), id = b.dataset.cut.slice(0, at), cut = b.dataset.cut.slice(at + 1), pid = Number(id), had = chosen.get(pid);
     if (had?.cut === cut) chosen.delete(pid);
     else if (had || chosen.size <= P.hearings) chosen.set(pid, { cut: cut!, width: had?.width ?? 'case' });
     render();
