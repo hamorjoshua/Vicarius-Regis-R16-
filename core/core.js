@@ -4,12 +4,12 @@
 
 const C = {
   max: 8, pressing: 2, urgent: 4,
-  regardMin: -2, regardMax: 2,
+  regardMin: -2, regardMax: 2, esteemMin: -2, esteemMax: 2, rivalryMin: -2, rivalryMax: 2,
   devotionMax: 3, superstitionMax: 3,
   grievanceLine: 3,
   standingMax: 5,
   needMin: -8, needMax: 6, needWorsening: -3, needDire: -6,
-  capacity: 3, pressureRate: 0.35, ease: 0.25, urgentDelivers: 0.5,
+  capacity: 2.4, pressureRate: 0.4, dutyBase: 5, dutySpread: 2, ease: 0.25, urgentDelivers: 0.5,
   unmetNeedPressure: 0.25,
   hearings: 3, weeks: 52, quarter: 13,
   wordWeeks: 2, compactWeeks: 3, timeWeeks: 3, vowWeeks: 3,
@@ -62,11 +62,20 @@ function addGrievance(w, key, n) {
     note(w, 'breach', `The ${key} break into a breach of confidence.`, { key });
   }
 }
+function addEsteem(w, h, n) { if (h) h.esteem = round2(clamp(h.esteem + n, C.esteemMin, C.esteemMax)); }
+// estate <-> estate: negative is rivalry, positive alliance
+const pairKey = (a, b) => [a, b].sort().join('~');
+const rivalry = (w, a, b) => (a === b ? 2 : w.rivalry[pairKey(a, b)] || 0);
+function addRivalry(w, a, b, n) { if (a !== b) w.rivalry[pairKey(a, b)] = round2(clamp(rivalry(w, a, b) + n, C.rivalryMin, C.rivalryMax)); }
+const isPariah = (h) => h.esteem <= C.esteemMin;
+const speaksForEstate = (h) => h.esteem >= 1;
 const isUrgent = (h) => h.pressure >= C.urgent;
 const isPressing = (h) => h.pressure >= C.pressing;
 
 // ---------------------------------------------------------------- relationships
-// kin (both ways), grudge (household -> constituency, or "Court"), charge (accuser -> accused), owes (debtor -> creditor)
+// kin (a <-> b), owes (from debtor -> to creditor), charge (from accuser -> to accused),
+// grudge (from household -> toH household | toC constituency | toCourt)
+// esteem lives on each household (its estate's view of it); rivalry between estates on the world
 function relate(w, rel) {
   w.relSeq = (w.relSeq || 0) + 1;
   const r = { id: w.relSeq, since: w.week, ...rel };
@@ -123,6 +132,9 @@ function apply(w, effects, ctx = {}) {
     switch (e.type) {
       case 'pressure': addPressure(w, h, e.n); break;
       case 'regard': addRegard(w, h, e.n); break;
+      case 'esteem': addEsteem(w, h, e.n); break;
+      case 'rivalry': addRivalry(w, e.a, e.b, e.n); break;
+      case 'unbind': w.bindings = w.bindings.filter((b) => b.id !== e.binding); break;
       case 'devotion': if (h) h.devotion = clamp(h.devotion + e.n, 0, C.devotionMax); break;
       case 'superstition': if (h) h.superstition = clamp(h.superstition + e.n, 0, C.superstitionMax); break;
       case 'grievance': addGrievance(w, e.key, e.n); break;
@@ -177,7 +189,7 @@ function close(w, ctx) {
   // the unheard: pressed households left waiting feed their estate's grievance, unless they hold the court's word
   for (const id of ctx.unheard || []) {
     const h = H(w, id);
-    if (isPressing(h) && !holdsWord(w, id)) addGrievance(w, constituencyOf(h), C.unheardGrievance);
+    if (isPressing(h) && !holdsWord(w, id) && !isPariah(h)) addGrievance(w, constituencyOf(h), C.unheardGrievance);
   }
   // shares become pressure
   const load = {};
@@ -215,7 +227,8 @@ function close(w, ctx) {
     }
   }
   // urgency feeds grievance
-  for (const h of alive(w)) if (isUrgent(h) && !holdsWord(w, h.id)) addGrievance(w, constituencyOf(h), C.urgentGrievance);
+  // a pariah's troubles no longer move its estate; one that speaks for its estate moves it more
+  for (const h of alive(w)) if (isUrgent(h) && !holdsWord(w, h.id) && !isPariah(h)) addGrievance(w, constituencyOf(h), C.urgentGrievance * (speaksForEstate(h) ? 1.5 : 1));
   // every binding due at the close
   testBindings(w, 'close', ctx);
   // the quarter day: the realm's demands grow
@@ -236,7 +249,7 @@ function newWorld(seed, opts = {}) {
   const w = {
     seed, rng, week: 1, standing: opts.standing ?? 5, breaches: 0, disasters: 0,
     households: [], duties: [], needs: {}, grievance: {}, relationships: [], bindings: [],
-    rules: {}, signs: {}, log: [], over: null,
+    rules: {}, signs: {}, rivalry: {}, log: [], over: null,
   };
   const names = [...NAMES].sort(() => rng() - 0.5);
   for (const region of REGIONS) {
@@ -244,7 +257,7 @@ function newWorld(seed, opts = {}) {
     for (const estate of estates) {
       w.households.push({
         id: w.households.length, name: names.pop() || `House ${w.households.length}`, estate, region,
-        pressure: Math.floor(rng() * 3), regard: 0,
+        pressure: Math.floor(rng() * 3), regard: 0, esteem: 0,
         devotion: Math.floor(rng() * 4), superstition: Math.floor(rng() * 4),
       });
     }
@@ -253,7 +266,7 @@ function newWorld(seed, opts = {}) {
       const pool = inRegion(w, region).filter((h) => DUTY_ESTATES[need].includes(h.estate));
       const roll = {};
       for (const h of [...pool].sort(() => rng() - 0.5).slice(0, 3)) roll[h.id] = rng() < 0.2 ? 1 : 2;
-      w.duties.push({ id: w.duties.length, name: DUTY_NAMES[need], region, need, church: need === 'commoners', requirement: 4 + Math.floor(rng() * 3), roll });
+      w.duties.push({ id: w.duties.length, name: DUTY_NAMES[need], region, need, church: need === 'commoners', requirement: C.dutyBase + Math.floor(rng() * C.dutySpread), roll });
     }
   }
   // a few kinships and debts to begin with
@@ -261,6 +274,8 @@ function newWorld(seed, opts = {}) {
     const region = pick(rng, REGIONS), hs = inRegion(w, region), a = pick(rng, hs), b = pick(rng, hs.filter((x) => x.estate !== a.estate));
     if (b && !kinOf(w, a.id).includes(b.id)) relate(w, { kind: 'kin', a: a.id, b: b.id });
   }
+  // the old rivalries of the realm
+  for (const [a, b] of [['Noble', 'Merchant'], ['Cleric', 'Official'], ['Soldier', 'Commoner']]) addRivalry(w, a, b, -1);
   for (let i = 0; i < 3; i++) {
     const a = pick(rng, w.households), b = pick(rng, w.households.filter((x) => x.region === a.region && x.id !== a.id));
     relate(w, { kind: 'owes', from: a.id, to: b.id, size: 1 });
@@ -271,7 +286,7 @@ function newWorld(seed, opts = {}) {
 module.exports = {
   C, REGIONS, ESTATES, RANK, NEEDS, clamp, round2, rngOf, pick,
   constituencyOf, needKey, alive, H, dutyById, dutiesOf, inRegion,
-  addPressure, addRegard, addGrievance, isUrgent, isPressing,
+  addPressure, addRegard, addGrievance, addEsteem, addRivalry, rivalry, isPariah, speaksForEstate, isUrgent, isPressing,
   relate, unrelate, rels, kinOf, grudgesOf, chargesAgainst, debtsOf, creditsOf,
   shares, delivered, dutyMet, needMet,
   addBinding, holds, apply, note, markSign, testBindings, bindingsOf, holdsWord,
