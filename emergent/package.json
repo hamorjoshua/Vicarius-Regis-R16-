@@ -1,0 +1,15 @@
+{
+  "name": "vicarius-regis-emergent",
+  "private": true,
+  "type": "module",
+  "description": "Vicarius Regis: the emergent realm, built in stages from docs/living-realm-design.md.",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test test/invariants.test.ts",
+    "years": "node harness/run.ts years"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.8.0"
+  }
+}
