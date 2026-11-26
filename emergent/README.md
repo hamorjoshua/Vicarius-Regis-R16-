@@ -456,7 +456,21 @@ Three small realms, a three-year reign each:
 | This case only | 14 | 0.61 | 0.66 | 0.52 | 0.84 |
 | A rule for the realm each time | 17 | 0.63 | 0.67 | 0.53 | 0.84 |
 
-The court shapes its own docket: those bound by a debt flock to a court that grants everything, those in want give up on one that hears nobody, and an unpredictable court is the most avoided. Not yet measured at full size. Still missing: a body's own custom as a step between a house's own way and the regent, the two sides' pleas, the regent's word, the Crown's store, and the screen.
+The court shapes its own docket: those bound by a debt flock to a court that grants everything, those in want give up on one that hears nobody, and an unpredictable court is the most avoided.
+
+The same five courts on eight full-size realms, with going to court as a choice (means):
+
+| Court | Reigns kept | Standing at end | Heard | Settled below | Repeating a recent shape | Five commonest shapes | Shapes heard | Kept their own counsel |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Hears nobody | 4 of 8 | 1.4 | 0 | 0 | | | | 249 |
+| Grants everything | 5 of 8 | 2.2 | 184 | 0 | 72% | 59% | 35 | 45 |
+| Rules at random | 8 of 8 | 4.7 | 89 | 198 | 32% | 31% | 49 | 159 |
+| This case only | 5 of 8 | 2.7 | 285 | 0 | 78% | 55% | 39 | 68 |
+| A rule for the realm each time | 8 of 8 | 4.5 | 80 | 450 | 22% | 35% | 52 | 42 |
+
+- **Repetition for the rule-making court is 22%,** against 15% without the choice. The four pairs of realms gave 8%, 23%, 23% and 34%, so the difference is within the spread.
+- **Expectations follow the court at full size too:** under a court that grants everything, those bound by a debt expect relief 0.71 to 0.80; under one that hears nobody, those in bare want fall to 0.26 to 0.44.
+- **Making rules is what keeps a reign, not judging well.** The court that rules at random, but makes rules two times in three, keeps every reign and ends with as much standing as the careful one. What each ruling says matters too little yet. Still missing: a body's own custom as a step between a house's own way and the regent, the two sides' pleas, the regent's word, the Crown's store, and the screen.
 
 ## Known gaps
 
