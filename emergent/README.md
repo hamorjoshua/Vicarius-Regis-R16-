@@ -322,6 +322,22 @@ Twelve realms with minds and plans, forty years of run after the past, four at a
 
 A third of the realms (4 of 12) suffer a fall of 75% or more within forty years of run. The other eight open small, having fallen in their past, and spend the run regrowing.
 
+## With learned foresight
+
+Each person holds a belief about how much a unit of seed returns, drawn at birth around their parents' and corrected each midwinter by what the year's sowing brought back. The hearth sows by its eldest member's belief. The same twelve realms:
+
+| | Baseline | With learned foresight |
+| --- | --- | --- |
+| Realms that fall by 75% or more | 4 of 12 | 3 of 12 |
+| Realms that fall by 40 to 75% | 0 | 4 |
+| Mean number at the end | 126 | 171 |
+| Shapes of event, per batch of three | 30 to 35 | 35 to 41 |
+
+- **Hearths come to believe very different things.** Within one realm the believed return runs from 4 to 58 for a unit of seed.
+- **Belief drifts upward,** to a mean near 30 from a start near 6. Sparse sowing returns more for each seed, so sowing little teaches that seed goes far.
+- **Realms end larger on average,** and falls are more often partial. With twelve realms this is a tendency, not a proof.
+- Still given, not learned: when the season for sowing is open, and how a standing crop is expected to ripen.
+
 ## Known gaps
 
 1. **The fall is still too deep** (64 to 87% where it happens), and it recurs about once a generation. Foresight, a past, customs and defended fields have each been tried; the last helped most and none cured it. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.

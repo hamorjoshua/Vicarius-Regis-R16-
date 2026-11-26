@@ -2,7 +2,7 @@
 // Last week's choices are carried out against what is there now.
 
 import { AIDERS, Kn, NS, P, Rc, St } from '../tables.ts';
-import { dist, holdsByCell, kinOf, payRent, rec, struggle, tenancies } from '../util.ts';
+import { dist, holdsByCell, kinOf, payRent, rec, struggle, tenancies, tie } from '../util.ts';
 import { bear } from './grow.ts';
 import type { Body, State, Work } from '../types.ts';
 
@@ -74,6 +74,21 @@ export function make(s: State): void {
     for (const h of over) sum += h.strength;
     if (sum < P.held) continue;
     e.k = 'take';
-    for (const h of over) s.wrongs.push({ by: b.id, to: h.a, kind: first[0], q: (first[1] * m * h.strength) / sum, rec: e.id });
+    for (const h of over) {
+      // A holder who lives near saw who it was. One who does not, finds the ground stripped and must guess:
+      // they lay it to whichever house within reach of the ground they already think worst of.
+      const hb = s.bodies[h.a]!;
+      let by = b.id;
+      if (hb.alive && dist(s.side, hb.home, j.w.cell) > P.reach) {
+        let worst = -Infinity;
+        for (const x of s.bodies) {
+          if (!x.alive || x.parts.length || x.id === hb.id || dist(s.side, x.home, j.w.cell) > P.reach + 1) continue;
+          const ill = (hb.lore[`house:${x.id}`] ?? 0) - tie(s, hb.id, x.id) + (x.id === b.id ? 0.1 : 0);
+          if (ill > worst) { worst = ill; by = x.id; }
+        }
+        rec(s, 'blame', { a: hb.id, b: by, cell: j.w.cell, kind: first[0], q2: by === b.id ? 0 : 1, kind2: b.id, cause: e.id });
+      }
+      s.wrongs.push({ by, to: h.a, kind: first[0], q: (first[1] * m * h.strength) / sum, rec: e.id });
+    }
   }
 }

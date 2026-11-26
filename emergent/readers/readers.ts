@@ -60,6 +60,8 @@ export class Readers {
   /** Each belief: when it first took hold, how many houses came to it themselves and how many were told. */
   /** Plans made, fulfilled and given up. */
   plans = { made: 0, done: 0, dropped: 0 };
+  /** Takings nobody saw: how many were laid to the right house, and how many to the wrong one. */
+  blame = { right: 0, wrong: 0 };
   beliefs = new Map<string, { first: number; own: number; told: number }>();
 
   /** One link of a chain, in words. */
@@ -91,6 +93,7 @@ export class Readers {
         if (r.way?.startsWith('belief:')) return `house ${r.a} came to believe ${beliefWords(r.way.slice(7))}${r.b >= 0 ? ', as house ' + r.b + ' told it' : ''}`;
         return `house ${r.a} came to know a way of dealing from house ${r.b}: ${wayWords(r.way ?? '')}`;
       case 'plan': return r.q2 > 0 ? `house ${r.a} got from house ${r.b} what it had set itself to make ${kind} for` : r.q2 < 0 ? `house ${r.a} gave up its plan to make ${kind} for house ${r.b}` : `house ${r.a}${r.need >= 0 ? ', in want of ' + need + ',' : ''} set itself to make ${kind}, which house ${r.b} wants, so as to get ${(SIDE[(r.way ?? '').split('>')[1] ?? ''] ?? 'what it lacks')} from it`;
+      case 'blame': return r.q2 ? `house ${r.a}, finding its ground at ${place(this, r.cell)} stripped, laid it to house ${r.b}, though it was house ${r.kind2} that did it` : `house ${r.a}, finding its ground at ${place(this, r.cell)} stripped, rightly laid it to house ${r.b}`;
       case 'bar': return `house ${r.a} shut its door to house ${r.b}`;
       case 'move': return `house ${r.a} left for ${place(this, r.cell)}`;
       default: return `${r.k} (${r.a}, ${r.b})`;
@@ -167,6 +170,7 @@ export class Readers {
         if (r.b >= 0) bl.told++; else bl.own++;
         this.beliefs.set(kind, bl);
       }
+      else if (r.k === 'blame') { if (r.q2) this.blame.wrong++; else this.blame.right++; }
       else if (r.k === 'plan') { if (r.q2 > 0) this.plans.done++; else if (r.q2 < 0) this.plans.dropped++; else this.plans.made++; }
       else if (r.k === 'promise' && r.way) {
         const w = this.ways.get(r.way);

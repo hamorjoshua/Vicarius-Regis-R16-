@@ -21,6 +21,7 @@ function tally(s: State, c: Record<string, number>): void {
     else if (r.k === 'give') add(r.kind2 === 1 ? (r.need >= 0 ? 'drew from the common store' : 'gave to the common store') : 'give');
     else if (r.k === 'leave') add(r.kind2 === -3 ? 'left a band' : r.kind2 === -4 ? 'band came apart' : 'leave');
     else if (r.k === 'promise' && r.way) add(`dealt ${r.way}`);
+    else if (r.k === 'blame') add(r.q2 ? 'blamed the wrong house' : 'blamed the right house');
     else if (r.k === 'plan') add(r.q2 > 0 ? 'plan fulfilled' : r.q2 < 0 ? 'plan given up' : 'plan made');
     else if (r.k === 'learn') add(r.way?.startsWith('belief:') ? (r.b >= 0 ? 'was told a belief' : 'came to a belief') : 'learned a way');
     else if (r.k === 'promise') add(r.kind2 === 1 ? 'promise of work' : r.kind2 === 2 ? 'loan against ground' : r.kind2 >= 3 ? (r.kind2 > 3 ? 'lease of a lease' : 'lease') : 'promise');
@@ -146,6 +147,7 @@ if (cmd === 'measures') {
   [...STOCKS.map(k => k.id), 'soil (mean)'].forEach((name, i) => console.log(`  | ${name} | ${[1, ...tens].map(t => { const v = mean(r => r.land[t - 1]![i]!); return v < 10 ? v.toFixed(2) : Math.round(v); }).join(' | ')} |`));
   console.log(`  | floods in the ten years to | - | ${tens.map(t => mean(r => r.R.events.filter(e => e.shape === 'flood' && e.t0 >= (t - 10) * 52 && e.t0 < t * 52).length).toFixed(1)).join(' | ')} |`);
 
+  console.log(`\nTakings nobody saw (laid to the right house / to the wrong one), by realm: ${runs.map(r => `${r.R.blame.right}/${r.R.blame.wrong}`).join(', ')}`);
   console.log(`\nPlans held over weeks (made / fulfilled / given up), by realm: ${runs.map(r => `${r.R.plans.made}/${r.R.plans.done}/${r.R.plans.dropped}`).join(', ')}`);
 
   console.log(`\nWhat hearths believe a unit of seed returns at the end (least / mean / most), by realm: ${runs.map(r => { const hs = r.s.bodies.filter(b => b.alive && !b.parts.length && b.hope.length).map(b => b.hope[STOCKS.findIndex(k => k.id === 'corn')]!); return hs.length ? `${Math.min(...hs).toFixed(1)}/${(hs.reduce((x, y2) => x + y2, 0) / hs.length).toFixed(1)}/${Math.max(...hs).toFixed(1)}` : '-'; }).join(', ')}`);
