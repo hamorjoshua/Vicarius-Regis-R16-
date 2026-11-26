@@ -4,7 +4,7 @@
 // and fade. Nothing here knows which beliefs are true.
 
 import { P } from '../tables.ts';
-import { dist, head, kinOf, leaves, rec, tie, warm } from '../util.ts';
+import { around, dist, head, hearthIndex, kinOf, leaves, rec, tie, warm } from '../util.ts';
 import type { Body, State } from '../types.ts';
 
 function believe(s: State, b: Body, sign: string, strength: number, from: number): void {
@@ -15,6 +15,7 @@ function believe(s: State, b: Body, sign: string, strength: number, from: number
 }
 
 export function learn(s: State): void {
+  const idx = hearthIndex(s);
   const meet = (id: number, sign: string): void => {
     const b = s.bodies[id];
     if (!b || !b.alive || b.parts.length) return;
@@ -32,12 +33,12 @@ export function learn(s: State): void {
       meet(r.a, `house:${r.b}`); meet(r.b, `house:${r.a}`);
       if (r.way) { meet(r.a, `way:${r.way}`); meet(r.b, `way:${r.way}`); }
     } else if (r.k === 'move') {
-      for (const b of s.bodies) if (b.alive && b.id !== r.a && dist(s.side, b.home, r.cell) <= P.reach) { meet(b.id, 'new'); meet(b.id, `house:${r.a}`); }
+      for (const b of around(idx, s.side, r.cell, P.reach)) if (b.alive && b.id !== r.a) { meet(b.id, 'new'); meet(b.id, `house:${r.a}`); }
     } else if (r.k === 'die') {
       const p = s.people[r.a]!;
       harm(r.b, 1);
       // A child dead in its first years is laid to the state of the house it was born into, by all who see it.
-      if (p.omen >= 0 && r.q < 6) for (const b of s.bodies) {
+      if (p.omen >= 0 && r.q < 6) for (const b of around(idx, s.side, r.cell, P.reach)) {
         if (!b.alive || b.parts.length || dist(s.side, b.home, r.cell) > P.reach) continue;
         believe(s, b, `born:${p.omen}`, (b.lore[`born:${p.omen}`] ?? 0) + (b.id === r.b ? P.blame : P.blame / 3), b.id === r.b ? -1 : r.b);
       }
@@ -80,7 +81,7 @@ export function learn(s: State): void {
     for (const [sign, v] of Object.entries(b.lore)) if (v > P.heed && sign.startsWith('house:')) warm(s, b.id, Number(sign.slice(6)), -0.05 * v);
     const strong = Object.entries(b.lore).filter(([, v]) => v >= P.tell);
     if (!strong.length) continue;
-    for (const t of s.bodies) {
+    for (const t of around(idx, s.side, b.home, P.dealReach)) {
       if (!t.alive || t === b || t.parts.length || dist(s.side, t.home, b.home) > P.dealReach) continue;
       const near = kin.get(b.id)?.has(t.id) || (b.of >= 0 && b.of === t.of) ? 0.3 : 0;
       const trust = near + tie(s, t.id, b.id);

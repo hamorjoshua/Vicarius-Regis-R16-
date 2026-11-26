@@ -3,7 +3,7 @@
 
 import { Kn, NK, NN, P } from '../tables.ts';
 import { askAhead, heads, welfare } from '../value.ts';
-import { bond, dist, head, kinOf, leaves, living, rec, regard } from '../util.ts';
+import { around, bond, dist, head, kinOf, leaves, living, rec, regard } from '../util.ts';
 import type { Body, Person, State } from '../types.ts';
 
 export function body(s: State, home: number): Body {
@@ -66,11 +66,13 @@ function band(s: State): void {
   // Coming together.
   const units = s.bodies.filter(b => b.alive && b.of < 0 && (b.parts.length > 0 || b.members.length > 0));
   const done = new Set<number>();
+  const unitsAt: Body[][] = s.cells.map(() => []);
+  for (const u of units) unitsAt[u.home]!.push(u);
   const friends = (a: Body, b: Body): boolean => dist(s.side, a.home, b.home) <= P.dealReach && regard(s, a, b) >= P.band && regard(s, b, a) >= P.band;
   for (const u of units) {
     if (done.has(u.id)) continue;
     const group = [u];
-    for (const v of units) if (v !== u && !done.has(v.id) && group.length < 8 && group.every(g => friends(g, v))) group.push(v);
+    for (const v of around(unitsAt, s.side, u.home, P.dealReach)) if (v !== u && !done.has(v.id) && group.length < 8 && group.every(g => friends(g, v))) group.push(v);
     if (group.length < P.bandOf) continue;
     const c = body(s, u.home);
     c.parts = group.map(g => g.id);
@@ -79,7 +81,7 @@ function band(s: State): void {
   }
 }
 
-export function gather(prev: State, s: State): void {
+export function gather(kin: Map<number, Set<number>>, s: State): void {
   for (const b of s.bodies) if (b.alive) b.members = b.members.filter(i => s.people[i]!.alive);
 
   // The wedded come to live at one hearth: the one from the poorer house crosses.
@@ -120,7 +122,6 @@ export function gather(prev: State, s: State): void {
   }
 
   // A hearth with no one grown sends its children to kin; one with no one at all passes to kin, or is left.
-  const kin = kinOf(prev);
   const nearestKin = (b: Body): Body | undefined => {
     let best: Body | undefined, bestD = Infinity;
     for (const k of kin.get(b.id) ?? []) {

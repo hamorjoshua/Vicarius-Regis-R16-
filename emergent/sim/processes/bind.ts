@@ -3,8 +3,8 @@
 
 import { Kn, NEEDS, NK, NN, P, TOIL } from '../tables.ts';
 import { askAhead, cover } from '../value.ts';
-import { bond, dist, head, holdsByCell, kinOf, might, muster, rec, served as remember, struggle, tie, warm } from '../util.ts';
-import type { Body, Bond, State } from '../types.ts';
+import { around, bond, setTie, dist, head, holdsByCell, kinOf, might, muster, rec, served as remember, struggle, tie, warm } from '../util.ts';
+import type { Body, Bond, Person, State } from '../types.ts';
 
 /** The needs a kind serves, for saying why someone's cover fell. */
 const served = (kind: number): number[] => NEEDS.map((_, n) => n).filter(n => Kn[kind]!.serves[n]! > 0);
@@ -126,7 +126,7 @@ export function bind(s: State): void {
     if (stake < hC.temper * 0.6) { bd.due = s.t + 13; continue; }
     const mC = might(s, kin, C, D.id), mD = might(s, kin, D, C.id);
     if (mC < 0.6 * mD) {
-      if (tie(s, C.id, D.id) > -0.8) { s.ties[`${C.id}:${D.id}`] = -0.8; rec(s, 'bar', { a: C.id, b: D.id, cause: bd.rec }); }
+      if (tie(s, C.id, D.id) > -0.8) { setTie(s, C.id, D.id, -0.8); rec(s, 'bar', { a: C.id, b: D.id, cause: bd.rec }); }
       bd.due = s.t + 26;
       continue;
     }
@@ -154,11 +154,13 @@ export function bind(s: State): void {
 
   // Two unwed people within reach of one another, and not of one blood, wed.
   const taken = new Set<number>();
+  const women: Person[][] = s.cells.map(() => []);
+  for (const w of s.people) if (w.alive && w.sex === 1 && w.spouse < 0) women[s.bodies[w.body]!.home]!.push(w);
   for (const m of s.people) {
     if (!m.alive || m.sex !== 0 || m.spouse >= 0 || (s.t - m.born) / 52 < P.wedHe) continue;
     const mb = s.bodies[m.body]!;
     let best = -1, bestScore = Infinity;
-    for (const w of s.people) {
+    for (const w of around(women, s.side, mb.home, P.dealReach)) {
       if (!w.alive || w.sex !== 1 || w.spouse >= 0 || taken.has(w.id)) continue;
       const age = (s.t - w.born) / 52;
       if (age < P.wedShe || age > P.bearTo + 8) continue;

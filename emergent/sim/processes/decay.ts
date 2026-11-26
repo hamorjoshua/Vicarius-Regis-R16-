@@ -56,8 +56,10 @@ export function decay(s: State): void {
     if (bd.about === 'person') continue;
     bd.strength *= 1 - (bd.about === 'land' ? P.lapse : P.lapse / 2);
   }
-  for (const key of Object.keys(s.ties)) {
-    const v = s.ties[key]! * P.fade;
-    if (v > -0.01 && v < 0.01) delete s.ties[key]; else s.ties[key] = v;
+  for (const a in s.ties) {
+    const row = s.ties[a]!;
+    let any = false;
+    for (const b in row) { const v = row[b]! * P.fade; if (v > -0.01 && v < 0.01) delete row[b]; else { row[b] = v; any = true; } }
+    if (!any) delete s.ties[a];
   }
 }

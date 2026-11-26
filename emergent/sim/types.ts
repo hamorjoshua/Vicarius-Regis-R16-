@@ -124,8 +124,8 @@ export interface State {
   people: Person[];
   bodies: Body[];
   bonds: Bond[];
-  /** Regard: `ties["a:b"]` is how body a holds body b. */
-  ties: Record<string, number>;
+  /** Regard: `ties[a][b]` is how body a holds body b. */
+  ties: Record<number, Record<number, number>>;
   sky: { aT: number[]; aR: number[]; temp: number[]; rain: number[] };
   wrongs: Wrong[];
   uses: Use[];

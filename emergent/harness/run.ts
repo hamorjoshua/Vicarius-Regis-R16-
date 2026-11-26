@@ -2,7 +2,7 @@
 // Each runs a realm with no court. This file is a reader: it may name things; the rules may not.
 
 import { inherit } from '../sim/found.ts';
-import { step } from '../sim/step.ts';
+import { advance } from '../sim/step.ts';
 import { KINDS, NEEDS, RECIPES, STOCKS } from '../sim/tables.ts';
 import { deflateSync } from 'node:zlib';
 import { Readers, beliefWords, form, wayWords, year } from '../readers/readers.ts';
@@ -36,7 +36,7 @@ if (cmd === 'years') {
   console.log(`seed ${seed}: ${s.people.length} people in ${s.bodies.length} hearths`);
   for (let y = 0; y < years; y++) {
     const c: Record<string, number> = {};
-    for (let w = 0; w < 52; w++) { s = step(s); tally(s, c); }
+    for (let w = 0; w < 52; w++) { s = advance(s); tally(s, c); }
     const alive = s.people.filter(p => p.alive), bodies = s.bodies.filter(b => b.alive && !b.parts.length);
     const store = KINDS.map((k, i) => `${k.id} ${Math.round(bodies.reduce((x, b) => x + b.store[i]!, 0))}`).join(', ');
     const homes = new Set(bodies.map(b => b.home)).size;
@@ -54,7 +54,7 @@ if (cmd === 'years') {
 function watch(years: number, seed: number, each?: (s: State, R: Readers) => void): { s: State; R: Readers; ms: number } {
   let s = inherit(seed);
   const R = new Readers(), t0 = Date.now();
-  for (let w = 0; w < years * 52; w++) { s = step(s); R.read(s); each?.(s, R); }
+  for (let w = 0; w < years * 52; w++) { s = advance(s); R.read(s); each?.(s, R); }
   R.close();
   return { s, R, ms: (Date.now() - t0) / (years * 52) };
 }

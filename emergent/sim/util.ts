@@ -28,10 +28,11 @@ export function rec(s: State, k: string, f: Partial<Rec> = {}): Rec {
   return r;
 }
 
-export const tie = (s: State, a: number, b: number): number => s.ties[`${a}:${b}`] ?? 0;
+export const tie = (s: State, a: number, b: number): number => { const row = s.ties[a]; return row === undefined ? 0 : (row[b] ?? 0); };
+export const setTie = (s: State, a: number, b: number, v: number): void => { (s.ties[a] ??= {})[b] = v; };
 export function warm(s: State, a: number, b: number, d: number): void {
   if (a === b) return;
-  s.ties[`${a}:${b}`] = clamp(tie(s, a, b) + d, -1, 1);
+  setTie(s, a, b, clamp(tie(s, a, b) + d, -1, 1));
 }
 
 /** The share of a full day's work a person of this age can do. */
@@ -188,4 +189,18 @@ export function served(s: State, bd: Bond, good: boolean): void {
     w.w += good ? 0.2 : -0.5;
     if (w.w <= 0) delete s.bodies[id]!.ways[bd.way];
   }
+}
+
+/** The hearths living on each cell. */
+export function hearthIndex(s: State): Body[][] {
+  const idx: Body[][] = s.cells.map(() => []);
+  for (const b of s.bodies) if (b.alive && !b.parts.length) idx[b.home]!.push(b);
+  return idx;
+}
+
+/** Everything indexed on the cells within r of a cell. */
+export function around<T>(idx: T[][], side: number, cell: number, r: number): T[] {
+  const out: T[] = [];
+  for (const c of near(side, cell, r)) { const l = idx[c]!; for (let i = 0; i < l.length; i++) out.push(l[i]!); }
+  return out;
 }

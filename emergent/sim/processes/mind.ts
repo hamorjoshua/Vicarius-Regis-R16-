@@ -7,6 +7,7 @@ import { weekOf } from '../types.ts';
 import { grown, head } from '../util.ts';
 import type { Body, Person, State } from '../types.ts';
 
+const copy = (w: Record<string, { w: number; p: number }>): Record<string, { w: number; p: number }> => { const o: Record<string, { w: number; p: number }> = {}; for (const k in w) o[k] = { w: w[k]!.w, p: w[k]!.p }; return o; };
 const speaker = (s: State, b: Body): Person | undefined => { const g = grown(s, b); let h: Person | undefined; for (const p of g) if (!h || p.born < h.born || (p.born === h.born && p.id < h.id)) h = p; return h ?? head(s, b); };
 
 /** Before the week's choices: each hearth takes up the mind of the one who speaks for it. */
@@ -16,7 +17,7 @@ export function attend(s: State): void {
     const h = speaker(s, b);
     if (!h) continue;
     b.lore = { ...h.lore };
-    b.ways = structuredClone(h.ways);
+    b.ways = copy(h.ways);
     const g = grown(s, b);
     b.hope = h.hope.slice();
     b.skill = Rc.map((_r, i) => (g.length ? g.reduce((x, p) => x + p.skill[i]!, 0) / g.length : P.green));
@@ -35,7 +36,7 @@ export function settle(s: State): void {
     // A way the hearth saw fail is dropped by all of it.
     for (const k of Object.keys(h.ways)) if (!b.ways[k]) for (const m of g) delete m.ways[k];
     h.lore = { ...b.lore };
-    h.ways = structuredClone(b.ways);
+    h.ways = copy(b.ways);
     // At midwinter each looks at what the year's putting-in returned, and believes a little more nearly that.
     if (weekOf(s.t) === 0) {
       for (let st = 0; st < NS; st++) {

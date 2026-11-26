@@ -2,7 +2,7 @@
 // Last week's choices are carried out against what is there now.
 
 import { AIDERS, Kn, NS, P, Rc, St } from '../tables.ts';
-import { dist, holdsByCell, kinOf, payRent, rec, struggle, tenancies, tie } from '../util.ts';
+import { around, dist, hearthIndex, holdsByCell, kinOf, payRent, rec, struggle, tenancies, tie } from '../util.ts';
 import { bear } from './grow.ts';
 import type { Body, State, Work } from '../types.ts';
 
@@ -31,6 +31,7 @@ export function make(s: State): void {
   const holds = holdsByCell(s);
   const lets = tenancies(s);
   const kin = kinOf(s);
+  const hearths = hearthIndex(s);
   for (const j of jobs) {
     const r = Rc[j.w.r]!, c = s.cells[j.w.cell]!, b = j.b;
     let m = j.m;
@@ -81,7 +82,7 @@ export function make(s: State): void {
       let by = b.id;
       if (hb.alive && dist(s.side, hb.home, j.w.cell) > P.reach) {
         let worst = -Infinity;
-        for (const x of s.bodies) {
+        for (const x of around(hearths, s.side, j.w.cell, P.reach + 1)) {
           if (!x.alive || x.parts.length || x.id === hb.id || dist(s.side, x.home, j.w.cell) > P.reach + 1) continue;
           const ill = (hb.lore[`house:${x.id}`] ?? 0) - tie(s, hb.id, x.id) + (x.id === b.id ? 0.1 : 0);
           if (ill > worst) { worst = ill; by = x.id; }

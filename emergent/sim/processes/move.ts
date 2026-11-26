@@ -2,7 +2,7 @@
 // water runs downhill, and a body that chose to go, goes.
 
 import { Kn, NK, NS, P, St } from '../tables.ts';
-import { holdsByCell, near, rec } from '../util.ts';
+import { hearthIndex, holdsByCell, near, rec } from '../util.ts';
 import { bear } from './grow.ts';
 import type { Cell, State } from '../types.ts';
 
@@ -33,6 +33,7 @@ export function move(prev: State, s: State): void {
   const n = s.cells.length;
   const R = route(s, i => s.sky.rain[i]! / P.rainMean);
   const holds = holdsByCell(s);
+  const hearths = hearthIndex(s);
   for (let i = 0; i < n; i++) {
     const c = s.cells[i]!, was = prev.cells[i]!, ratio = s.sky.rain[i]! / P.rainMean;
     // What soaks in wets the ground; what runs off is gone downhill, and on a bare slope takes soil with it.
@@ -57,7 +58,7 @@ export function move(prev: State, s: State): void {
       const e = rec(s, 'decay', { cell: i, kind2: k, q: lost, q2: 1 });
       for (const h of holds.get(i) ?? []) for (const need of r.needs) s.bodies[h.a]!.why[need] = e.id;
     }
-    for (const b of s.bodies) {
+    for (const b of hearths[i]!) {
       if (!b.alive || b.home !== i || b.parts.length) continue;
       const share = Math.min(0.3, 0.1 * c.flood);
       let lost = 0;

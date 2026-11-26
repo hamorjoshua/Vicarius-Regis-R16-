@@ -8,18 +8,18 @@ import { bear, person } from './processes/grow.ts';
 import { body } from './processes/gather.ts';
 import { route } from './processes/move.ts';
 import { bond, dist, near } from './util.ts';
-import { step } from './step.ts';
+import { advance } from './step.ts';
 import type { Cell, Person, State } from './types.ts';
 
 /** A realm with a past: founded a generation back and lived through to week 0. */
 export function inherit(seed: number, years = P.past): State {
   let s = found(seed, -years * 52);
-  while (s.t < 0) s = step(s);
+  while (s.t < 0) s = advance(s);
   return s;
 }
 
-export function found(seed: number, t0 = 0): State {
-  const side = P.side, n = side * side;
+export function found(seed: number, t0 = 0, side = P.side, souls = P.souls): State {
+  const n = side * side;
   let nth = 0;
   const u = (): number => draw(seed, 'founding', 0, 0, nth++);
   const s: State = {
@@ -67,11 +67,11 @@ export function found(seed: number, t0 = 0): State {
 
   // Hamlets on the best dry ground, a few hearths in each.
   const sownBear = (c: Cell): number => { let b = 0; for (let k = 0; k < NS; k++) if (St[k]!.sown) b += bear(c, k); return b; };
-  const sites = s.cells.map((c, i) => ({ i, v: c.water ? -1 : sownBear(c) * (0.6 + 0.8 * u()) })).sort((a, b) => b.v - a.v).slice(0, 14).map(x => x.i);
+  const sites = s.cells.map((c, i) => ({ i, v: c.water ? -1 : sownBear(c) * (0.6 + 0.8 * u()) })).sort((a, b) => b.v - a.v).slice(0, Math.max(4, Math.round(souls / 15))).map(x => x.i);
   const granted = new Set<number>();
   const first = BY_HARM[0]!;
   const year = (y: number): number => t0 - Math.round(y * 52);
-  while (s.people.filter(p => p.alive).length < P.souls) {
+  while (s.people.length < souls) {
     const b = body(s, sites[Math.floor(u() * sites.length)]!);
     // Each grown person is founded alone; hearths are left to form.
     const hers = body(s, b.home);

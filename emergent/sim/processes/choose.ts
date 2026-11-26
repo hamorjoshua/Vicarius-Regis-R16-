@@ -4,7 +4,7 @@
 import { exp } from '../math.ts';
 import { AIDERS, BY_HARM, Kn, NEEDS, NK, NN, NS, P, Rc, St, TOIL } from '../tables.ts';
 import { askAhead, cover, welfare, welfareLater, zeros } from '../value.ts';
-import { bond, dist, grown, head, holdsByCell, kinOf, muster, near, rec, struggle, tenancies, tie, warm, type Tenancy } from '../util.ts';
+import { around, bond, dist, grown, head, holdsByCell, kinOf, muster, near, rec, struggle, tenancies, tie, warm, type Tenancy } from '../util.ts';
 import { bear } from './grow.ts';
 import { tBar } from './sky.ts';
 import { weekOf, type Body, type Bond, type Person, type State } from '../types.ts';
@@ -26,7 +26,7 @@ interface Ctx {
 }
 
 /** Everything about the land that is worked out once a week. */
-interface Land { lets: Tenancy[]; holds: Map<number, Bond[]>; bears: number[][]; left: Map<number, number>; homes: number[] }
+interface Land { landOf: Map<number, Bond[]>; letsOf: Map<number, Tenancy[]>; letOn: Set<number>; pledged: Set<number>; at: Ctx[][]; lets: Tenancy[]; holds: Map<number, Bond[]>; bears: number[][]; left: Map<number, number>; homes: number[] }
 
 /** Where a living thing will stand after T more growing weeks. */
 const ripen = (x: number, K: number, r: number, T: number): number => (x <= 0 || K <= 0 ? 0 : K / (1 + (K / x - 1) * exp(-r * T)));
@@ -85,7 +85,7 @@ function rights(L: Land, body: number, cell: number): { mine: number; free: bool
   for (const h of L.holds.get(cell) ?? []) { sum += h.strength; if (h.a === body) own += h.strength; }
   if (own > 0) return { mine: own / sum, free: true, rent: 0 };
   // Ground used through another's bond is used as that other might, less the share owed.
-  for (const x of L.lets) if (x.cell === cell && x.lease.a === body) return { mine: x.root.strength / sum, free: true, rent: x.lease.share };
+  for (const x of L.letsOf.get(body) ?? []) if (x.cell === cell) return { mine: x.root.strength / sum, free: true, rent: x.lease.share };
   return { mine: 0, free: sum < P.held, rent: 0 };
 }
 
@@ -226,11 +226,22 @@ function cellWorth(s: State, L: Land, X: Ctx, cell: number): number {
 }
 
 /** The rights to ground a body has and is not using: its own holdings, and ground it has the use of. */
+/** Work out once who holds and uses what, so that nobody has to search every bond to find out. */
+function survey(s: State, L: Land): void {
+  L.lets = tenancies(s);
+  L.landOf = new Map(); L.letsOf = new Map(); L.letOn = new Set(); L.pledged = new Set();
+  for (const b of s.bonds) {
+    if (b.about === 'land') { const l = L.landOf.get(b.a); if (l) l.push(b); else L.landOf.set(b.a, [b]); }
+    else if (b.about === 'bond' && b.secures >= 0) L.pledged.add(b.on);
+  }
+  for (const x of L.lets) { L.letOn.add(x.lease.on); const l = L.letsOf.get(x.lease.a); if (l) l.push(x); else L.letsOf.set(x.lease.a, [x]); }
+}
+
 function idleRights(s: State, L: Land, id: number): { rb: Bond; cell: number }[] {
-  const out: { rb: Bond; cell: number }[] = [], letAlready = new Set(L.lets.map(x => x.lease.on));
-  const idle = (b: Bond): boolean => !letAlready.has(b.id) && s.t - b.used >= P.idle && s.t - b.since >= P.idle;
-  for (const b of s.bonds) if (b.about === 'land' && b.a === id && b.strength >= 0.5 && idle(b)) out.push({ rb: b, cell: b.cell });
-  for (const x of L.lets) if (x.lease.a === id && idle(x.lease)) out.push({ rb: x.lease, cell: x.cell });
+  const out: { rb: Bond; cell: number }[] = [];
+  const idle = (b: Bond): boolean => !L.letOn.has(b.id) && s.t - b.used >= P.idle && s.t - b.since >= P.idle;
+  for (const b of L.landOf.get(id) ?? []) if (b.strength >= 0.5 && idle(b)) out.push({ rb: b, cell: b.cell });
+  for (const x of L.letsOf.get(id) ?? []) if (idle(x.lease)) out.push({ rb: x.lease, cell: x.cell });
   return out;
 }
 
@@ -240,9 +251,9 @@ const shuns = (s: State, x: Body, y: Body): boolean => (x.lore.new ?? 0) > P.hee
 function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number): boolean {
   const a = A.b;
   const trust = (X: Ctx, Y: Ctx): number => Math.max(0.05, Math.min(1, P.trust + 0.6 * tie(s, X.b.id, Y.b.id)));
-  const rightsOf = (id: number): number => { let n = 0; for (const b of s.bonds) if (b.about === 'land' && b.a === id && b.strength >= P.held) n++; for (const x of L.lets) if (x.lease.a === id) n++; return n; };
+  const rightsOf = (id: number): number => { let n = L.letsOf.get(id)?.length ?? 0; for (const b of L.landOf.get(id) ?? []) if (b.strength >= P.held) n++; return n; };
   const myIdle = idleRights(s, L, a.id);
-  const surety = s.bonds.find(x => x.about === 'land' && x.a === a.id && x.strength >= 0.5 && !s.bonds.some(y => y.about === 'bond' && y.secures >= 0 && y.on === x.id));
+  const surety = (L.landOf.get(a.id) ?? []).find(x => x.strength >= 0.5 && !L.pledged.has(x.id));
   const anyRush = (X: Ctx): boolean => X.rush.some(Boolean);
 
   // What it lacks.
@@ -261,7 +272,7 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
   if (a.aim && (s.t - a.aim.since > P.resolve || !s.bodies[a.aim.for]!.alive)) { rec(s, 'plan', { a: a.id, b: a.aim.for, kind: a.aim.kind, q2: -1 }); a.aim = null; }
   let best: { B: Ctx; way: string; get: Item; give: Item; gainA: number; share: number } | null = null;
   let far: { B: Ctx; recvA: number; costB: number; want: Side } | null = null;
-  for (const B of cs.values()) {
+  for (const B of around(L.at, s.side, a.home, P.dealReach)) {
     if (B === A || dist(s.side, a.home, B.b.home) > P.dealReach || tie(s, a.id, B.b.id) < P.barAt || tie(s, B.b.id, a.id) < P.barAt) continue;
     if (shuns(s, a, B.b) || shuns(s, B.b, a)) continue;
     const tB = trust(B, A);
@@ -376,14 +387,14 @@ function arrange(s: State, L: Land, cs: Map<number, Ctx>, A: Ctx, need: number):
   };
   if (give.t === 'Y' && get.rb) bond(s, { about: 'bond', a: a.id, b: b.id, on: get.rb.id, share, due: s.t + P.lease, used: s.t, basis: 'word', rec: e.id, way });
   else { carry(get, b, a); carry(give, a, b); }
-  L.lets = tenancies(s);
+  survey(s, L);
   return true;
 }
 
 function deal(s: State, L: Land, cs: Map<number, Ctx>, kin: Map<number, Set<number>>, A: Ctx): void {
   const a = A.b;
   const partners: Ctx[] = [];
-  for (const B of cs.values()) if (B !== A && dist(s.side, a.home, B.b.home) <= P.dealReach) partners.push(B);
+  for (const B of around(L.at, s.side, a.home, P.dealReach)) if (B !== A) partners.push(B);
   if (!partners.length) return;
   const kinds = Kn.map((_k, i) => i).filter(k => !Kn[k]!.fixed);
   const wants = kinds.slice().sort((x, y) => A.v[y]! - A.v[x]! || x - y).slice(0, 3).filter(k => A.v[k]! > 1e-6);
@@ -583,13 +594,14 @@ function roam(s: State, L: Land, c: Ctx): void {
 }
 
 export function choose(s: State): void {
-  const L: Land = { lets: tenancies(s), holds: holdsByCell(s), bears: s.cells.map(c => St.map((_r, k) => bear(c, k))), left: new Map(), homes: new Array<number>(s.cells.length).fill(0) };
+  const L: Land = { landOf: new Map(), letsOf: new Map(), letOn: new Set(), pledged: new Set(), at: s.cells.map(() => []), lets: [], holds: holdsByCell(s), bears: s.cells.map(c => St.map((_r, k) => bear(c, k))), left: new Map(), homes: new Array<number>(s.cells.length).fill(0) };
   for (const b of s.bodies) if (b.alive) for (const cell of near(s.side, b.home, P.reach)) L.homes[cell] = L.homes[cell]! + 1;
+  survey(s, L);
   const cs = new Map<number, Ctx>();
   for (const b of s.bodies) {
     if (!b.alive) continue;
     const c = context(s, L, b);
-    if (c) { cs.set(b.id, c); b.pressed = c.rush.some(Boolean); }
+    if (c) { cs.set(b.id, c); L.at[b.home]!.push(c); b.pressed = c.rush.some(Boolean); }
   }
   const kin = kinOf(s);
   for (const c of cs.values()) deal(s, L, cs, kin, c);

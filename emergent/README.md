@@ -353,6 +353,22 @@ A holder who lives near their ground knows who stripped it. One who lives furthe
 - **More kinds of thing happen:** 39 to 42 shapes of event in each batch of three.
 - Not built: beliefs about who holds what, and records that can be forged.
 
+## Speed and size (the start of stage 7)
+
+The founding now takes a size (`found(seed, t0, side, souls)`), and three things were changed for speed:
+
+- **The week is lived in place** (`advance`). Copying the whole state each week was a third of the time. The pure `step` remains for tests and previews.
+- **Hearths are indexed by cell,** so nobody is compared with the whole realm when dealing, telling, wedding or banding.
+- **Who holds what is surveyed once a week,** and regard is kept as a table of tables. Searching every bond for idle ground was 64% of the time at two thousand people.
+
+| Realm | Before | Now | For each person |
+| --- | --- | --- | --- |
+| 100 cells, about 215 people | 23 to 29 ms a week | 20 ms | 95 microseconds |
+| 400 cells, about 870 people | 149 ms | 49 ms | 57 microseconds |
+| 1,024 cells, about 2,100 people | 1,129 ms | 202 ms | 95 microseconds |
+
+Cost now grows roughly in step with the number of people. At that rate 14,000 people would take between one and two seconds a week, against the design's budget of a tenth of a second. A realm of 400 cells and about 870 people fits the budget today. These timings are from the first year of a realm; later years, with more bonds and beliefs, were not timed at the larger sizes.
+
 ## Known gaps
 
 1. **The fall is still too deep** (64 to 87% where it happens), and it recurs about once a generation. Foresight, a past, customs and defended fields have each been tried; the last helped most and none cured it. Belief supplies restraint only while children are dying, and is forgotten within a few years. Customs now exist and last, but none forms about children. The depth of the fall may lie less in births than in the fields: the hungry strip standing crops, their own and others', unopposed, and the next harvest fails for everyone.
