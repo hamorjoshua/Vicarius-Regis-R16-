@@ -512,7 +512,7 @@ Five courts on eight full-size realms, a three-year reign each (means):
 
 ## The screen, and a world with power in it
 
-`index.html` is the game in one file that runs offline (`npm run build` rebuilds it from `ui/`). It founds a realm in the browser, lets it live through its past, and seats the regent.
+`index.html` is the game in one file that runs offline (`npm run build` rebuilds it from `ui/`). The same build also writes the site's front page, `../index.html`, with the few lines the site's existing service worker needs before it will hand a new page to returning visitors. The earlier game, Petitions of the Realm, is kept whole under `../petitions/`. It founds a realm in the browser, lets it live through its past, and seats the regent.
 
 Played, the first screen showed that matters were dull: nearly all were one house owing another goods or ground. The measures had counted how far matters differed as text, not whether they were worth hearing. Three things were changed in answer.
 
